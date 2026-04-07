@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+function ErrorBox({ children }) {
+  return (
+    <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <span style={{ color: '#e53e3e', fontSize: '15px', lineHeight: 1.3, flexShrink: 0, fontWeight: 700 }}>✕</span>
+      <span style={{ color: '#1B2A4A' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function VerifyEmail() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -41,29 +50,19 @@ export default function VerifyEmail() {
         50% { box-shadow: 0 0 0 10px rgba(201,168,76,0); }
       }
       .rp-code-input {
-        width: 100%; padding: 14px;
-        border-radius: 6px;
-        border: 1.5px solid #e2e6ed;
-        background: #fafbfc;
-        color: #1B2A4A;
-        font-size: 28px;
-        font-family: 'Bebas Neue', sans-serif;
-        letter-spacing: 0.3em;
-        text-align: center;
-        outline: none; box-sizing: border-box;
-        transition: border-color 0.15s, background 0.15s;
+        width: 100%; padding: 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
+        font-size: 28px; font-family: 'Bebas Neue', sans-serif;
+        letter-spacing: 0.3em; text-align: center; outline: none;
+        box-sizing: border-box; transition: border-color 0.15s, background 0.15s;
       }
       .rp-code-input:focus { border-color: #C9A84C; background: #fff; }
       .rp-code-input::placeholder { color: #d0d7e0; font-size: 18px; letter-spacing: 0.2em; }
       .rp-primary {
-        width: 100%; padding: 13px;
-        border: none; background: #1B2A4A;
-        color: #fff;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 0.25em; text-transform: uppercase;
-        cursor: pointer;
-        transition: background 0.2s, transform 0.1s;
+        width: 100%; padding: 13px; border: none; background: #1B2A4A; color: #fff;
+        font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+        letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer;
+        transition: background 0.2s, transform 0.1s; border-radius: 6px;
       }
       .rp-primary:hover:not(:disabled) { background: #C9A84C; }
       .rp-primary:active:not(:disabled) { transform: scale(0.985); }
@@ -92,17 +91,13 @@ export default function VerifyEmail() {
     if (result.error) {
       result = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'email' })
     }
-
     setLoading(false)
 
     if (result.error) {
       setError('Invalid or expired code. Please check and try again, or resend.')
     } else {
-      // Show success animation, then navigate after delay
       setVerified(true)
-      setTimeout(() => {
-        navigate(isNewUser ? '/build-passport' : '/home')
-      }, 2200)
+      setTimeout(() => navigate(isNewUser ? '/build-passport' : '/home'), 2200)
     }
   }
 
@@ -129,7 +124,6 @@ export default function VerifyEmail() {
       </div>
 
       <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '40px 36px 32px', width: '100%', maxWidth: '380px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
-
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
@@ -156,30 +150,20 @@ export default function VerifyEmail() {
           )}
         </div>
 
-        {!verified && error && (
-          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
-        )}
+        {!verified && error && <ErrorBox>{error}</ErrorBox>}
+
         {!verified && resent && (
-          <div style={{ background: '#f0faf4', border: '1px solid #bbf0d0', borderRadius: '6px', padding: '10px 14px', color: '#1a7a40', fontSize: '13px', marginBottom: '14px' }}>New code sent — check your inbox.</div>
+          <div style={{ background: '#f0faf4', border: '1px solid #bbf0d0', borderRadius: '6px', padding: '10px 14px', color: '#1a7a40', fontSize: '13px', marginBottom: '14px' }}>
+            New code sent — check your inbox.
+          </div>
         )}
 
         {!verified && (
           <>
             <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Verification Code</label>
-              <input
-                className="rp-code-input"
-                type="text"
-                inputMode="numeric"
-                maxLength={8}
-                value={code}
-                onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-                placeholder="· · · · · ·"
-                onKeyDown={e => e.key === 'Enter' && handleVerify()}
-              />
-              <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '5px 0 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
-                Enter the code exactly as shown in your email
-              </p>
+              <input className="rp-code-input" type="text" inputMode="numeric" maxLength={8} value={code} onChange={e => setCode(e.target.value.replace(/\D/g, ''))} placeholder="· · · · · ·" onKeyDown={e => e.key === 'Enter' && handleVerify()} />
+              <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '5px 0 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>Enter the code exactly as shown in your email</p>
             </div>
             <button className="rp-primary" onClick={handleVerify} disabled={loading || code.length < 6} style={{ marginBottom: '16px' }}>
               {loading ? 'Verifying...' : 'Verify Email'}
@@ -187,13 +171,9 @@ export default function VerifyEmail() {
           </>
         )}
 
-        {/* Progress steps */}
         <div style={{ border: '1px solid #f0f2f5', borderRadius: '6px', padding: '8px 16px', marginBottom: verified ? 0 : '16px' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '2px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Your Passport Setup</div>
-          <div className="step-row">
-            <div className="step-dot done">✓</div>
-            <span className="step-label active">Account created</span>
-          </div>
+          <div className="step-row"><div className="step-dot done">✓</div><span className="step-label active">Account created</span></div>
           <div className="step-row">
             <div className={`step-dot ${verified ? 'done-anim' : 'pending'}`}>{verified ? '✓' : '2'}</div>
             <span className={`step-label ${verified ? 'active' : 'muted'}`}>Email verified</span>
