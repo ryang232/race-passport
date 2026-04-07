@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+function ErrorBox({ children }) {
+  return (
+    <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <span style={{ color: '#e53e3e', fontSize: '15px', lineHeight: 1.3, flexShrink: 0, fontWeight: 700 }}>✕</span>
+      <span style={{ color: '#1B2A4A' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function SignUp() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -18,10 +27,9 @@ export default function SignUp() {
         to { transform: translateX(-50%); }
       }
       .rp-input {
-        width: 100%; padding: 12px 14px;
-        border-radius: 6px; border: 1.5px solid #e2e6ed;
-        background: #fafbfc; color: #1B2A4A; font-size: 15px;
-        font-family: 'Barlow', sans-serif; outline: none;
+        width: 100%; padding: 12px 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
+        font-size: 15px; font-family: 'Barlow', sans-serif; outline: none;
         box-sizing: border-box; transition: border-color 0.15s, background 0.15s;
       }
       .rp-input:focus { border-color: #C9A84C; background: #fff; }
@@ -57,20 +65,14 @@ export default function SignUp() {
       setError('Please enter a valid email address')
       return
     }
-
     setLoading(true)
-
-    // Attempt a dummy sign-up to detect if the email already exists.
-    // Supabase returns identities: [] for existing emails when email confirmation is on.
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
-      password: Math.random().toString(36) + Math.random().toString(36), // throwaway password
+      password: Math.random().toString(36) + Math.random().toString(36),
       options: { emailRedirectTo: `${window.location.origin}/home` }
     })
-
     setLoading(false)
 
-    // Existing account detected
     const alreadyExists =
       signUpError?.message?.toLowerCase().includes('already registered') ||
       signUpError?.message?.toLowerCase().includes('already been registered') ||
@@ -89,16 +91,7 @@ export default function SignUp() {
       )
       return
     }
-
-    if (signUpError) {
-      setError(signUpError.message)
-      return
-    }
-
-    // Email is free — delete the throwaway user we just created and proceed
-    // (Supabase won't confirm it since no email was sent yet at this stage,
-    // the real account gets created properly on CreateAccount)
-    // Navigate and pass email through
+    if (signUpError) { setError(signUpError.message); return }
     navigate('/create-account', { state: { email: email.trim() } })
   }
 
@@ -124,20 +117,11 @@ export default function SignUp() {
           <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: 0, textTransform: 'uppercase' }}>Create your Race Passport today</p>
         </div>
 
-        {error && (
-          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6 }}>{error}</div>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
 
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
-          <input
-            className="rp-input"
-            type="email"
-            value={email}
-            onChange={e => { setEmail(e.target.value); setError(null) }}
-            placeholder="your@email.com"
-            onKeyDown={e => e.key === 'Enter' && handleContinue()}
-          />
+          <input className="rp-input" type="email" value={email} onChange={e => { setEmail(e.target.value); setError(null) }} placeholder="your@email.com" onKeyDown={e => e.key === 'Enter' && handleContinue()} />
         </div>
 
         <button className="rp-primary" onClick={handleContinue} disabled={loading || !email.includes('@')} style={{ marginBottom: '4px' }}>
