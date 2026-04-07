@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+function ErrorBox({ children }) {
+  return (
+    <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <span style={{ color: '#e53e3e', fontSize: '15px', lineHeight: 1.3, flexShrink: 0, fontWeight: 700 }}>✕</span>
+      <span style={{ color: '#1B2A4A' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [submitted, setSubmitted] = useState(false)
@@ -76,9 +85,7 @@ export default function ForgotPassword() {
 
         {!submitted ? (
           <>
-            {error && (
-              <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
-            )}
+            {error && <ErrorBox>{error}</ErrorBox>}
             <div style={{ marginBottom: '20px' }}>
               <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
               <input className="rp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" onKeyDown={e => e.key === 'Enter' && handleReset()} />
