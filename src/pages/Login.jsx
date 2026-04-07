@@ -83,9 +83,7 @@ export default function Login() {
         </div>
 
         {error && (
-          <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
-        )}
-
+          <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', color: '#1B2A4A', fontSize: '13px', marginBottom: '14px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}><span style={{ color: '#e53e3e', fontSize: '16px', lineHeight: 1.2, flexShrink: 0 }}>✕</span><span>{error}</span></div>
         <div style={{ marginBottom: '12px' }}>
           <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
           <input className="rp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
