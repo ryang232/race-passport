@@ -53,25 +53,41 @@ export default function CreateAccount() {
   const handleSignUp = async () => {
     setError(null)
     if (!fullName.trim()) { setError('Please enter your full name'); return }
-    if (password !== confirmPassword) { setError('Passwords do not match'); return }
+    if (!email.trim()) { setError('Email is required'); return }
+    if (!email.includes('@')) { setError('Please enter a valid email address'); return }
+    if (!password) { setError('Password is required'); return }
     if (password.length < 6) { setError('Password must be at least 6 characters'); return }
+    if (password !== confirmPassword) { setError('Passwords do not match'); return }
 
     setLoading(true)
-    const { error } = await supabase.auth.signUp({
-      email,
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
       password,
       options: {
-        data: { full_name: fullName },
+        data: { full_name: fullName.trim() },
         emailRedirectTo: `${window.location.origin}/home`,
       }
     })
     setLoading(false)
 
     if (error) {
-      setError(error.message)
-    } else {
-      navigate('/verify-email')
+      // Replace Supabase's generic anonymous sign-in error with a friendlier message
+      if (error.message.toLowerCase().includes('anonymous')) {
+        setError('Email is required')
+      } else {
+        setError(error.message)
+      }
+      return
     }
+
+    // Navigate to verify email, passing name + email as state
+    navigate('/verify-email', {
+      state: {
+        email: email.trim(),
+        name: fullName.trim(),
+        isNewUser: true,
+      }
+    })
   }
 
   const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
@@ -87,8 +103,6 @@ export default function CreateAccount() {
       overflow: 'hidden',
       fontFamily: "'Barlow', sans-serif",
     }}>
-
-      {/* Giant slow ghost ticker */}
       <div style={{
         position: 'absolute',
         top: '50%',
@@ -98,11 +112,7 @@ export default function CreateAccount() {
         pointerEvents: 'none',
         zIndex: 0,
       }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          animation: 'tickerScroll 60s linear infinite',
-        }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', animation: 'tickerScroll 60s linear infinite' }}>
           {TICKER.map((d, i) => (
             <span key={i} style={{
               fontFamily: "'Bebas Neue', sans-serif",
@@ -118,66 +128,41 @@ export default function CreateAccount() {
         </div>
       </div>
 
-      {/* Card */}
       <div style={{
-        position: 'relative',
-        zIndex: 10,
-        background: '#fff',
-        borderRadius: '4px',
+        position: 'relative', zIndex: 10,
+        background: '#fff', borderRadius: '4px',
         padding: '40px 36px 32px',
-        width: '100%',
-        maxWidth: '380px',
-        margin: '20px',
+        width: '100%', maxWidth: '380px', margin: '20px',
         boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)',
       }}>
-
-        {/* Wordmark */}
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>
-              RACE PASSPORT
-            </span>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <h1 style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: '38px', color: '#1B2A4A',
-            margin: '0 0 6px', letterSpacing: '1.5px', lineHeight: 1,
-          }}>CREATE ACCOUNT</h1>
-          <p style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: '10px', letterSpacing: '2.5px',
-            color: '#9aa5b4', margin: 0, textTransform: 'uppercase',
-          }}>Start your passport today</p>
+          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '38px', color: '#1B2A4A', margin: '0 0 6px', letterSpacing: '1.5px', lineHeight: 1 }}>CREATE ACCOUNT</h1>
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: 0, textTransform: 'uppercase' }}>Start your passport today</p>
         </div>
 
         {error && (
-          <div style={{
-            background: '#fff5f5', border: '1px solid #fed7d7',
-            borderRadius: '6px', padding: '10px 14px',
-            color: '#c53030', fontSize: '13px', marginBottom: '14px',
-          }}>{error}</div>
+          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
         )}
 
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Full Name</label>
-          <input className="rp-input" type="text" value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Jane Doe" />
-        </div>
-
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
-          <input className="rp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
-        </div>
-
-        <div style={{ marginBottom: '10px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Password</label>
-          <input className="rp-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Min 6 characters" />
-        </div>
-
-        <div style={{ marginBottom: '20px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Confirm Password</label>
-          <input className="rp-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key === 'Enter' && handleSignUp()} />
-        </div>
+        {[
+          { label: 'Full Name', value: fullName, setter: setFullName, type: 'text', placeholder: 'Jane Doe' },
+          { label: 'Email', value: email, setter: setEmail, type: 'email', placeholder: 'your@email.com' },
+          { label: 'Password', value: password, setter: setPassword, type: 'password', placeholder: 'Min 6 characters' },
+          { label: 'Confirm Password', value: confirmPassword, setter: setConfirmPassword, type: 'password', placeholder: '••••••••' },
+        ].map(({ label, value, setter, type, placeholder }, i, arr) => (
+          <div key={label} style={{ marginBottom: i === arr.length - 1 ? '20px' : '10px' }}>
+            <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>{label}</label>
+            <input
+              className="rp-input" type={type} value={value}
+              onChange={e => setter(e.target.value)} placeholder={placeholder}
+              onKeyDown={i === arr.length - 1 ? e => e.key === 'Enter' && handleSignUp() : undefined}
+            />
+          </div>
+        ))}
 
         <button className="rp-primary" onClick={handleSignUp} disabled={loading}>
           {loading ? 'Creating account...' : 'Create Account'}
@@ -185,9 +170,7 @@ export default function CreateAccount() {
 
         <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '13px', marginTop: '20px', fontFamily: "'Barlow', sans-serif", fontWeight: 300 }}>
           Already have an account?{' '}
-          <Link to="/login" style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: '600' }}>
-            Sign in →
-          </Link>
+          <Link to="/login" style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: '600' }}>Sign in →</Link>
         </p>
       </div>
     </div>
