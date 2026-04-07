@@ -5,6 +5,7 @@ import SignUp from './pages/SignUp'
 import CreateAccount from './pages/CreateAccount'
 import VerifyEmail from './pages/VerifyEmail'
 import ForgotPassword from './pages/ForgotPassword'
+import ResetPassword from './pages/ResetPassword'
 import BuildPassport from './pages/BuildPassport'
 import Home from './pages/Home'
 import Discover from './pages/Discover'
@@ -23,6 +24,7 @@ export default function App() {
           <Route path="/create-account" element={<CreateAccount />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/build-passport" element={<BuildPassport />} />
           <Route path="/home" element={<Home />} />
           <Route path="/discover" element={<Discover />} />
