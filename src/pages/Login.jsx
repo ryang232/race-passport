@@ -19,50 +19,33 @@ export default function Login() {
         to { transform: translateX(-50%); }
       }
       .rp-input {
-        width: 100%; padding: 12px 14px;
-        border-radius: 6px;
-        border: 1.5px solid #e2e6ed;
-        background: #fafbfc;
-        color: #1B2A4A; font-size: 15px;
-        font-family: 'Barlow', sans-serif;
-        outline: none; box-sizing: border-box;
-        transition: border-color 0.15s, background 0.15s;
+        width: 100%; padding: 12px 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
+        font-size: 15px; font-family: 'Barlow', sans-serif; outline: none;
+        box-sizing: border-box; transition: border-color 0.15s, background 0.15s;
       }
       .rp-input:focus { border-color: #C9A84C; background: #fff; }
       .rp-input::placeholder { color: #b0b8c4; }
       .rp-primary {
-        width: 100%; padding: 13px;
-        border: none; background: #1B2A4A;
-        color: #fff;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 0.25em; text-transform: uppercase;
-        cursor: pointer;
-        transition: background 0.2s, transform 0.1s;
+        width: 100%; padding: 13px; border: none; background: #1B2A4A; color: #fff;
+        font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+        letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer;
+        transition: background 0.2s, transform 0.1s; border-radius: 6px;
       }
       .rp-primary:hover:not(:disabled) { background: #C9A84C; }
       .rp-primary:active:not(:disabled) { transform: scale(0.985); }
       .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .rp-social {
-        width: 100%; padding: 11px 14px;
-        border: 1.5px solid #e2e6ed;
-        background: #fff; color: #1B2A4A;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 12px; font-weight: 600;
+        width: 100%; padding: 11px 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fff; color: #1B2A4A;
+        font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 600;
         letter-spacing: 0.2em; text-transform: uppercase;
         display: flex; align-items: center; justify-content: center; gap: 9px;
         opacity: 0.45; cursor: not-allowed;
       }
-      .rp-divider {
-        display: flex; align-items: center; gap: 10px; margin: 12px 0;
-      }
-      .rp-divider::before, .rp-divider::after {
-        content: ''; flex: 1; height: 1px; background: #e2e6ed;
-      }
-      .rp-divider span {
-        font-size: 10px; color: #b0b8c4;
-        font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1.5px;
-      }
+      .rp-divider { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+      .rp-divider::before, .rp-divider::after { content: ''; flex: 1; height: 1px; background: #e2e6ed; }
+      .rp-divider span { font-size: 10px; color: #b0b8c4; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1.5px; }
     `
     if (!document.getElementById('rp-login-styles')) document.head.appendChild(style)
     return () => document.getElementById('rp-login-styles')?.remove()
@@ -80,89 +63,30 @@ export default function Login() {
   const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      fontFamily: "'Barlow', sans-serif",
-    }}>
-
-      {/* Giant slow ghost ticker */}
-      <div style={{
-        position: 'absolute',
-        top: '50%',
-        transform: 'translateY(-55%)',
-        left: 0,
-        whiteSpace: 'nowrap',
-        pointerEvents: 'none',
-        zIndex: 0,
-      }}>
-        <div style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          animation: 'tickerScroll 60s linear infinite',
-        }}>
+    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', fontFamily: "'Barlow', sans-serif" }}>
+      <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-55%)', left: 0, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', animation: 'tickerScroll 60s linear infinite' }}>
           {TICKER.map((d, i) => (
-            <span key={i} style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(180px, 24vw, 340px)',
-              color: 'transparent',
-              WebkitTextStroke: '1px rgba(27,42,74,0.055)',
-              lineHeight: 1,
-              padding: '0 40px',
-              userSelect: 'none',
-              flexShrink: 0,
-            }}>{d}</span>
+            <span key={i} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(180px, 24vw, 340px)', color: 'transparent', WebkitTextStroke: '1px rgba(27,42,74,0.055)', lineHeight: 1, padding: '0 40px', userSelect: 'none', flexShrink: 0 }}>{d}</span>
           ))}
         </div>
       </div>
 
-      {/* Login card */}
-      <div style={{
-        position: 'relative',
-        zIndex: 10,
-        background: '#fff',
-        borderRadius: '4px',
-        padding: '40px 36px 32px',
-        width: '100%',
-        maxWidth: '380px',
-        margin: '20px',
-        boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)',
-      }}>
-
-        {/* Wordmark */}
+      <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '40px 36px 32px', width: '100%', maxWidth: '380px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
         <div style={{ textAlign: 'center', marginBottom: '28px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
-            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>
-              RACE PASSPORT
-            </span>
+            <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <h1 style={{
-            fontFamily: "'Bebas Neue', sans-serif",
-            fontSize: '38px', color: '#1B2A4A',
-            margin: '0 0 6px', letterSpacing: '1.5px', lineHeight: 1,
-          }}>WELCOME BACK</h1>
-          <p style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: '10px', letterSpacing: '2.5px',
-            color: '#9aa5b4', margin: 0, textTransform: 'uppercase',
-          }}>Sign in to your passport</p>
+          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '38px', color: '#1B2A4A', margin: '0 0 6px', letterSpacing: '1.5px', lineHeight: 1 }}>WELCOME BACK</h1>
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: 0, textTransform: 'uppercase' }}>Sign in to your passport</p>
         </div>
 
         {error && (
-          <div style={{
-            background: '#fff5f5', border: '1px solid #fed7d7',
-            borderRadius: '6px', padding: '10px 14px',
-            color: '#c53030', fontSize: '13px', marginBottom: '14px',
-          }}>{error}</div>
+          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
         )}
 
-        <div style={{ marginBottom: '10px' }}>
+        <div style={{ marginBottom: '12px' }}>
           <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
           <input className="rp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" />
         </div>
@@ -172,13 +96,13 @@ export default function Login() {
           <input className="rp-input" type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key === 'Enter' && handleLogin()} />
         </div>
 
-        <div style={{ textAlign: 'right', marginBottom: '18px' }}>
-          <span style={{ fontSize: '11px', color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '1px', textTransform: 'uppercase', cursor: 'pointer' }}>
+        <div style={{ textAlign: 'right', marginBottom: '20px' }}>
+          <Link to="/forgot-password" style={{ fontSize: '11px', color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '1px', textTransform: 'uppercase', textDecoration: 'none' }}>
             Forgot password?
-          </span>
+          </Link>
         </div>
 
-        <button className="rp-primary" onClick={handleLogin} disabled={loading}>
+        <button className="rp-primary" onClick={handleLogin} disabled={loading} style={{ marginBottom: '12px' }}>
           {loading ? 'Signing in...' : 'Sign In'}
         </button>
 
@@ -194,18 +118,23 @@ export default function Login() {
           Continue with Google
         </div>
 
-        <div className="rp-social">
+        <div className="rp-social" style={{ marginBottom: '20px' }}>
           <svg width="14" height="16" viewBox="0 0 18 18" fill="#1B2A4A">
             <path d="M12.525 0c.068.93-.27 1.858-.787 2.54-.52.69-1.37 1.22-2.21 1.16-.09-.88.32-1.8.79-2.44C10.84.58 11.74.07 12.525 0zM15.7 12.05c-.42.93-.62 1.35-1.16 2.17-.75 1.14-1.81 2.56-3.12 2.57-1.17.01-1.47-.74-3.06-.73-1.59.01-1.92.75-3.09.74-1.31-.01-2.31-1.29-3.06-2.43C.57 11.72.04 8.94.95 7.21c.64-1.2 1.79-1.9 3.02-1.9 1.12 0 1.83.73 2.76.73.9 0 1.45-.73 2.75-.73 1.1 0 2.13.58 2.77 1.58-2.44 1.33-2.04 4.8.45 5.16z"/>
           </svg>
           Continue with Apple
         </div>
 
-        <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '13px', marginTop: '20px', fontFamily: "'Barlow', sans-serif", fontWeight: 300 }}>
+        <p style={{ textAlign: 'center', fontSize: '11px', color: '#b0b8c4', margin: '0 0 14px', lineHeight: 1.6, fontWeight: 300 }}>
+          By continuing, you agree to our{' '}
+          <span style={{ color: '#1B2A4A', cursor: 'pointer', textDecoration: 'underline' }}>Terms of Service</span>
+          {' '}and{' '}
+          <span style={{ color: '#1B2A4A', cursor: 'pointer', textDecoration: 'underline' }}>Privacy Policy</span>
+        </p>
+
+        <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '13px', margin: 0, fontWeight: 300 }}>
           Don't have a passport?{' '}
-          <Link to="/create-account" style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: '600' }}>
-            Create one →
-          </Link>
+          <Link to="/signup" style={{ color: '#C9A84C', textDecoration: 'none', fontWeight: '600' }}>Create one →</Link>
         </p>
       </div>
     </div>
