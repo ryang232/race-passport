@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
 export default function VerifyEmail() {
@@ -16,7 +16,6 @@ export default function VerifyEmail() {
   const firstName = name ? name.split(' ')[0] : ''
 
   useEffect(() => {
-    // If no email in state, redirect back
     if (!email) navigate('/create-account')
 
     const style = document.createElement('style')
@@ -57,11 +56,7 @@ export default function VerifyEmail() {
       .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .step-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
       .step-row:last-child { border-bottom: none; }
-      .step-dot {
-        width: 26px; height: 26px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        flex-shrink: 0; font-size: 12px;
-      }
+      .step-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
       .step-dot.done { background: #C9A84C; color: #fff; }
       .step-dot.pending { background: #f0f2f5; color: #b0b8c4; border: 1.5px solid #e2e6ed; }
     `
@@ -70,19 +65,29 @@ export default function VerifyEmail() {
   }, [email, navigate])
 
   const handleVerify = async () => {
-    if (!code || code.length < 6) { setError('Please enter the 6-digit code from your email'); return }
+    if (!code || code.length < 6) { setError('Please enter the full code from your email'); return }
     setError(null)
     setLoading(true)
 
-    const { error } = await supabase.auth.verifyOtp({
+    // Try signup OTP type first, then email type as fallback
+    let result = await supabase.auth.verifyOtp({
       email,
       token: code.trim(),
-      type: isNewUser ? 'signup' : 'email',
+      type: 'signup',
     })
 
+    if (result.error) {
+      result = await supabase.auth.verifyOtp({
+        email,
+        token: code.trim(),
+        type: 'email',
+      })
+    }
+
     setLoading(false)
-    if (error) {
-      setError('Invalid or expired code. Please try again or resend.')
+
+    if (result.error) {
+      setError('Invalid or expired code. Please check the code and try again, or resend.')
     } else {
       navigate(isNewUser ? '/build-passport' : '/home')
     }
@@ -92,10 +97,7 @@ export default function VerifyEmail() {
     setResending(true)
     setResent(false)
     setError(null)
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-    })
+    const { error } = await supabase.auth.resend({ type: 'signup', email })
     setResending(false)
     if (error) setError(error.message)
     else setResent(true)
@@ -104,132 +106,75 @@ export default function VerifyEmail() {
   const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#fff',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      position: 'relative',
-      overflow: 'hidden',
-      fontFamily: "'Barlow', sans-serif",
-    }}>
-      {/* Ghost ticker background */}
-      <div style={{
-        position: 'absolute', top: '50%',
-        transform: 'translateY(-55%)',
-        left: 0, whiteSpace: 'nowrap',
-        pointerEvents: 'none', zIndex: 0,
-      }}>
+    <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', fontFamily: "'Barlow', sans-serif" }}>
+      <div style={{ position: 'absolute', top: '50%', transform: 'translateY(-55%)', left: 0, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', animation: 'tickerScroll 60s linear infinite' }}>
           {TICKER.map((d, i) => (
-            <span key={i} style={{
-              fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(180px, 24vw, 340px)',
-              color: 'transparent',
-              WebkitTextStroke: '1px rgba(27,42,74,0.055)',
-              lineHeight: 1, padding: '0 40px',
-              userSelect: 'none', flexShrink: 0,
-            }}>{d}</span>
+            <span key={i} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(180px, 24vw, 340px)', color: 'transparent', WebkitTextStroke: '1px rgba(27,42,74,0.055)', lineHeight: 1, padding: '0 40px', userSelect: 'none', flexShrink: 0 }}>{d}</span>
           ))}
         </div>
       </div>
 
-      {/* Card */}
-      <div style={{
-        position: 'relative', zIndex: 10,
-        background: '#fff', borderRadius: '4px',
-        padding: '40px 36px 32px',
-        width: '100%', maxWidth: '380px', margin: '20px',
-        boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)',
-      }}>
-        {/* Wordmark */}
+      <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '40px 36px 32px', width: '100%', maxWidth: '380px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
+
         <div style={{ textAlign: 'center', marginBottom: '24px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
             <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-
-          {/* Envelope icon */}
-          <div style={{
-            width: 52, height: 52, borderRadius: '50%',
-            background: 'rgba(201,168,76,0.1)',
-            border: '1.5px solid rgba(201,168,76,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            margin: '0 auto 16px',
-          }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <svg width="22" height="18" viewBox="0 0 22 18" fill="none">
               <rect x="1" y="1" width="20" height="16" rx="2" stroke="#C9A84C" strokeWidth="1.5"/>
               <path d="M1 4l10 7 10-7" stroke="#C9A84C" strokeWidth="1.5"/>
             </svg>
           </div>
-
-          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#1B2A4A', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>
-            CHECK YOUR INBOX
-          </h1>
-          <p style={{ fontSize: '13px', color: '#9aa5b4', margin: '0 0 4px', fontWeight: 300, lineHeight: 1.5 }}>
+          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#1B2A4A', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>CHECK YOUR INBOX</h1>
+          <p style={{ fontSize: '13px', color: '#9aa5b4', margin: '0 0 4px', fontWeight: 300, lineHeight: 1.6 }}>
             {firstName ? `Welcome to Race Passport, ${firstName}.` : 'Welcome to Race Passport.'}<br />
-            We sent a 6-digit code to
+            We sent a verification code to
           </p>
           <p style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 600, margin: '0 0 4px' }}>{email}</p>
-          <p style={{ fontSize: '12px', color: '#9aa5b4', margin: 0, fontWeight: 300 }}>
-            Enter it below to verify your email and finish creating your account.
-          </p>
+          <p style={{ fontSize: '12px', color: '#9aa5b4', margin: 0, fontWeight: 300 }}>Enter it below to verify your email and finish creating your account.</p>
         </div>
 
         {error && (
           <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
         )}
-
         {resent && (
-          <div style={{ background: '#f0faf4', border: '1px solid #bbf0d0', borderRadius: '6px', padding: '10px 14px', color: '#1a7a40', fontSize: '13px', marginBottom: '14px' }}>
-            New code sent — check your inbox.
-          </div>
+          <div style={{ background: '#f0faf4', border: '1px solid #bbf0d0', borderRadius: '6px', padding: '10px 14px', color: '#1a7a40', fontSize: '13px', marginBottom: '14px' }}>New code sent — check your inbox.</div>
         )}
 
         <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>
-            Verification Code
-          </label>
+          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Verification Code</label>
           <input
             className="rp-code-input"
             type="text"
             inputMode="numeric"
-            maxLength={6}
+            maxLength={8}
             value={code}
             onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="000000"
+            placeholder="· · · · · ·"
             onKeyDown={e => e.key === 'Enter' && handleVerify()}
           />
+          <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '5px 0 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
+            Enter the code exactly as shown in your email
+          </p>
         </div>
 
         <button className="rp-primary" onClick={handleVerify} disabled={loading || code.length < 6} style={{ marginBottom: '16px' }}>
           {loading ? 'Verifying...' : 'Verify Email'}
         </button>
 
-        {/* Progress steps */}
         <div style={{ border: '1px solid #f0f2f5', borderRadius: '6px', padding: '8px 16px', marginBottom: '16px' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '2px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Your Passport Setup</div>
-          <div className="step-row">
-            <div className="step-dot done">✓</div>
-            <span style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 500 }}>Account created</span>
-          </div>
-          <div className="step-row">
-            <div className="step-dot pending">2</div>
-            <span style={{ fontSize: '13px', color: '#9aa5b4' }}>Email verified</span>
-          </div>
-          <div className="step-row">
-            <div className="step-dot pending">3</div>
-            <span style={{ fontSize: '13px', color: '#9aa5b4' }}>Build your passport</span>
-          </div>
+          <div className="step-row"><div className="step-dot done">✓</div><span style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 500 }}>Account created</span></div>
+          <div className="step-row"><div className="step-dot pending">2</div><span style={{ fontSize: '13px', color: '#9aa5b4' }}>Email verified</span></div>
+          <div className="step-row"><div className="step-dot pending">3</div><span style={{ fontSize: '13px', color: '#9aa5b4' }}>Build your passport</span></div>
         </div>
 
         <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '12px', margin: 0, fontWeight: 300 }}>
           Didn't receive it? Check your spam or{' '}
-          <span
-            onClick={handleResend}
-            style={{ color: '#C9A84C', cursor: resending ? 'not-allowed' : 'pointer', fontWeight: 600, textDecoration: 'none' }}
-          >
+          <span onClick={handleResend} style={{ color: '#C9A84C', cursor: resending ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
             {resending ? 'sending...' : 'resend code'}
           </span>
         </p>
