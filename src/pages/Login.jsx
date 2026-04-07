@@ -2,64 +2,6 @@ import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
-const STAMP_DATA = [
-  { dist: '26.2', name: 'NYC Marathon', loc: 'New York, NY', year: '2024', gold: false },
-  { dist: '140.6', name: 'IRONMAN World Championship', loc: 'Kona, HI', year: '2023', gold: true },
-  { dist: '13.1', name: 'Cherry Blossom Half', loc: 'Washington, DC', year: '2025', gold: true },
-  { dist: '70.3', name: 'IRONMAN 70.3 Augusta', loc: 'Augusta, GA', year: '2024', gold: false },
-  { dist: '10K', name: 'Broad Street Run', loc: 'Philadelphia, PA', year: '2023', gold: false },
-  { dist: '50K', name: 'Seneca Creek Ultra', loc: 'Gaithersburg, MD', year: '2022', gold: true },
-  { dist: '26.2', name: 'Marine Corps Marathon', loc: 'Arlington, VA', year: '2024', gold: false },
-  { dist: '5K', name: 'Turkey Trot', loc: 'Chicago, IL', year: '2023', gold: false },
-  { dist: '13.1', name: "Rock 'n' Roll Half", loc: 'Nashville, TN', year: '2023', gold: false },
-  { dist: '100M', name: 'Western States', loc: 'Auburn, CA', year: '2022', gold: true },
-]
-
-function Stamp({ dist, name, loc, year, gold, size = 130 }) {
-  const navy = '#1B2A4A'
-  const gold_c = '#C9A84C'
-  const color = gold ? gold_c : navy
-  const fontSize = dist.length > 4 ? 16 : dist.length > 2 ? 20 : 26
-
-  return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%',
-      border: `2px solid ${color}`,
-      display: 'flex', flexDirection: 'column',
-      alignItems: 'center', justifyContent: 'center',
-      position: 'relative', flexShrink: 0,
-      background: gold ? 'rgba(201,168,76,0.04)' : '#fff',
-    }}>
-      <div style={{
-        position: 'absolute', inset: 6, borderRadius: '50%',
-        border: '0.75px dashed ' + (gold ? 'rgba(201,168,76,0.3)' : 'rgba(27,42,74,0.18)'),
-      }} />
-      <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize, color, lineHeight: 1, letterSpacing: '0.04em' }}>{dist}</div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 7, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color, textAlign: 'center', padding: '0 12px', lineHeight: 1.3, marginTop: 3 }}>{name}</div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 7, letterSpacing: '0.12em', textTransform: 'uppercase', color: gold_c, marginTop: 2 }}>{loc}</div>
-      <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: 7, letterSpacing: '0.18em', color: 'rgba(27,42,74,0.3)', marginTop: 1 }}>{year}</div>
-    </div>
-  )
-}
-
-function StampRow({ reverse = false, offset = 0 }) {
-  const items = [...STAMP_DATA, ...STAMP_DATA, ...STAMP_DATA]
-  return (
-    <div style={{ overflow: 'hidden', width: '100%' }}>
-      <div style={{
-        display: 'flex', gap: 20,
-        width: 'max-content',
-        animation: `${reverse ? 'stampLeft' : 'stampRight'} 40s linear infinite`,
-        animationDelay: `${offset}s`,
-      }}>
-        {items.map((s, i) => (
-          <Stamp key={i} {...s} size={110} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
 export default function Login() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
@@ -68,7 +10,6 @@ export default function Login() {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Inject fonts + keyframes
     const style = document.createElement('style')
     style.id = 'rp-login-styles'
     style.textContent = `
@@ -76,14 +17,6 @@ export default function Login() {
       @keyframes tickerScroll {
         from { transform: translateX(0); }
         to { transform: translateX(-50%); }
-      }
-      @keyframes stampRight {
-        from { transform: translateX(-33.333%); }
-        to { transform: translateX(0); }
-      }
-      @keyframes stampLeft {
-        from { transform: translateX(0); }
-        to { transform: translateX(-33.333%); }
       }
       .rp-input {
         width: 100%; padding: 12px 14px;
@@ -144,14 +77,13 @@ export default function Login() {
     else navigate('/home')
   }
 
-  const TICKER_ITEMS = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '26.2', '13.1', '10K', '5K', '70.3', '50K', '100M']
+  const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
 
   return (
     <div style={{
       minHeight: '100vh',
       background: '#fff',
       display: 'flex',
-      flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
       position: 'relative',
@@ -159,46 +91,34 @@ export default function Login() {
       fontFamily: "'Barlow', sans-serif",
     }}>
 
-      {/* Top stamp row */}
-      <div style={{ position: 'absolute', top: 24, left: 0, right: 0, opacity: 0.55 }}>
-        <StampRow reverse={false} offset={0} />
-      </div>
-
-      {/* Giant horizontal ticker — ghost outlined numbers */}
+      {/* Giant slow ghost ticker */}
       <div style={{
         position: 'absolute',
         top: '50%',
-        transform: 'translateY(-58%)',
+        transform: 'translateY(-55%)',
         left: 0,
-        display: 'flex',
-        alignItems: 'center',
         whiteSpace: 'nowrap',
         pointerEvents: 'none',
         zIndex: 0,
       }}>
         <div style={{
-          display: 'flex',
-          animation: 'tickerScroll 18s linear infinite',
-          width: 'max-content',
+          display: 'inline-flex',
+          alignItems: 'center',
+          animation: 'tickerScroll 60s linear infinite',
         }}>
-          {[...TICKER_ITEMS, ...TICKER_ITEMS].map((d, i) => (
+          {TICKER.map((d, i) => (
             <span key={i} style={{
               fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(160px, 22vw, 320px)',
+              fontSize: 'clamp(180px, 24vw, 340px)',
               color: 'transparent',
-              WebkitTextStroke: '1px rgba(27,42,74,0.06)',
+              WebkitTextStroke: '1px rgba(27,42,74,0.055)',
               lineHeight: 1,
-              padding: '0 32px',
+              padding: '0 40px',
               userSelect: 'none',
               flexShrink: 0,
             }}>{d}</span>
           ))}
         </div>
-      </div>
-
-      {/* Bottom stamp row */}
-      <div style={{ position: 'absolute', bottom: 24, left: 0, right: 0, opacity: 0.55 }}>
-        <StampRow reverse={true} offset={-12} />
       </div>
 
       {/* Login card */}
@@ -210,7 +130,7 @@ export default function Login() {
         padding: '40px 36px 32px',
         width: '100%',
         maxWidth: '380px',
-        margin: '160px 20px',
+        margin: '20px',
         boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)',
       }}>
 
