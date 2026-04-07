@@ -12,6 +12,7 @@ export default function VerifyEmail() {
   const [loading, setLoading] = useState(false)
   const [resent, setResent] = useState(false)
   const [resending, setResending] = useState(false)
+  const [verified, setVerified] = useState(false)
 
   const firstName = name ? name.split(' ')[0] : ''
 
@@ -25,6 +26,19 @@ export default function VerifyEmail() {
       @keyframes tickerScroll {
         from { transform: translateX(0); }
         to { transform: translateX(-50%); }
+      }
+      @keyframes checkPop {
+        0% { transform: scale(0); opacity: 0; }
+        60% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      @keyframes fadeSlideUp {
+        from { opacity: 0; transform: translateY(12px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(201,168,76,0.3); }
+        50% { box-shadow: 0 0 0 10px rgba(201,168,76,0); }
       }
       .rp-code-input {
         width: 100%; padding: 14px;
@@ -56,9 +70,14 @@ export default function VerifyEmail() {
       .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .step-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid #f0f2f5; }
       .step-row:last-child { border-bottom: none; }
-      .step-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; }
+      .step-dot { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 12px; transition: all 0.4s ease; }
       .step-dot.done { background: #C9A84C; color: #fff; }
+      .step-dot.done-anim { background: #C9A84C; color: #fff; animation: checkPop 0.5s ease forwards; }
       .step-dot.pending { background: #f0f2f5; color: #b0b8c4; border: 1.5px solid #e2e6ed; }
+      .step-label { font-size: 13px; transition: color 0.4s ease; }
+      .step-label.active { color: #1B2A4A; font-weight: 500; }
+      .step-label.muted { color: #9aa5b4; }
+      .success-message { animation: fadeSlideUp 0.5s ease forwards; }
     `
     if (!document.getElementById('rp-verify-styles')) document.head.appendChild(style)
     return () => document.getElementById('rp-verify-styles')?.remove()
@@ -69,27 +88,21 @@ export default function VerifyEmail() {
     setError(null)
     setLoading(true)
 
-    // Try signup OTP type first, then email type as fallback
-    let result = await supabase.auth.verifyOtp({
-      email,
-      token: code.trim(),
-      type: 'signup',
-    })
-
+    let result = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'signup' })
     if (result.error) {
-      result = await supabase.auth.verifyOtp({
-        email,
-        token: code.trim(),
-        type: 'email',
-      })
+      result = await supabase.auth.verifyOtp({ email, token: code.trim(), type: 'email' })
     }
 
     setLoading(false)
 
     if (result.error) {
-      setError('Invalid or expired code. Please check the code and try again, or resend.')
+      setError('Invalid or expired code. Please check and try again, or resend.')
     } else {
-      navigate(isNewUser ? '/build-passport' : '/home')
+      // Show success animation, then navigate after delay
+      setVerified(true)
+      setTimeout(() => {
+        navigate(isNewUser ? '/build-passport' : '/home')
+      }, 2200)
     }
   }
 
@@ -122,62 +135,89 @@ export default function VerifyEmail() {
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
             <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+          <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'rgba(201,168,76,0.1)', border: '1.5px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', animation: verified ? 'pulse 1s ease infinite' : 'none' }}>
             <svg width="22" height="18" viewBox="0 0 22 18" fill="none">
               <rect x="1" y="1" width="20" height="16" rx="2" stroke="#C9A84C" strokeWidth="1.5"/>
               <path d="M1 4l10 7 10-7" stroke="#C9A84C" strokeWidth="1.5"/>
             </svg>
           </div>
-          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#1B2A4A', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>CHECK YOUR INBOX</h1>
-          <p style={{ fontSize: '13px', color: '#9aa5b4', margin: '0 0 4px', fontWeight: 300, lineHeight: 1.6 }}>
-            {firstName ? `Welcome to Race Passport, ${firstName}.` : 'Welcome to Race Passport.'}<br />
-            We sent a verification code to
-          </p>
-          <p style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 600, margin: '0 0 4px' }}>{email}</p>
-          <p style={{ fontSize: '12px', color: '#9aa5b4', margin: 0, fontWeight: 300 }}>Enter it below to verify your email and finish creating your account.</p>
+          <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#1B2A4A', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>
+            {verified ? 'EMAIL VERIFIED!' : 'CHECK YOUR INBOX'}
+          </h1>
+          {!verified && (
+            <>
+              <p style={{ fontSize: '13px', color: '#9aa5b4', margin: '0 0 4px', fontWeight: 300, lineHeight: 1.6 }}>
+                {firstName ? `Welcome to Race Passport, ${firstName}.` : 'Welcome to Race Passport.'}<br />
+                We sent a verification code to
+              </p>
+              <p style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 600, margin: '0 0 4px' }}>{email}</p>
+              <p style={{ fontSize: '12px', color: '#9aa5b4', margin: 0, fontWeight: 300 }}>Enter it below to verify your email and finish creating your account.</p>
+            </>
+          )}
         </div>
 
-        {error && (
+        {!verified && error && (
           <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px' }}>{error}</div>
         )}
-        {resent && (
+        {!verified && resent && (
           <div style={{ background: '#f0faf4', border: '1px solid #bbf0d0', borderRadius: '6px', padding: '10px 14px', color: '#1a7a40', fontSize: '13px', marginBottom: '14px' }}>New code sent — check your inbox.</div>
         )}
 
-        <div style={{ marginBottom: '16px' }}>
-          <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Verification Code</label>
-          <input
-            className="rp-code-input"
-            type="text"
-            inputMode="numeric"
-            maxLength={8}
-            value={code}
-            onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
-            placeholder="· · · · · ·"
-            onKeyDown={e => e.key === 'Enter' && handleVerify()}
-          />
-          <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '5px 0 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
-            Enter the code exactly as shown in your email
-          </p>
-        </div>
+        {!verified && (
+          <>
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Verification Code</label>
+              <input
+                className="rp-code-input"
+                type="text"
+                inputMode="numeric"
+                maxLength={8}
+                value={code}
+                onChange={e => setCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="· · · · · ·"
+                onKeyDown={e => e.key === 'Enter' && handleVerify()}
+              />
+              <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '5px 0 0', textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '0.5px' }}>
+                Enter the code exactly as shown in your email
+              </p>
+            </div>
+            <button className="rp-primary" onClick={handleVerify} disabled={loading || code.length < 6} style={{ marginBottom: '16px' }}>
+              {loading ? 'Verifying...' : 'Verify Email'}
+            </button>
+          </>
+        )}
 
-        <button className="rp-primary" onClick={handleVerify} disabled={loading || code.length < 6} style={{ marginBottom: '16px' }}>
-          {loading ? 'Verifying...' : 'Verify Email'}
-        </button>
-
-        <div style={{ border: '1px solid #f0f2f5', borderRadius: '6px', padding: '8px 16px', marginBottom: '16px' }}>
+        {/* Progress steps */}
+        <div style={{ border: '1px solid #f0f2f5', borderRadius: '6px', padding: '8px 16px', marginBottom: verified ? 0 : '16px' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '2px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Your Passport Setup</div>
-          <div className="step-row"><div className="step-dot done">✓</div><span style={{ fontSize: '13px', color: '#1B2A4A', fontWeight: 500 }}>Account created</span></div>
-          <div className="step-row"><div className="step-dot pending">2</div><span style={{ fontSize: '13px', color: '#9aa5b4' }}>Email verified</span></div>
-          <div className="step-row"><div className="step-dot pending">3</div><span style={{ fontSize: '13px', color: '#9aa5b4' }}>Build your passport</span></div>
+          <div className="step-row">
+            <div className="step-dot done">✓</div>
+            <span className="step-label active">Account created</span>
+          </div>
+          <div className="step-row">
+            <div className={`step-dot ${verified ? 'done-anim' : 'pending'}`}>{verified ? '✓' : '2'}</div>
+            <span className={`step-label ${verified ? 'active' : 'muted'}`}>Email verified</span>
+          </div>
+          <div className="step-row">
+            <div className="step-dot pending">3</div>
+            <span className="step-label muted" style={{ color: verified ? '#1B2A4A' : undefined, fontWeight: verified ? 500 : undefined }}>
+              {verified ? (
+                <span className="success-message" style={{ color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", letterSpacing: '1px', textTransform: 'uppercase', fontSize: '12px' }}>
+                  Building your passport... →
+                </span>
+              ) : 'Build your passport'}
+            </span>
+          </div>
         </div>
 
-        <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '12px', margin: 0, fontWeight: 300 }}>
-          Didn't receive it? Check your spam or{' '}
-          <span onClick={handleResend} style={{ color: '#C9A84C', cursor: resending ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
-            {resending ? 'sending...' : 'resend code'}
-          </span>
-        </p>
+        {!verified && (
+          <p style={{ textAlign: 'center', color: '#9aa5b4', fontSize: '12px', margin: '16px 0 0', fontWeight: 300 }}>
+            Didn't receive it? Check your spam or{' '}
+            <span onClick={handleResend} style={{ color: '#C9A84C', cursor: resending ? 'not-allowed' : 'pointer', fontWeight: 600 }}>
+              {resending ? 'sending...' : 'resend code'}
+            </span>
+          </p>
+        )}
       </div>
     </div>
   )
