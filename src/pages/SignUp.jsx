@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function SignUp() {
   const navigate = useNavigate()
   const [email, setEmail] = useState('')
+  const [error, setError] = useState(null)
+  const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -31,6 +34,7 @@ export default function SignUp() {
       }
       .rp-primary:hover:not(:disabled) { background: #C9A84C; }
       .rp-primary:active:not(:disabled) { transform: scale(0.985); }
+      .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .rp-social {
         width: 100%; padding: 11px 14px; border-radius: 6px;
         border: 1.5px solid #e2e6ed; background: #fff; color: #1B2A4A;
@@ -39,20 +43,62 @@ export default function SignUp() {
         display: flex; align-items: center; justify-content: center; gap: 9px;
         opacity: 0.45; cursor: not-allowed;
       }
-      .rp-divider {
-        display: flex; align-items: center; gap: 10px; margin: 12px 0;
-      }
-      .rp-divider::before, .rp-divider::after {
-        content: ''; flex: 1; height: 1px; background: #e2e6ed;
-      }
+      .rp-divider { display: flex; align-items: center; gap: 10px; margin: 12px 0; }
+      .rp-divider::before, .rp-divider::after { content: ''; flex: 1; height: 1px; background: #e2e6ed; }
       .rp-divider span { font-size: 10px; color: #b0b8c4; font-family: 'Barlow Condensed', sans-serif; letter-spacing: 1.5px; }
     `
     if (!document.getElementById('rp-signup-styles')) document.head.appendChild(style)
     return () => document.getElementById('rp-signup-styles')?.remove()
   }, [])
 
-  const handleContinue = () => {
-    if (!email.trim() || !email.includes('@')) return
+  const handleContinue = async () => {
+    setError(null)
+    if (!email.trim() || !email.includes('@')) {
+      setError('Please enter a valid email address')
+      return
+    }
+
+    setLoading(true)
+
+    // Attempt a dummy sign-up to detect if the email already exists.
+    // Supabase returns identities: [] for existing emails when email confirmation is on.
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: email.trim(),
+      password: Math.random().toString(36) + Math.random().toString(36), // throwaway password
+      options: { emailRedirectTo: `${window.location.origin}/home` }
+    })
+
+    setLoading(false)
+
+    // Existing account detected
+    const alreadyExists =
+      signUpError?.message?.toLowerCase().includes('already registered') ||
+      signUpError?.message?.toLowerCase().includes('already been registered') ||
+      signUpError?.message?.toLowerCase().includes('user already exists') ||
+      (data?.user && data.user.identities && data.user.identities.length === 0)
+
+    if (alreadyExists) {
+      setError(
+        <span>
+          An account with this email already exists.{' '}
+          <Link to="/login" style={{ color: '#C9A84C', fontWeight: 600 }}>Sign in instead</Link>
+          {' '}or use{' '}
+          <Link to="/forgot-password" style={{ color: '#C9A84C', fontWeight: 600 }}>Forgot Password</Link>
+          {' '}to reset your password.
+        </span>
+      )
+      return
+    }
+
+    if (signUpError) {
+      setError(signUpError.message)
+      return
+    }
+
+    // Email is free — delete the throwaway user we just created and proceed
+    // (Supabase won't confirm it since no email was sent yet at this stage,
+    // the real account gets created properly on CreateAccount)
+    // Navigate and pass email through
     navigate('/create-account', { state: { email: email.trim() } })
   }
 
@@ -78,13 +124,24 @@ export default function SignUp() {
           <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: 0, textTransform: 'uppercase' }}>Create your Race Passport today</p>
         </div>
 
+        {error && (
+          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6 }}>{error}</div>
+        )}
+
         <div style={{ marginBottom: '20px' }}>
           <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
-          <input className="rp-input" type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" onKeyDown={e => e.key === 'Enter' && handleContinue()} />
+          <input
+            className="rp-input"
+            type="email"
+            value={email}
+            onChange={e => { setEmail(e.target.value); setError(null) }}
+            placeholder="your@email.com"
+            onKeyDown={e => e.key === 'Enter' && handleContinue()}
+          />
         </div>
 
-        <button className="rp-primary" onClick={handleContinue} disabled={!email.includes('@')} style={{ marginBottom: '4px' }}>
-          Continue
+        <button className="rp-primary" onClick={handleContinue} disabled={loading || !email.includes('@')} style={{ marginBottom: '4px' }}>
+          {loading ? 'Checking...' : 'Continue'}
         </button>
 
         <div className="rp-divider"><span>OR</span></div>
