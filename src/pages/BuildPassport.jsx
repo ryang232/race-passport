@@ -9,15 +9,70 @@ export default function BuildPassport() {
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
+  const [email, setEmail] = useState('')
+  const [phone, setPhone] = useState('')
+  const [dob, setDob] = useState('')
+  const [gender, setGender] = useState('')
+  const [address, setAddress] = useState('')
+  const [city, setCity] = useState('')
+  const [state, setState] = useState('')
+  const [zip, setZip] = useState('')
+  const [country, setCountry] = useState('United States')
   const [raceName, setRaceName] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
-  const [dob, setDob] = useState('')
-  const [gender, setGender] = useState('')
   const [shirtSize, setShirtSize] = useState('')
   const [experience, setExperience] = useState('')
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [profileLoaded, setProfileLoaded] = useState(false)
+
+  // Load existing profile data from Supabase
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user) return
+      const { data } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single()
+
+      if (data) {
+        // Split full_name into first/last if dedicated fields aren't stored yet
+        const metaFirst = user.user_metadata?.first_name
+        const metaLast = user.user_metadata?.last_name
+        const fullName = data.full_name || user.user_metadata?.full_name || ''
+        const parts = fullName.trim().split(' ')
+
+        setFirstName(metaFirst || parts[0] || '')
+        setLastName(metaLast || parts.slice(1).join(' ') || '')
+        setEmail(user.email || '')
+        setPhone(data.phone || '')
+        setDob(data.date_of_birth || '')
+        setGender(data.gender || '')
+        setAddress(data.address || '')
+        setCity(data.city || '')
+        setState(data.state || '')
+        setZip(data.zip_code || '')
+        setCountry(data.country || 'United States')
+        setRaceName(data.race_name || '')
+        setContactName(data.emergency_contact_name || '')
+        setContactPhone(data.emergency_contact_phone || '')
+        setShirtSize(data.shirt_size || '')
+        setExperience(data.experience_level || '')
+      } else {
+        // No profile row yet — pull from auth metadata
+        const meta = user.user_metadata || {}
+        const fullName = meta.full_name || ''
+        const parts = fullName.trim().split(' ')
+        setFirstName(meta.first_name || parts[0] || '')
+        setLastName(meta.last_name || parts.slice(1).join(' ') || '')
+        setEmail(user.email || '')
+      }
+      setProfileLoaded(true)
+    }
+    loadProfile()
+  }, [user])
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -29,86 +84,56 @@ export default function BuildPassport() {
         to { transform: translateX(-50%); }
       }
       .rp-input {
-        width: 100%; padding: 11px 14px;
-        border-radius: 6px;
-        border: 1.5px solid #e2e6ed;
-        background: #fafbfc;
-        color: #1B2A4A; font-size: 14px;
-        font-family: 'Barlow', sans-serif;
-        outline: none; box-sizing: border-box;
-        transition: border-color 0.15s, background 0.15s;
+        width: 100%; padding: 11px 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
+        font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
+        box-sizing: border-box; transition: border-color 0.15s, background 0.15s;
       }
       .rp-input:focus { border-color: #C9A84C; background: #fff; }
       .rp-input::placeholder { color: #b0b8c4; }
+      .rp-input.readonly { background: #f4f5f7; color: #9aa5b4; cursor: default; }
       .rp-select {
-        width: 100%; padding: 11px 14px;
-        border-radius: 6px;
-        border: 1.5px solid #e2e6ed;
-        background: #fafbfc;
-        color: #1B2A4A; font-size: 14px;
-        font-family: 'Barlow', sans-serif;
-        outline: none; box-sizing: border-box;
-        appearance: none;
+        width: 100%; padding: 11px 14px; border-radius: 6px;
+        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
+        font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
+        box-sizing: border-box; appearance: none; cursor: pointer;
         transition: border-color 0.15s;
-        cursor: pointer;
       }
       .rp-select:focus { border-color: #C9A84C; background: #fff; }
       .rp-primary {
-        width: 100%; padding: 13px;
-        border: none; background: #1B2A4A;
-        color: #fff;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 0.25em; text-transform: uppercase;
-        cursor: pointer;
-        transition: background 0.2s, transform 0.1s;
-        border-radius: 6px;
+        width: 100%; padding: 13px; border: none; background: #1B2A4A; color: #fff;
+        font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
+        letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer;
+        transition: background 0.2s, transform 0.1s; border-radius: 6px;
       }
       .rp-primary:hover:not(:disabled) { background: #C9A84C; }
       .rp-primary:active:not(:disabled) { transform: scale(0.985); }
       .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
       .rp-secondary {
-        width: 100%; padding: 12px;
-        border: 1.5px solid #e2e6ed;
-        background: #fff; color: #1B2A4A;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 0.25em; text-transform: uppercase;
-        cursor: pointer;
-        transition: border-color 0.2s, background 0.2s;
-        border-radius: 6px;
+        width: 100%; padding: 12px; border: 1.5px solid #e2e6ed;
+        background: #fff; color: #1B2A4A; font-family: 'Barlow Condensed', sans-serif;
+        font-size: 13px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase;
+        cursor: pointer; transition: border-color 0.2s, background 0.2s; border-radius: 6px;
       }
       .rp-secondary:hover { border-color: #1B2A4A; background: #f8f9fb; }
       .size-btn {
-        padding: 9px 0;
-        border-radius: 6px;
-        border: 1.5px solid #e2e6ed;
-        background: #fafbfc;
-        color: #1B2A4A;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600;
-        letter-spacing: 1px;
-        cursor: pointer;
-        transition: all 0.15s;
-        flex: 1;
+        padding: 9px 0; border-radius: 6px; border: 1.5px solid #e2e6ed;
+        background: #fafbfc; color: #1B2A4A; font-family: 'Barlow Condensed', sans-serif;
+        font-size: 12px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
+        transition: all 0.15s; flex: 1;
       }
       .size-btn:hover { border-color: #1B2A4A; }
       .size-btn.selected { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-      .field-label {
-        display: block; font-size: '10px'; font-weight: 600;
-        letter-spacing: 1.5px; color: #9aa5b4;
-        margin-bottom: 5px; text-transform: uppercase;
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 10px;
+      .section-header {
+        font-family: 'Bebas Neue', sans-serif;
+        font-size: 20px; color: #1B2A4A; letter-spacing: 1px;
+        padding: 14px 0 8px; border-bottom: 2px solid #1B2A4A;
+        margin-bottom: 14px; margin-top: 8px;
       }
-      .section-divider {
-        font-family: 'Barlow Condensed', sans-serif;
-        font-size: 9px; font-weight: 600;
-        letter-spacing: 2px; color: #9aa5b4;
-        text-transform: uppercase;
-        padding: 10px 0 6px;
-        border-bottom: 1px solid #f0f2f5;
-        margin-bottom: 12px;
+      .field-label {
+        display: block; font-size: 10px; font-weight: 600;
+        letter-spacing: 1.5px; color: #9aa5b4; margin-bottom: 5px;
+        text-transform: uppercase; font-family: 'Barlow Condensed', sans-serif;
       }
     `
     if (!document.getElementById('rp-bp-styles')) document.head.appendChild(style)
@@ -117,14 +142,12 @@ export default function BuildPassport() {
 
   const handleSaveAndContinue = async () => {
     setError(null)
-
-    // Validate required fields
     if (!firstName.trim() || !lastName.trim() || !dob.trim()) {
       setError(
         <span>
           <strong>First name, last name, and date of birth are required</strong> to search for your past race results on RunSignup.
           <br /><br />
-          If you'd like to skip this and set up your passport later, press <strong>Skip for Now</strong> below.
+          If you'd like to set this up later, press <strong>Skip for Now</strong> below.
         </span>
       )
       return
@@ -136,26 +159,24 @@ export default function BuildPassport() {
       .update({
         full_name: `${firstName.trim()} ${lastName.trim()}`,
         race_name: raceName.trim() || null,
+        phone: phone.trim() || null,
         emergency_contact_name: contactName.trim() || null,
         emergency_contact_phone: contactPhone.trim() || null,
         date_of_birth: dob || null,
         gender: gender || null,
         shirt_size: shirtSize || null,
         experience_level: experience || null,
+        address: address.trim() || null,
+        city: city.trim() || null,
+        state: state.trim() || null,
+        zip_code: zip.trim() || null,
+        country: country.trim() || null,
       })
       .eq('id', user?.id)
 
     setSaving(false)
-
-    if (error) {
-      setError('Something went wrong saving your profile. Please try again.')
-    } else {
-      navigate('/home')
-    }
-  }
-
-  const handleSkip = () => {
-    navigate('/home')
+    if (error) setError('Something went wrong saving your profile. Please try again.')
+    else navigate('/home')
   }
 
   const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
@@ -163,8 +184,6 @@ export default function BuildPassport() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden', fontFamily: "'Barlow', sans-serif", padding: '40px 0' }}>
-
-      {/* Ghost ticker */}
       <div style={{ position: 'fixed', top: '50%', transform: 'translateY(-55%)', left: 0, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0 }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', animation: 'tickerScroll 60s linear infinite' }}>
           {TICKER.map((d, i) => (
@@ -173,42 +192,38 @@ export default function BuildPassport() {
         </div>
       </div>
 
-      {/* Card */}
-      <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '36px 36px 32px', width: '100%', maxWidth: '440px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
+      <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '36px 36px 32px', width: '100%', maxWidth: '460px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
 
-        {/* Wordmark + header */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
             <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
           <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '34px', color: '#1B2A4A', margin: '0 0 4px', letterSpacing: '1.5px', lineHeight: 1 }}>BUILD YOUR PASSPORT</h1>
-          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: '0 0 14px', textTransform: 'uppercase' }}>Step 1 of 2 — Your Racing Profile</p>
-
-          {/* Progress bar */}
-          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '16px' }}>
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: '0 0 12px', textTransform: 'uppercase' }}>Step 1 of 2 — Your Racing Profile</p>
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', marginBottom: '14px' }}>
             <div style={{ height: '3px', width: '40px', background: '#C9A84C', borderRadius: '2px' }} />
             <div style={{ height: '3px', width: '40px', background: '#e2e6ed', borderRadius: '2px' }} />
           </div>
+          <p style={{ fontSize: '12px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6, textAlign: 'left', background: '#f8f9fb', border: '1px solid #e2e6ed', borderRadius: '6px', padding: '12px 14px' }}>
+            <strong style={{ color: '#1B2A4A' }}>Why do we ask for this?</strong> When you find a race through Race Passport, you're currently directed to the race's own registration page. In a future version, you'll be able to register directly inside Race Passport using the details below — so we want them ready when that day comes.
+          </p>
         </div>
 
         {/* Skip banner */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fb', border: '1px solid #e2e6ed', borderRadius: '6px', padding: '10px 14px', marginBottom: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fb', border: '1px solid #e2e6ed', borderRadius: '6px', padding: '10px 14px', marginBottom: '16px' }}>
           <span style={{ fontSize: '12px', color: '#6b7a8d', fontWeight: 300 }}>This can wait — explore Race Passport first.</span>
-          <button onClick={handleSkip} style={{ background: 'none', border: 'none', color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', fontWeight: 600, letterSpacing: '1px', cursor: 'pointer', textTransform: 'uppercase', padding: 0, flexShrink: 0, marginLeft: '12px' }}>Skip →</button>
+          <button onClick={() => navigate('/home')} style={{ background: 'none', border: 'none', color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', fontWeight: 600, letterSpacing: '1px', cursor: 'pointer', textTransform: 'uppercase', padding: 0, flexShrink: 0, marginLeft: '12px' }}>Skip →</button>
         </div>
-
-        <p style={{ fontSize: '11px', color: '#9aa5b4', margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><circle cx="6" cy="6" r="5.5" stroke="#9aa5b4"/><path d="M6 5.5V8.5M6 3.5V4" stroke="#9aa5b4" strokeWidth="1.2" strokeLinecap="round"/></svg>
-          All fields can be updated anytime from your profile settings.
-        </p>
 
         {error && (
           <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '12px 14px', color: '#c53030', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6 }}>{error}</div>
         )}
 
-        {/* Your Name */}
-        <div className="section-divider">Your Name</div>
+        {/* YOUR RACE PASSPORT INFORMATION */}
+        <div className="section-header">Your Race Passport Information</div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
           <div>
             <label className="field-label">First Name <span style={{ color: '#C9A84C' }}>*</span></label>
@@ -219,25 +234,17 @@ export default function BuildPassport() {
             <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" />
           </div>
         </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label className="field-label">Race Name</label>
-          <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Billy" />
-          <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '4px 0 0' }}>The name that appears on your bib. Leave blank to use your full name.</p>
-        </div>
 
-        {/* Emergency Contact */}
-        <div className="section-divider">Emergency Contact</div>
         <div style={{ marginBottom: '10px' }}>
-          <label className="field-label">Contact Name</label>
-          <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" />
-        </div>
-        <div style={{ marginBottom: '16px' }}>
-          <label className="field-label">Contact Phone</label>
-          <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+          <label className="field-label">Email</label>
+          <input className="rp-input readonly" type="email" value={email} readOnly />
         </div>
 
-        {/* Personal Info */}
-        <div className="section-divider">Personal Info</div>
+        <div style={{ marginBottom: '10px' }}>
+          <label className="field-label">Phone Number</label>
+          <input className="rp-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+        </div>
+
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
           <div>
             <label className="field-label">Date of Birth <span style={{ color: '#C9A84C' }}>*</span></label>
@@ -255,8 +262,58 @@ export default function BuildPassport() {
           </div>
         </div>
 
-        {/* Shirt Size */}
+        <div style={{ marginBottom: '10px' }}>
+          <label className="field-label">Street Address</label>
+          <input className="rp-input" type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
+          <div>
+            <label className="field-label">City</label>
+            <input className="rp-input" type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="New York" />
+          </div>
+          <div>
+            <label className="field-label">State</label>
+            <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="NY" />
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+          <div>
+            <label className="field-label">Zip Code</label>
+            <input className="rp-input" type="text" value={zip} onChange={e => setZip(e.target.value)} placeholder="10001" />
+          </div>
+          <div>
+            <label className="field-label">Country</label>
+            <input className="rp-input" type="text" value={country} onChange={e => setCountry(e.target.value)} placeholder="United States" />
+          </div>
+        </div>
+
+        {/* RACE INFO */}
+        <div className="section-header">Race Info</div>
+
         <div style={{ marginBottom: '16px' }}>
+          <label className="field-label">Race Name (Bib Name)</label>
+          <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Billy" />
+          <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '4px 0 0' }}>The name that appears on your bib. Leave blank to use your full name.</p>
+        </div>
+
+        {/* EMERGENCY CONTACT */}
+        <div className="section-header">Emergency Contact</div>
+
+        <div style={{ marginBottom: '10px' }}>
+          <label className="field-label">Contact Name</label>
+          <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" />
+        </div>
+        <div style={{ marginBottom: '16px' }}>
+          <label className="field-label">Contact Phone</label>
+          <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
+        </div>
+
+        {/* RUNNING BACKGROUND */}
+        <div className="section-header">Running Background</div>
+
+        <div style={{ marginBottom: '12px' }}>
           <label className="field-label">Shirt Size</label>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
             {SIZES.map(size => (
@@ -265,8 +322,6 @@ export default function BuildPassport() {
           </div>
         </div>
 
-        {/* Running Background */}
-        <div className="section-divider">Running Background</div>
         <div style={{ marginBottom: '24px' }}>
           <label className="field-label">Experience Level</label>
           <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)}>
@@ -282,18 +337,15 @@ export default function BuildPassport() {
         <button className="rp-primary" onClick={handleSaveAndContinue} disabled={saving} style={{ marginBottom: '10px' }}>
           {saving ? 'Saving...' : 'Save & Continue →'}
         </button>
-        <button className="rp-secondary" onClick={handleSkip}>
-          Skip for Now
-        </button>
+        <button className="rp-secondary" onClick={() => navigate('/home')}>Skip for Now</button>
 
-        {/* Next up teaser */}
+        {/* Next up */}
         <div style={{ marginTop: '20px', padding: '14px', background: '#f8f9fb', borderRadius: '6px', border: '1px solid #e2e6ed' }}>
           <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', fontWeight: 600, letterSpacing: '2px', color: '#9aa5b4', textTransform: 'uppercase', margin: '0 0 4px' }}>Next Up</p>
           <p style={{ fontSize: '12px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
             We'll search <strong style={{ color: '#1B2A4A' }}>RunSignup</strong> for your past results to add them to your Race Passport.
           </p>
         </div>
-
       </div>
     </div>
   )
