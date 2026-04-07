@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 
+function ErrorBox({ children }) {
+  return (
+    <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '10px 14px', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <span style={{ color: '#e53e3e', fontSize: '15px', lineHeight: 1.3, flexShrink: 0, fontWeight: 700 }}>✕</span>
+      <span style={{ color: '#1B2A4A' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function CreateAccount() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -32,7 +41,7 @@ export default function CreateAccount() {
       }
       .rp-input:focus { border-color: #C9A84C; background: #fff; }
       .rp-input::placeholder { color: #b0b8c4; }
-      .rp-input.prefilled { background: #fafbfc; color: #9aa5b4; }
+      .rp-input.prefilled { background: #f4f5f7; color: #9aa5b4; }
       .rp-primary {
         width: 100%; padding: 13px; border: none; background: #1B2A4A; color: #fff;
         font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
@@ -57,9 +66,6 @@ export default function CreateAccount() {
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
 
     setLoading(true)
-
-    // Check if email already exists by attempting a password reset — 
-    // safer: try signing up and catch the duplicate error
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -72,7 +78,6 @@ export default function CreateAccount() {
         emailRedirectTo: `${window.location.origin}/home`,
       }
     })
-
     setLoading(false)
 
     if (signUpError) {
@@ -97,8 +102,6 @@ export default function CreateAccount() {
       return
     }
 
-    // Supabase returns a user but with no session if email confirmation is on
-    // Check if identities is empty — means email already exists but unconfirmed
     if (data?.user && data.user.identities && data.user.identities.length === 0) {
       setError(
         <span>
@@ -145,11 +148,8 @@ export default function CreateAccount() {
           <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', letterSpacing: '2.5px', color: '#9aa5b4', margin: 0, textTransform: 'uppercase' }}>Create your Race Passport today</p>
         </div>
 
-        {error && (
-          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '10px 14px', color: '#c53030', fontSize: '13px', marginBottom: '14px', lineHeight: 1.6 }}>{error}</div>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
 
-        {/* First + Last name row */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
           <div>
             <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>First Name</label>
@@ -163,13 +163,7 @@ export default function CreateAccount() {
 
         <div style={{ marginBottom: '10px' }}>
           <label style={{ display: 'block', fontSize: '10px', fontWeight: '600', letterSpacing: '1.5px', color: '#9aa5b4', marginBottom: '5px', textTransform: 'uppercase', fontFamily: "'Barlow Condensed', sans-serif" }}>Email</label>
-          <input
-            className={`rp-input${prefillEmail ? ' prefilled' : ''}`}
-            type="email" value={email}
-            onChange={e => setEmail(e.target.value)}
-            placeholder="your@email.com"
-            readOnly={!!prefillEmail}
-          />
+          <input className={`rp-input${prefillEmail ? ' prefilled' : ''}`} type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" readOnly={!!prefillEmail} />
         </div>
 
         <div style={{ marginBottom: '10px' }}>
