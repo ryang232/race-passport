@@ -3,6 +3,15 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+function ErrorBox({ children }) {
+  return (
+    <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '12px 14px', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+      <span style={{ color: '#e53e3e', fontSize: '15px', lineHeight: 1.3, flexShrink: 0, fontWeight: 700 }}>✕</span>
+      <span style={{ color: '#1B2A4A' }}>{children}</span>
+    </div>
+  )
+}
+
 export default function BuildPassport() {
   const navigate = useNavigate()
   const { user } = useAuth()
@@ -25,25 +34,16 @@ export default function BuildPassport() {
   const [experience, setExperience] = useState('')
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [profileLoaded, setProfileLoaded] = useState(false)
 
-  // Load existing profile data from Supabase
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', user.id)
-        .single()
-
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (data) {
-        // Split full_name into first/last if dedicated fields aren't stored yet
         const metaFirst = user.user_metadata?.first_name
         const metaLast = user.user_metadata?.last_name
         const fullName = data.full_name || user.user_metadata?.full_name || ''
         const parts = fullName.trim().split(' ')
-
         setFirstName(metaFirst || parts[0] || '')
         setLastName(metaLast || parts.slice(1).join(' ') || '')
         setEmail(user.email || '')
@@ -61,7 +61,6 @@ export default function BuildPassport() {
         setShirtSize(data.shirt_size || '')
         setExperience(data.experience_level || '')
       } else {
-        // No profile row yet — pull from auth metadata
         const meta = user.user_metadata || {}
         const fullName = meta.full_name || ''
         const parts = fullName.trim().split(' ')
@@ -69,7 +68,6 @@ export default function BuildPassport() {
         setLastName(meta.last_name || parts.slice(1).join(' ') || '')
         setEmail(user.email || '')
       }
-      setProfileLoaded(true)
     }
     loadProfile()
   }, [user])
@@ -96,8 +94,7 @@ export default function BuildPassport() {
         width: 100%; padding: 11px 14px; border-radius: 6px;
         border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
         font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
-        box-sizing: border-box; appearance: none; cursor: pointer;
-        transition: border-color 0.15s;
+        box-sizing: border-box; appearance: none; cursor: pointer; transition: border-color 0.15s;
       }
       .rp-select:focus { border-color: #C9A84C; background: #fff; }
       .rp-primary {
@@ -125,15 +122,14 @@ export default function BuildPassport() {
       .size-btn:hover { border-color: #1B2A4A; }
       .size-btn.selected { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
       .section-header {
-        font-family: 'Bebas Neue', sans-serif;
-        font-size: 20px; color: #1B2A4A; letter-spacing: 1px;
-        padding: 14px 0 8px; border-bottom: 2px solid #1B2A4A;
+        font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: #1B2A4A;
+        letter-spacing: 1px; padding: 14px 0 8px; border-bottom: 2px solid #1B2A4A;
         margin-bottom: 14px; margin-top: 8px;
       }
       .field-label {
-        display: block; font-size: 10px; font-weight: 600;
-        letter-spacing: 1.5px; color: #9aa5b4; margin-bottom: 5px;
-        text-transform: uppercase; font-family: 'Barlow Condensed', sans-serif;
+        display: block; font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
+        color: #9aa5b4; margin-bottom: 5px; text-transform: uppercase;
+        font-family: 'Barlow Condensed', sans-serif;
       }
     `
     if (!document.getElementById('rp-bp-styles')) document.head.appendChild(style)
@@ -152,28 +148,23 @@ export default function BuildPassport() {
       )
       return
     }
-
     setSaving(true)
-    const { error } = await supabase
-      .from('profiles')
-      .update({
-        full_name: `${firstName.trim()} ${lastName.trim()}`,
-        race_name: raceName.trim() || null,
-        phone: phone.trim() || null,
-        emergency_contact_name: contactName.trim() || null,
-        emergency_contact_phone: contactPhone.trim() || null,
-        date_of_birth: dob || null,
-        gender: gender || null,
-        shirt_size: shirtSize || null,
-        experience_level: experience || null,
-        address: address.trim() || null,
-        city: city.trim() || null,
-        state: state.trim() || null,
-        zip_code: zip.trim() || null,
-        country: country.trim() || null,
-      })
-      .eq('id', user?.id)
-
+    const { error } = await supabase.from('profiles').update({
+      full_name: `${firstName.trim()} ${lastName.trim()}`,
+      race_name: raceName.trim() || null,
+      phone: phone.trim() || null,
+      emergency_contact_name: contactName.trim() || null,
+      emergency_contact_phone: contactPhone.trim() || null,
+      date_of_birth: dob || null,
+      gender: gender || null,
+      shirt_size: shirtSize || null,
+      experience_level: experience || null,
+      address: address.trim() || null,
+      city: city.trim() || null,
+      state: state.trim() || null,
+      zip_code: zip.trim() || null,
+      country: country.trim() || null,
+    }).eq('id', user?.id)
     setSaving(false)
     if (error) setError('Something went wrong saving your profile. Please try again.')
     else navigate('/home')
@@ -194,7 +185,6 @@ export default function BuildPassport() {
 
       <div style={{ position: 'relative', zIndex: 10, background: '#fff', borderRadius: '4px', padding: '36px 36px 32px', width: '100%', maxWidth: '460px', margin: '20px', boxShadow: '0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
 
-        {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '14px' }}>
             <div style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C' }} />
@@ -211,17 +201,13 @@ export default function BuildPassport() {
           </p>
         </div>
 
-        {/* Skip banner */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8f9fb', border: '1px solid #e2e6ed', borderRadius: '6px', padding: '10px 14px', marginBottom: '16px' }}>
           <span style={{ fontSize: '12px', color: '#6b7a8d', fontWeight: 300 }}>This can wait — explore Race Passport first.</span>
           <button onClick={() => navigate('/home')} style={{ background: 'none', border: 'none', color: '#C9A84C', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', fontWeight: 600, letterSpacing: '1px', cursor: 'pointer', textTransform: 'uppercase', padding: 0, flexShrink: 0, marginLeft: '12px' }}>Skip →</button>
         </div>
 
-        {error && (
-          <div style={{ background: '#fff5f5', border: '1px solid #fed7d7', borderRadius: '6px', padding: '12px 14px', color: '#c53030', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6 }}>{error}</div>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
 
-        {/* YOUR RACE PASSPORT INFORMATION */}
         <div className="section-header">Your Race Passport Information</div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '10px' }}>
@@ -289,18 +275,14 @@ export default function BuildPassport() {
           </div>
         </div>
 
-        {/* RACE INFO */}
         <div className="section-header">Race Info</div>
-
         <div style={{ marginBottom: '16px' }}>
           <label className="field-label">Race Name (Bib Name)</label>
           <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Billy" />
           <p style={{ fontSize: '11px', color: '#b0b8c4', margin: '4px 0 0' }}>The name that appears on your bib. Leave blank to use your full name.</p>
         </div>
 
-        {/* EMERGENCY CONTACT */}
         <div className="section-header">Emergency Contact</div>
-
         <div style={{ marginBottom: '10px' }}>
           <label className="field-label">Contact Name</label>
           <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" />
@@ -310,9 +292,7 @@ export default function BuildPassport() {
           <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
         </div>
 
-        {/* RUNNING BACKGROUND */}
         <div className="section-header">Running Background</div>
-
         <div style={{ marginBottom: '12px' }}>
           <label className="field-label">Shirt Size</label>
           <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
@@ -321,7 +301,6 @@ export default function BuildPassport() {
             ))}
           </div>
         </div>
-
         <div style={{ marginBottom: '24px' }}>
           <label className="field-label">Experience Level</label>
           <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)}>
@@ -339,7 +318,6 @@ export default function BuildPassport() {
         </button>
         <button className="rp-secondary" onClick={() => navigate('/home')}>Skip for Now</button>
 
-        {/* Next up */}
         <div style={{ marginTop: '20px', padding: '14px', background: '#f8f9fb', borderRadius: '6px', border: '1px solid #e2e6ed' }}>
           <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '10px', fontWeight: 600, letterSpacing: '2px', color: '#9aa5b4', textTransform: 'uppercase', margin: '0 0 4px' }}>Next Up</p>
           <p style={{ fontSize: '12px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
