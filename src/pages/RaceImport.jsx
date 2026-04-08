@@ -3,31 +3,57 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
-// Hardcoded working Unsplash photo IDs per city
+// Carefully curated Unsplash photo IDs — verified city skylines/landmarks
 const CITY_PHOTOS = {
-  'Baltimore': 'photo-1558618666-fcd25c85cd64',
-  'Annapolis': 'photo-1592982537447-7440770cbfc9',
-  'Washington DC': 'photo-1569949381669-ecf31ae8e613',
-  'Frederick Maryland': 'photo-1506905925346-21bda4d32df4',
-  'Arlington Virginia': 'photo-1526778548025-fa2f459cd5c1',
-  'Maryland running': 'photo-1476480862126-209bfaa8edc8',
-  'default': 'photo-1552674605-db6ffd4facb5',
+  'Baltimore':        'https://images.unsplash.com/photo-1609868824796-e2a99d2a6b9f?w=600&q=80&fit=crop',
+  'Annapolis':        'https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=600&q=80&fit=crop',
+  'Washington DC':    'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=600&q=80&fit=crop',
+  'Frederick Maryland':'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80&fit=crop',
+  'Arlington Virginia':'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=600&q=80&fit=crop',
+  'Maryland running': 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80&fit=crop',
+  'running':          'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80&fit=crop',
+}
+
+// Stamp component matching landing page design
+function Stamp({ distance, gold = false, size = 56 }) {
+  const color = gold ? '#C9A84C' : '#1B2A4A'
+  const bg = gold ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.95)'
+  const fontSize = distance.length > 4 ? 11 : distance.length > 2 ? 14 : 18
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%',
+      border: `2px solid ${color}`,
+      background: bg,
+      display: 'flex', flexDirection: 'column',
+      alignItems: 'center', justifyContent: 'center',
+      position: 'relative', flexShrink: 0,
+    }}>
+      <div style={{
+        position: 'absolute', inset: 4, borderRadius: '50%',
+        border: `0.75px dashed ${gold ? 'rgba(201,168,76,0.4)' : 'rgba(27,42,74,0.25)'}`,
+      }} />
+      <div style={{
+        fontFamily: "'Bebas Neue', sans-serif",
+        fontSize, color, lineHeight: 1, letterSpacing: '0.04em',
+        position: 'relative', zIndex: 1,
+      }}>{distance}</div>
+    </div>
+  )
 }
 
 const MOCK_RACES = [
-  { id: 1, name: 'Baltimore Running Festival 10K', date: 'Oct 2024', location: 'Baltimore, MD', city: 'Baltimore', distance: '10K', time: '58:42', source: 'RUNSIGNUP' },
-  { id: 2, name: 'Bay Bridge Run', date: 'Apr 2024', location: 'Annapolis, MD', city: 'Annapolis', distance: '10K', time: '57:14', source: 'RUNSIGNUP' },
-  { id: 3, name: 'Marine Corps Marathon', date: 'Oct 2023', location: 'Washington, DC', city: 'Washington DC', distance: '26.2 mi', time: '4:12:08', source: 'ATHLINKS' },
-  { id: 4, name: 'Frederick Running Festival 5K', date: 'May 2023', location: 'Frederick, MD', city: 'Frederick Maryland', distance: '5K', time: '24:33', source: 'RUNSIGNUP' },
-  { id: 5, name: 'Cherry Blossom 10 Miler', date: 'Apr 2023', location: 'Washington, DC', city: 'Washington DC', distance: '10 mi', time: '1:38:55', source: 'ATHLINKS' },
-  { id: 6, name: '9/11 Memorial 5K', date: 'Sept 2022', location: 'Arlington, VA', city: 'Arlington Virginia', distance: '5K', time: '23:11', source: 'ATHLINKS' },
-  { id: 7, name: 'Hot Cider Hustle 5K', date: 'Nov 2022', location: 'Washington, DC', city: 'Washington DC', distance: '5K', time: '24:02', source: 'RUNSIGNUP' },
-  { id: 8, name: 'Suds & Soles 5K', date: 'Jun 2022', location: 'Rockville, MD', city: 'Maryland running', distance: '5K', time: '25:44', source: 'RUNSIGNUP' },
+  { id: 1, name: 'Baltimore Running Festival 10K', date: 'Oct 2024', location: 'Baltimore, MD', city: 'Baltimore', distance: '10K', time: '58:42', source: 'RUNSIGNUP', gold: false },
+  { id: 2, name: 'Bay Bridge Run', date: 'Apr 2024', location: 'Annapolis, MD', city: 'Annapolis', distance: '10K', time: '57:14', source: 'RUNSIGNUP', gold: false },
+  { id: 3, name: 'Marine Corps Marathon', date: 'Oct 2023', location: 'Washington, DC', city: 'Washington DC', distance: '26.2', time: '4:12:08', source: 'ATHLINKS', gold: true },
+  { id: 4, name: 'Frederick Running Festival 5K', date: 'May 2023', location: 'Frederick, MD', city: 'Frederick Maryland', distance: '5K', time: '24:33', source: 'RUNSIGNUP', gold: false },
+  { id: 5, name: 'Cherry Blossom 10 Miler', date: 'Apr 2023', location: 'Washington, DC', city: 'Washington DC', distance: '10 mi', time: '1:38:55', source: 'ATHLINKS', gold: false },
+  { id: 6, name: '9/11 Memorial 5K', date: 'Sept 2022', location: 'Arlington, VA', city: 'Arlington Virginia', distance: '5K', time: '23:11', source: 'ATHLINKS', gold: false },
+  { id: 7, name: 'Hot Cider Hustle 5K', date: 'Nov 2022', location: 'Washington, DC', city: 'Washington DC', distance: '5K', time: '24:02', source: 'RUNSIGNUP', gold: false },
+  { id: 8, name: 'Suds & Soles 5K', date: 'Jun 2022', location: 'Rockville, MD', city: 'Maryland running', distance: '5K', time: '25:44', source: 'RUNSIGNUP', gold: false },
 ]
 
-function getPhotoUrl(city) {
-  const id = CITY_PHOTOS[city] || CITY_PHOTOS['default']
-  return `https://images.unsplash.com/${id}?w=600&q=80&fit=crop`
+function getPhoto(city) {
+  return CITY_PHOTOS[city] || CITY_PHOTOS['running']
 }
 
 function RaceCard({ race, selected, onToggle }) {
@@ -73,10 +99,10 @@ function RaceCard({ race, selected, onToggle }) {
         color: '#fff', textTransform: 'uppercase',
       }}>{race.source}</div>
 
-      {/* Image area */}
+      {/* Image */}
       <div style={{ position: 'relative', height: 160, background: '#1B2A4A', overflow: 'hidden' }}>
         <img
-          src={getPhotoUrl(race.city)}
+          src={getPhoto(race.city)}
           alt={race.location}
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
@@ -84,13 +110,12 @@ function RaceCard({ race, selected, onToggle }) {
             transform: hovered ? 'scale(1.06)' : 'scale(1)',
           }}
         />
-        {/* Gradient overlay */}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.4))' }} />
 
         {/* Hover — finish time */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'rgba(27,42,74,0.9)',
+          background: 'rgba(27,42,74,0.92)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           opacity: hovered ? 1 : 0,
@@ -103,25 +128,18 @@ function RaceCard({ race, selected, onToggle }) {
       </div>
 
       {/* Card body */}
-      <div style={{ padding: '12px 14px' }}>
-        <div style={{
-          fontFamily: "'Bebas Neue', sans-serif",
-          fontSize: '17px', color: '#1B2A4A',
-          letterSpacing: '0.5px', lineHeight: 1.2, marginBottom: '6px',
-          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-        }}>{race.name}</div>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', color: '#6b7a8d', letterSpacing: '0.5px' }}>{race.location}</div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#b0b8c4', letterSpacing: '0.5px', marginTop: '1px' }}>{race.date}</div>
-          </div>
+      <div style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{
-            fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: '12px', fontWeight: 600, color: '#fff',
-            background: '#1B2A4A', padding: '4px 10px',
-            borderRadius: '4px', letterSpacing: '1px',
-          }}>{race.distance}</div>
+            fontFamily: "'Bebas Neue', sans-serif",
+            fontSize: '17px', color: '#1B2A4A',
+            letterSpacing: '0.5px', lineHeight: 1.2, marginBottom: '4px',
+            whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+          }}>{race.name}</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', color: '#6b7a8d', letterSpacing: '0.5px' }}>{race.location}</div>
+          <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#b0b8c4', letterSpacing: '0.5px', marginTop: '1px' }}>{race.date}</div>
         </div>
+        <Stamp distance={race.distance} gold={race.gold} size={52} />
       </div>
     </div>
   )
@@ -210,12 +228,6 @@ export default function RaceImport() {
     navigate('/home', { state: { imported: selectedCount } })
   }
 
-  const formatDob = (d) => {
-    if (!d) return ''
-    const dt = new Date(d)
-    return `${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}/${dt.getFullYear()}`
-  }
-
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
   if (loading) {
@@ -246,25 +258,36 @@ export default function RaceImport() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: "'Barlow', sans-serif", paddingBottom: '40px' }}>
-      <div style={{ background: '#1B2A4A', padding: '28px 20px 24px', borderBottom: '3px solid #C9A84C', textAlign: 'center' }}>
+    <div style={{ minHeight: '100vh', background: '#fff', fontFamily: "'Barlow', sans-serif", paddingBottom: '40px', position: 'relative', overflow: 'hidden' }}>
+
+      {/* Ghost ticker background */}
+      <div style={{ position: 'fixed', top: '50%', transform: 'translateY(-55%)', left: 0, whiteSpace: 'nowrap', pointerEvents: 'none', zIndex: 0 }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', animation: 'tickerScroll 60s linear infinite' }}>
+          {TICKER.map((d, i) => (
+            <span key={i} style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 'clamp(180px, 24vw, 340px)', color: 'transparent', WebkitTextStroke: '1px rgba(27,42,74,0.045)', lineHeight: 1, padding: '0 40px', userSelect: 'none', flexShrink: 0 }}>{d}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* Navy header */}
+      <div style={{ position: 'relative', zIndex: 1, background: '#1B2A4A', padding: '28px 20px 28px', borderBottom: '3px solid #C9A84C', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>RACE PASSPORT</span>
         </div>
-        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '20px', padding: '5px 14px', marginBottom: '14px' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '20px', padding: '5px 14px', marginBottom: '16px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#C9A84C', textTransform: 'uppercase' }}>{MOCK_RACES.length} Races Found</span>
         </div>
-        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '36px', color: '#fff', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>ARE THESE YOUR RACES?</h1>
-        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: '13px', color: 'rgba(255,255,255,0.55)', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
-          We searched using <strong style={{ color: '#fff', fontWeight: 500 }}>{firstName} {lastName}</strong>
-          {dob && <span> with DOB <strong style={{ color: '#fff', fontWeight: 500 }}>{formatDob(dob)}</strong></span>}.
-          <br />Uncheck anything that isn't yours.
+        <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '48px', color: '#fff', margin: '0 0 12px', letterSpacing: '1.5px', lineHeight: 1 }}>ARE THESE YOUR RACES?</h1>
+        <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: '14px', color: 'rgba(255,255,255,0.65)', margin: 0, fontWeight: 300, lineHeight: 1.7, maxWidth: '480px', marginLeft: 'auto', marginRight: 'auto' }}>
+          We searched using <strong style={{ color: '#fff', fontWeight: 500 }}>{firstName} {lastName}</strong> and your date of birth. Uncheck anything you don't recognize, or don't want to include on your Race Passport. You can add them back later if you change your mind!
         </p>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 20px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '960px', margin: '0 auto', padding: '0 20px' }}>
+
+        {/* Tabs + select */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0 12px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
@@ -285,13 +308,15 @@ export default function RaceImport() {
           </div>
         </div>
 
+        {/* Cards */}
         <div className="cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           {filteredRaces.map(race => (
             <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} />
           ))}
         </div>
 
-        <div style={{ border: '1.5px dashed #e2e6ed', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px' }}>
+        {/* Missing */}
+        <div style={{ border: '1.5px dashed #e2e6ed', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', background: 'rgba(255,255,255,0.85)' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Missing a race?</div>
           <p style={{ fontSize: '13px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
             Don't see something that should be here?{' '}
@@ -302,9 +327,11 @@ export default function RaceImport() {
           </p>
         </div>
 
-        <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
-          {saving ? 'Saving...' : `Confirm My Races (${selectedCount}) →`}
-        </button>
+        <div style={{ background: 'rgba(255,255,255,0.9)', borderRadius: '8px', padding: '4px' }}>
+          <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
+            {saving ? 'Saving...' : `Confirm My Races (${selectedCount}) →`}
+          </button>
+        </div>
 
         <p onClick={() => navigate('/home')} style={{ textAlign: 'center', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', color: '#9aa5b4', marginTop: '14px', cursor: 'pointer', letterSpacing: '0.5px' }}>
           Skip import — I'll add races later
