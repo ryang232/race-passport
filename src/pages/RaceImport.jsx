@@ -21,21 +21,32 @@ export default function RaceImport() {
   const [selected, setSelected] = useState({})
   const [activeSource, setActiveSource] = useState('ALL')
   const [saving, setSaving] = useState(false)
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
+  const [firstName, setFirstName] = useState('Ryan')
+  const [lastName, setLastName] = useState('Groene')
   const [dob, setDob] = useState('')
 
   useEffect(() => {
+    // Try to load profile if logged in, but always proceed to results
     const loadAndSearch = async () => {
-      if (!user) return
-      const { data } = await supabase.from('profiles').select('full_name, date_of_birth').eq('id', user.id).single()
-      if (data) {
-        const parts = (data.full_name || '').trim().split(' ')
-        setFirstName(parts[0] || '')
-        setLastName(parts.slice(1).join(' ') || '')
-        setDob(data.date_of_birth || '')
+      if (user) {
+        try {
+          const { data } = await supabase
+            .from('profiles')
+            .select('full_name, date_of_birth')
+            .eq('id', user.id)
+            .single()
+          if (data) {
+            const parts = (data.full_name || '').trim().split(' ')
+            setFirstName(parts[0] || 'Ryan')
+            setLastName(parts.slice(1).join(' ') || 'Groene')
+            setDob(data.date_of_birth || '')
+          }
+        } catch (e) {
+          // silently fail, use defaults
+        }
       }
-      // Simulate API search delay
+
+      // Always fire after 2.8s regardless of auth state
       setTimeout(() => {
         const initialSelected = {}
         MOCK_RACES.forEach(r => { initialSelected[r.id] = true })
@@ -43,17 +54,16 @@ export default function RaceImport() {
         setLoading(false)
       }, 2800)
     }
+
     loadAndSearch()
 
     const style = document.createElement('style')
     style.id = 'rp-ri-styles'
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
-      @keyframes tickerScroll {
-        from { transform: translateX(0); }
-        to { transform: translateX(-50%); }
-      }
+      @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
       @keyframes fadeIn { from { opacity:0; transform:translateY(16px);} to { opacity:1; transform:translateY(0);} }
+      @keyframes pulse { 0%,100%{opacity:0.3;} 50%{opacity:1;} }
       .rp-race-row {
         display: flex; align-items: center; gap: 12px;
         padding: 12px 14px; border-radius: 8px;
@@ -80,7 +90,6 @@ export default function RaceImport() {
         display: flex; align-items: center; gap: 6px;
       }
       .source-tab.active { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-      .source-dot { width: 6px; height: 6px; border-radius: 50%; }
       .rp-primary {
         width: 100%; padding: 15px; border: none; background: #1B2A4A; color: #fff;
         font-family: 'Barlow Condensed', sans-serif; font-size: 14px; font-weight: 600;
@@ -114,19 +123,18 @@ export default function RaceImport() {
 
   const handleConfirm = async () => {
     setSaving(true)
-    // In real implementation: save selected races to race_history table
     await new Promise(r => setTimeout(r, 800))
     setSaving(false)
     navigate('/home', { state: { imported: selectedCount } })
   }
-
-  const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
 
   const formatDob = (dob) => {
     if (!dob) return ''
     const d = new Date(dob)
     return `${String(d.getMonth() + 1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
   }
+
+  const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
 
   if (loading) {
     return (
@@ -152,7 +160,6 @@ export default function RaceImport() {
               <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C', animation: `pulse 1.1s ease-in-out ${i * 0.37}s infinite` }} />
             ))}
           </div>
-          <style>{`@keyframes pulse { 0%,100%{opacity:0.3;} 50%{opacity:1;} }`}</style>
         </div>
       </div>
     )
@@ -161,18 +168,15 @@ export default function RaceImport() {
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: "'Barlow', sans-serif", padding: '0 0 40px' }}>
 
-      {/* Header */}
       <div style={{ background: '#1B2A4A', padding: '28px 20px 24px', borderBottom: '3px solid #C9A84C', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
           <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '11px', letterSpacing: '3px', color: 'rgba(255,255,255,0.5)' }}>RACE PASSPORT</span>
         </div>
-
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', background: 'rgba(201,168,76,0.15)', border: '1px solid rgba(201,168,76,0.3)', borderRadius: '20px', padding: '5px 14px', marginBottom: '14px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#C9A84C', textTransform: 'uppercase' }}>{MOCK_RACES.length} Races Found</span>
         </div>
-
         <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '36px', color: '#fff', margin: '0 0 8px', letterSpacing: '1.5px', lineHeight: 1 }}>ARE THESE YOUR RACES?</h1>
         <p style={{ fontFamily: "'Barlow', sans-serif", fontSize: '13px', color: 'rgba(255,255,255,0.55)', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
           We searched using <strong style={{ color: '#fff', fontWeight: 500 }}>{firstName} {lastName}</strong>
@@ -183,21 +187,18 @@ export default function RaceImport() {
 
       <div style={{ maxWidth: '480px', margin: '0 auto', padding: '0 16px' }}>
 
-        {/* Source tabs */}
         <div style={{ display: 'flex', gap: '8px', padding: '16px 0 12px', justifyContent: 'center' }}>
           {[
-            { key: 'ALL', label: 'All', count: MOCK_RACES.length, color: '#1B2A4A' },
-            { key: 'RUNSIGNUP', label: 'RunSignup', count: runSignupCount, color: '#C9A84C' },
-            { key: 'ATHLINKS', label: 'Athlinks', count: athlinksCount, color: '#C9A84C' },
+            { key: 'ALL', label: 'All', count: MOCK_RACES.length },
+            { key: 'RUNSIGNUP', label: 'RunSignup', count: runSignupCount },
+            { key: 'ATHLINKS', label: 'Athlinks', count: athlinksCount },
           ].map(tab => (
             <button key={tab.key} className={`source-tab ${activeSource === tab.key ? 'active' : ''}`} onClick={() => setActiveSource(tab.key)}>
-              {activeSource !== tab.key && <div className="source-dot" style={{ background: tab.color }} />}
               {tab.label} <span style={{ opacity: 0.7 }}>{tab.count}</span>
             </button>
           ))}
         </div>
 
-        {/* Select/deselect row */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <button onClick={toggleAll} style={{ background: 'none', border: 'none', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#C9A84C', textTransform: 'uppercase', cursor: 'pointer', padding: 0 }}>
             {allSelected ? 'Deselect All' : 'Select All'}
@@ -205,7 +206,6 @@ export default function RaceImport() {
           <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#9aa5b4', letterSpacing: '0.5px' }}>{selectedCount} of {MOCK_RACES.length} selected</span>
         </div>
 
-        {/* Race list */}
         <div className="results-in">
           {filteredRaces.map(race => (
             <div key={race.id} className={`rp-race-row ${selected[race.id] ? 'selected' : ''}`} onClick={() => toggleRace(race.id)}>
@@ -230,7 +230,6 @@ export default function RaceImport() {
           ))}
         </div>
 
-        {/* Missing a race */}
         <div style={{ border: '1.5px dashed #e2e6ed', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px', marginTop: '4px' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Missing a race?</div>
           <p style={{ fontSize: '13px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
@@ -242,7 +241,6 @@ export default function RaceImport() {
           </p>
         </div>
 
-        {/* Confirm button */}
         <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
           {saving ? 'Saving...' : `Confirm My Races (${selectedCount}) →`}
         </button>
