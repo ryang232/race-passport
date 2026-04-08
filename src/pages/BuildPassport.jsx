@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
+import { isDemo, DEMO_EMAIL, DEMO_FIRST_NAME, DEMO_LAST_NAME, DEMO_DOB } from '../lib/demo'
 
 function ErrorBox({ children }) {
   return (
@@ -40,7 +41,15 @@ export default function BuildPassport() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!user) return
+      // Demo mode — prefill with demo data, no Supabase call needed
+      if (!user || isDemo(user?.email) || isDemo(email)) {
+        setFirstName(DEMO_FIRST_NAME)
+        setLastName(DEMO_LAST_NAME)
+        setEmail(DEMO_EMAIL)
+        setDob(DEMO_DOB)
+        return
+      }
+
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       if (data) {
         const metaFirst = user.user_metadata?.first_name
@@ -102,8 +111,8 @@ export default function BuildPassport() {
       .dist-btn.selected { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
       .yn-btn { flex:1; padding:10px; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:all 0.15s; }
       .yn-btn:hover { border-color:#1B2A4A; }
-      .yn-btn.selected-yes { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
-      .yn-btn.selected-no { background:#f0f2f5; color:#1B2A4A; border-color:#e2e6ed; }
+      .yn-btn.sel-yes { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
+      .yn-btn.sel-no { background:#f0f2f5; color:#1B2A4A; border-color:#e2e6ed; }
       .section-header { font-family:'Bebas Neue',sans-serif; font-size:20px; color:#1B2A4A; letter-spacing:1px; padding:14px 0 8px; border-bottom:2px solid #1B2A4A; margin-bottom:14px; margin-top:8px; }
       .field-label { display:block; font-size:10px; font-weight:600; letter-spacing:1.5px; color:#9aa5b4; margin-bottom:5px; text-transform:uppercase; font-family:'Barlow Condensed',sans-serif; }
     `
@@ -123,6 +132,13 @@ export default function BuildPassport() {
       )
       return
     }
+
+    // Demo mode — skip Supabase, go straight to race import
+    if (isDemo(email)) {
+      navigate('/race-import')
+      return
+    }
+
     setSaving(true)
     const { error } = await supabase.from('profiles').update({
       full_name: `${firstName.trim()} ${lastName.trim()}`,
@@ -176,7 +192,7 @@ export default function BuildPassport() {
           </div>
         </div>
 
-        {/* Next Up — moved to top */}
+        {/* Next Up */}
         <div style={{ marginBottom:'16px', padding:'14px', background:'#f8f9fb', borderRadius:'6px', border:'1px solid #e2e6ed' }}>
           <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', margin:'0 0 4px' }}>Next Up — Step 2 of 2</p>
           <p style={{ fontSize:'12px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6 }}>
@@ -324,8 +340,8 @@ export default function BuildPassport() {
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Have you ever run a Marathon?</label>
           <div style={{ display:'flex', gap:'8px' }}>
-            <button className={`yn-btn ${doneMarathon === 'yes' ? 'selected-yes' : ''}`} onClick={() => setDoneMarathon('yes')}>Yes</button>
-            <button className={`yn-btn ${doneMarathon === 'no' ? 'selected-no' : ''}`} onClick={() => { setDoneMarathon('no'); setDoneIronman('') }}>No</button>
+            <button className={`yn-btn ${doneMarathon === 'yes' ? 'sel-yes' : ''}`} onClick={() => setDoneMarathon('yes')}>Yes</button>
+            <button className={`yn-btn ${doneMarathon === 'no' ? 'sel-no' : ''}`} onClick={() => { setDoneMarathon('no'); setDoneIronman('') }}>No</button>
           </div>
         </div>
 
@@ -333,8 +349,8 @@ export default function BuildPassport() {
           <div style={{ marginBottom:'14px' }}>
             <label className="field-label">Have you done a Half or Full Ironman?</label>
             <div style={{ display:'flex', gap:'8px' }}>
-              <button className={`yn-btn ${doneIronman === 'yes' ? 'selected-yes' : ''}`} onClick={() => setDoneIronman('yes')}>Yes</button>
-              <button className={`yn-btn ${doneIronman === 'no' ? 'selected-no' : ''}`} onClick={() => setDoneIronman('no')}>No</button>
+              <button className={`yn-btn ${doneIronman === 'yes' ? 'sel-yes' : ''}`} onClick={() => setDoneIronman('yes')}>Yes</button>
+              <button className={`yn-btn ${doneIronman === 'no' ? 'sel-no' : ''}`} onClick={() => setDoneIronman('no')}>No</button>
             </div>
           </div>
         )}
