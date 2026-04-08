@@ -3,20 +3,35 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 
+// Hardcoded working Unsplash photo IDs per city
+const CITY_PHOTOS = {
+  'Baltimore': 'photo-1558618666-fcd25c85cd64',
+  'Annapolis': 'photo-1592982537447-7440770cbfc9',
+  'Washington DC': 'photo-1569949381669-ecf31ae8e613',
+  'Frederick Maryland': 'photo-1506905925346-21bda4d32df4',
+  'Arlington Virginia': 'photo-1526778548025-fa2f459cd5c1',
+  'Maryland running': 'photo-1476480862126-209bfaa8edc8',
+  'default': 'photo-1552674605-db6ffd4facb5',
+}
+
 const MOCK_RACES = [
   { id: 1, name: 'Baltimore Running Festival 10K', date: 'Oct 2024', location: 'Baltimore, MD', city: 'Baltimore', distance: '10K', time: '58:42', source: 'RUNSIGNUP' },
   { id: 2, name: 'Bay Bridge Run', date: 'Apr 2024', location: 'Annapolis, MD', city: 'Annapolis', distance: '10K', time: '57:14', source: 'RUNSIGNUP' },
   { id: 3, name: 'Marine Corps Marathon', date: 'Oct 2023', location: 'Washington, DC', city: 'Washington DC', distance: '26.2 mi', time: '4:12:08', source: 'ATHLINKS' },
   { id: 4, name: 'Frederick Running Festival 5K', date: 'May 2023', location: 'Frederick, MD', city: 'Frederick Maryland', distance: '5K', time: '24:33', source: 'RUNSIGNUP' },
-  { id: 5, name: 'Cherry Blossom 10 Miler', date: 'Apr 2023', location: 'Washington, DC', city: 'Washington DC cherry blossom', distance: '10 mi', time: '1:38:55', source: 'ATHLINKS' },
+  { id: 5, name: 'Cherry Blossom 10 Miler', date: 'Apr 2023', location: 'Washington, DC', city: 'Washington DC', distance: '10 mi', time: '1:38:55', source: 'ATHLINKS' },
   { id: 6, name: '9/11 Memorial 5K', date: 'Sept 2022', location: 'Arlington, VA', city: 'Arlington Virginia', distance: '5K', time: '23:11', source: 'ATHLINKS' },
-  { id: 7, name: 'Hot Cider Hustle 5K', date: 'Nov 2022', location: 'Washington, DC', city: 'Washington DC autumn', distance: '5K', time: '24:02', source: 'RUNSIGNUP' },
+  { id: 7, name: 'Hot Cider Hustle 5K', date: 'Nov 2022', location: 'Washington, DC', city: 'Washington DC', distance: '5K', time: '24:02', source: 'RUNSIGNUP' },
   { id: 8, name: 'Suds & Soles 5K', date: 'Jun 2022', location: 'Rockville, MD', city: 'Maryland running', distance: '5K', time: '25:44', source: 'RUNSIGNUP' },
 ]
 
+function getPhotoUrl(city) {
+  const id = CITY_PHOTOS[city] || CITY_PHOTOS['default']
+  return `https://images.unsplash.com/${id}?w=600&q=80&fit=crop`
+}
+
 function RaceCard({ race, selected, onToggle }) {
   const [hovered, setHovered] = useState(false)
-  const imgUrl = `https://source.unsplash.com/400x220/?${encodeURIComponent(race.city)},city`
 
   return (
     <div
@@ -24,12 +39,10 @@ function RaceCard({ race, selected, onToggle }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        borderRadius: '10px',
-        overflow: 'hidden',
+        borderRadius: '10px', overflow: 'hidden',
         border: selected ? '2.5px solid #C9A84C' : '1.5px solid #e2e6ed',
-        background: '#fff',
-        cursor: 'pointer',
-        transition: 'border-color 0.15s, transform 0.15s',
+        background: '#fff', cursor: 'pointer',
+        transition: 'border-color 0.15s, transform 0.2s',
         transform: hovered ? 'translateY(-3px)' : 'translateY(0)',
         position: 'relative',
       }}
@@ -39,7 +52,7 @@ function RaceCard({ race, selected, onToggle }) {
         position: 'absolute', top: 10, right: 10, zIndex: 10,
         width: 24, height: 24, borderRadius: '50%',
         background: selected ? '#C9A84C' : 'rgba(255,255,255,0.9)',
-        border: selected ? '2px solid #C9A84C' : '2px solid rgba(255,255,255,0.8)',
+        border: selected ? '2px solid #C9A84C' : '2px solid rgba(255,255,255,0.7)',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         transition: 'all 0.15s',
       }}>
@@ -60,28 +73,24 @@ function RaceCard({ race, selected, onToggle }) {
         color: '#fff', textTransform: 'uppercase',
       }}>{race.source}</div>
 
-      {/* City image */}
-      <div style={{ position: 'relative', height: 160, overflow: 'hidden' }}>
+      {/* Image area */}
+      <div style={{ position: 'relative', height: 160, background: '#1B2A4A', overflow: 'hidden' }}>
         <img
-          src={imgUrl}
-          alt={race.city}
+          src={getPhotoUrl(race.city)}
+          alt={race.location}
           style={{
             width: '100%', height: '100%', objectFit: 'cover',
             transition: 'transform 0.4s ease',
             transform: hovered ? 'scale(1.06)' : 'scale(1)',
           }}
-          onError={e => {
-            e.target.style.display = 'none'
-            e.target.parentElement.style.background = '#1B2A4A'
-          }}
         />
-        {/* Dark overlay always */}
-        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.45))' }} />
+        {/* Gradient overlay */}
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,0.05), rgba(0,0,0,0.4))' }} />
 
-        {/* Hover overlay — finish time */}
+        {/* Hover — finish time */}
         <div style={{
           position: 'absolute', inset: 0,
-          background: 'rgba(27,42,74,0.88)',
+          background: 'rgba(27,42,74,0.9)',
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center',
           opacity: hovered ? 1 : 0,
@@ -98,26 +107,19 @@ function RaceCard({ race, selected, onToggle }) {
         <div style={{
           fontFamily: "'Bebas Neue', sans-serif",
           fontSize: '17px', color: '#1B2A4A',
-          letterSpacing: '0.5px', lineHeight: 1.2,
-          marginBottom: '6px',
+          letterSpacing: '0.5px', lineHeight: 1.2, marginBottom: '6px',
           whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
         }}>{race.name}</div>
-
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', color: '#9aa5b4', letterSpacing: '0.5px' }}>
-              {race.location}
-            </div>
-            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#b0b8c4', letterSpacing: '0.5px', marginTop: '1px' }}>
-              {race.date}
-            </div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '12px', color: '#6b7a8d', letterSpacing: '0.5px' }}>{race.location}</div>
+            <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#b0b8c4', letterSpacing: '0.5px', marginTop: '1px' }}>{race.date}</div>
           </div>
           <div style={{
             fontFamily: "'Barlow Condensed', sans-serif",
-            fontSize: '12px', fontWeight: 600,
-            color: '#fff', background: '#1B2A4A',
-            padding: '4px 10px', borderRadius: '4px',
-            letterSpacing: '1px',
+            fontSize: '12px', fontWeight: 600, color: '#fff',
+            background: '#1B2A4A', padding: '4px 10px',
+            borderRadius: '4px', letterSpacing: '1px',
           }}>{race.distance}</div>
         </div>
       </div>
@@ -191,7 +193,6 @@ export default function RaceImport() {
   const toggleRace = (id) => setSelected(prev => ({ ...prev, [id]: !prev[id] }))
   const selectedCount = Object.values(selected).filter(Boolean).length
   const allSelected = selectedCount === MOCK_RACES.length
-
   const toggleAll = () => {
     const next = {}
     MOCK_RACES.forEach(r => { next[r.id] = !allSelected })
@@ -209,13 +210,13 @@ export default function RaceImport() {
     navigate('/home', { state: { imported: selectedCount } })
   }
 
-  const formatDob = (dob) => {
-    if (!dob) return ''
-    const d = new Date(dob)
-    return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}/${d.getFullYear()}`
+  const formatDob = (d) => {
+    if (!d) return ''
+    const dt = new Date(d)
+    return `${String(dt.getMonth()+1).padStart(2,'0')}/${String(dt.getDate()).padStart(2,'0')}/${dt.getFullYear()}`
   }
 
-  const TICKER = ['26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M', '26.2', '13.1', '10K', '5K', '70.3', '140.6', '50K', '100M']
+  const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
   if (loading) {
     return (
@@ -233,9 +234,7 @@ export default function RaceImport() {
             <span style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '12px', letterSpacing: '3.5px', color: '#1B2A4A' }}>RACE PASSPORT</span>
           </div>
           <h1 style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: '42px', color: '#1B2A4A', margin: '0 0 8px', letterSpacing: '2px', lineHeight: 1 }}>BUILDING YOUR PASSPORT</h1>
-          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '13px', letterSpacing: '1.5px', color: '#9aa5b4', margin: '0 0 28px', textTransform: 'uppercase' }}>
-            Searching RunSignup + Athlinks
-          </p>
+          <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '13px', letterSpacing: '1.5px', color: '#9aa5b4', margin: '0 0 28px', textTransform: 'uppercase' }}>Searching RunSignup + Athlinks</p>
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
             {[0,1,2].map(i => (
               <div key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#C9A84C', animation: `pulse 1.1s ease-in-out ${i*0.37}s infinite` }} />
@@ -248,8 +247,6 @@ export default function RaceImport() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#f4f5f7', fontFamily: "'Barlow', sans-serif", paddingBottom: '40px' }}>
-
-      {/* Header */}
       <div style={{ background: '#1B2A4A', padding: '28px 20px 24px', borderBottom: '3px solid #C9A84C', textAlign: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '12px' }}>
           <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#C9A84C' }} />
@@ -267,9 +264,7 @@ export default function RaceImport() {
         </p>
       </div>
 
-      <div style={{ maxWidth: '900px', margin: '0 auto', padding: '0 16px' }}>
-
-        {/* Source tabs + select all */}
+      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '0 20px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 0 12px' }}>
           <div style={{ display: 'flex', gap: '8px' }}>
             {[
@@ -283,21 +278,19 @@ export default function RaceImport() {
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#9aa5b4', letterSpacing: '0.5px' }}>{selectedCount} of {MOCK_RACES.length} selected</span>
+            <span style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', color: '#9aa5b4' }}>{selectedCount} of {MOCK_RACES.length} selected</span>
             <button onClick={toggleAll} style={{ background: 'none', border: 'none', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#C9A84C', textTransform: 'uppercase', cursor: 'pointer', padding: 0 }}>
               {allSelected ? 'Deselect All' : 'Select All'}
             </button>
           </div>
         </div>
 
-        {/* Card grid */}
         <div className="cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px', marginBottom: '20px' }}>
           {filteredRaces.map(race => (
             <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} />
           ))}
         </div>
 
-        {/* Missing a race */}
         <div style={{ border: '1.5px dashed #e2e6ed', borderRadius: '8px', padding: '14px 16px', marginBottom: '20px' }}>
           <div style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '11px', fontWeight: 600, letterSpacing: '1.5px', color: '#9aa5b4', textTransform: 'uppercase', marginBottom: '4px' }}>Missing a race?</div>
           <p style={{ fontSize: '13px', color: '#6b7a8d', margin: 0, fontWeight: 300, lineHeight: 1.6 }}>
