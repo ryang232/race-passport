@@ -3,21 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
-
-// Carefully sourced Unsplash photos — actual running/race images
-const RACE_PHOTOS = {
-  marathon:  'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=800&q=80&fit=crop',
-  triathlon: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&q=80&fit=crop',
-  cherry:    'https://images.unsplash.com/photo-1534787238916-9ba6764efd4f?w=800&q=80&fit=crop',
-  road:      'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800&q=80&fit=crop',
-  track:     'https://images.unsplash.com/photo-1461897104016-0b3b00cc81ee?w=800&q=80&fit=crop',
-  trail:     'https://images.unsplash.com/photo-1502224562085-639556652f33?w=800&q=80&fit=crop',
-}
+import { fetchUnsplashPhoto, getFallback } from '../lib/unsplash'
 
 const MOCK_UPCOMING = [
-  { id:1, name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', photo: RACE_PHOTOS.marathon },
-  { id:2, name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', photo: RACE_PHOTOS.triathlon },
-  { id:3, name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', photo: RACE_PHOTOS.cherry },
+  { id:1, name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', query:'marathon runners city road race' },
+  { id:2, name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', query:'triathlon swim race athlete' },
+  { id:3, name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', query:'cherry blossom running spring race' },
 ]
 
 const MOCK_STAMPS = [
@@ -66,7 +57,7 @@ function FlipStat({ items, interval = 3500 }) {
   }, [items, interval])
   return (
     <div style={{ textAlign:'center', transition:'opacity 0.28s', opacity: visible ? 1 : 0 }}>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(24px,3vw,40px)', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>{items[idx].value}</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(26px,3.5vw,44px)', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>{items[idx].value}</div>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', marginTop:'6px' }}>{items[idx].label}</div>
     </div>
   )
@@ -94,22 +85,38 @@ function Stamp({ distance, size = 60 }) {
 
 function RaceCard({ race }) {
   const [hovered, setHovered] = useState(false)
+  const [photo, setPhoto] = useState(getFallback('running'))
+
+  useEffect(() => {
+    fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url))
+  }, [race.query])
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'12px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 8px 28px rgba(27,42,74,0.16)' : '0 2px 10px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-4px)' : 'none', flexShrink:0, width:'clamp(260px,28vw,360px)' }}>
-      <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={race.photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0),rgba(0,0,0,0.55))' }} />
+      style={{
+        borderRadius:'12px', overflow:'hidden', background:'#fff',
+        boxShadow: hovered ? '0 8px 28px rgba(27,42,74,0.16)' : '0 2px 10px rgba(27,42,74,0.08)',
+        cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s',
+        transform: hovered ? 'translateY(-4px)' : 'none',
+        flexShrink:0, width:'clamp(260px,30vw,420px)',
+      }}
+    >
+      <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
+        <img
+          src={photo}
+          alt={race.name}
+          style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }}
+        />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0) 40%,rgba(0,0,0,0.6))' }} />
         <div style={{ position:'absolute', top:12, right:12, background:'rgba(201,168,76,0.92)', borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>Registered</div>
-        {/* Distance stamp overlay bottom left */}
         <div style={{ position:'absolute', bottom:12, left:12 }}>
           <Stamp distance={race.distance} size={44} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'5px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'16px 18px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'5px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.date} · {race.location}</div>
       </div>
     </div>
@@ -149,14 +156,15 @@ export default function Home() {
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
       .nav-tab {
-        display: flex; flex-direction: column; align-items: center; gap: 3px;
-        padding: 0 20px; height: 64px; justify-content: center;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        padding: 0 24px; height: 64px; justify-content: center;
         cursor: pointer; border: none; background: none; color: #9aa5b4;
         transition: color 0.15s; font-family: 'Barlow Condensed', sans-serif;
         font-size: 10px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;
-        position: relative; border-bottom: 2px solid transparent;
+        position: relative; border-bottom: 2px solid transparent; white-space: nowrap;
       }
       .nav-tab.active { color: #1B2A4A; border-bottom-color: #C9A84C; }
+      .nav-tab.active svg { color: #C9A84C; }
       .nav-tab:hover { color: #1B2A4A; }
       .dropdown-item { display: block; width: 100%; padding: 10px 18px; background: none; border: none; text-align: left; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1px; color: #1B2A4A; cursor: pointer; transition: background 0.1s; white-space: nowrap; }
       .dropdown-item:hover { background: #f4f5f7; }
@@ -189,27 +197,24 @@ export default function Home() {
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
 
-      {/* STICKY TOP NAV — full width */}
+      {/* STICKY TOP NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'#fff', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
         <div style={{ width:'100%', padding:'0 32px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
-
           {/* Logo */}
           <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-
-          {/* Nav tabs — centered */}
-          <div style={{ display:'flex', alignItems:'stretch', gap:'0' }}>
+          {/* Tabs */}
+          <div style={{ display:'flex', alignItems:'stretch' }}>
             {NAV_TABS.map(tab => (
               <button key={tab.path} className={`nav-tab ${location.pathname === tab.path ? 'active' : ''}`} onClick={() => navigate(tab.path)}>
-                <span style={{ color: location.pathname === tab.path ? '#C9A84C' : 'inherit' }}>{tab.icon}</span>
+                {tab.icon}
                 {tab.label}
               </button>
             ))}
           </div>
-
-          {/* Avatar dropdown */}
+          {/* Avatar */}
           <div ref={dropdownRef} style={{ position:'relative', display:'flex', alignItems:'center' }}>
             <div onClick={() => setShowDropdown(!showDropdown)}
               style={{ width:38, height:38, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid #e2e6ed', transition:'border-color 0.15s' }}
@@ -247,33 +252,31 @@ export default function Home() {
         </div>
       )}
 
-      {/* HERO GREETING — full width */}
-      <div style={{ background:'#fff', borderBottom:'1px solid #e8eaed', padding:'36px 32px 30px' }}>
-        <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,60px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'2px' }}>
-            {greeting}, {firstName.toUpperCase()}.
-          </div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,60px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>
-            THE START LINE IS CALLING.
-          </div>
+      {/* GREETING */}
+      <div style={{ background:'#fff', borderBottom:'1px solid #e8eaed', padding:'32px 32px 28px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,4.5vw,56px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>
+          {greeting}, {firstName.toUpperCase()}.
+        </div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,4.5vw,56px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>
+          THE START LINE IS CALLING.
         </div>
       </div>
 
-      {/* MAIN CONTENT — full width with padding */}
+      {/* CONTENT */}
       <div style={{ width:'100%', padding:'28px 32px 60px' }}>
 
-        {/* STATS BAR */}
-        <div style={{ background:'#1B2A4A', borderRadius:'14px', padding:'24px 32px', display:'grid', gridTemplateColumns:'1fr 1px 1fr 1px 1fr 1px 1fr', marginBottom:'36px', border:'1px solid rgba(201,168,76,0.15)' }}>
-          <div style={{ textAlign:'center', padding:'0 20px' }}>
+        {/* STATS */}
+        <div style={{ background:'#1B2A4A', borderRadius:'14px', padding:'26px 0', display:'grid', gridTemplateColumns:'1fr 1px 1fr 1px 1fr 1px 1fr', marginBottom:'36px', border:'1px solid rgba(201,168,76,0.15)' }}>
+          <div style={{ textAlign:'center', padding:'0 24px' }}>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(28px,4vw,44px)', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>14</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', marginTop:'6px' }}>Races</div>
           </div>
           <div style={{ background:'rgba(255,255,255,0.08)' }} />
-          <div style={{ padding:'0 20px' }}><FlipStat items={MILES_ITEMS} interval={3500} /></div>
+          <div style={{ padding:'0 24px' }}><FlipStat items={MILES_ITEMS} interval={3500} /></div>
           <div style={{ background:'rgba(255,255,255,0.08)' }} />
-          <div style={{ padding:'0 20px' }}><FlipStat items={PR_ITEMS} interval={4000} /></div>
+          <div style={{ padding:'0 24px' }}><FlipStat items={PR_ITEMS} interval={4000} /></div>
           <div style={{ background:'rgba(255,255,255,0.08)' }} />
-          <div style={{ textAlign:'center', padding:'0 20px', cursor:'pointer' }} onClick={() => navigate('/discover')}>
+          <div style={{ textAlign:'center', padding:'0 24px', cursor:'pointer' }} onClick={() => navigate('/discover')}>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(28px,4vw,44px)', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>3</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.45)', textTransform:'uppercase', marginTop:'6px' }}>Upcoming</div>
           </div>
