@@ -1,103 +1,282 @@
-import { useNavigate } from 'react-router-dom'
-const navy='#1B2A4A', gold='#C9A84C'
-const STAMPS=[{dist:'140.6',name:'IRONMAN World',year:'2023',gold:true},{dist:'26.2',name:'NYC Marathon',year:'2024',gold:false},{dist:'70.3',name:'Eagleman',year:'2025',gold:true},{dist:'26.2',name:'Marine Corps',year:'2023',gold:false},{dist:'13.1',name:'Cherry Blossom',year:'2025',gold:false},{dist:'10K',name:'Bay Bridge',year:'2024',gold:false},{dist:'10K',name:'Capitol Hill',year:'2024',gold:false},{dist:'50K',name:'Seneca Creek',year:'2022',gold:true},{dist:'5K',name:'Hot Cider',year:'2023',gold:false},{dist:'5K',name:'Turkey Trot',year:'2023',gold:false},{dist:'13.1',name:'Parks Half',year:'2022',gold:false},{dist:'5K',name:'Suds & Soles',year:'2024',gold:false},{dist:'10K',name:'Broad St Run',year:'2023',gold:false},{dist:'13.1',name:'Rock n Roll',year:'2022',gold:false}]
-const UPCOMING=[{dist:'26.2',name:'Marine Corps Marathon',meta:'Oct 26 · Washington, DC',days:'92'},{dist:'70.3',name:'IRONMAN 70.3 Atlantic City',meta:'Sept 14 · Atlantic City, NJ',days:'49'},{dist:'10K',name:'Capitol Hill Classic 10K',meta:'May 17 · Washington, DC',days:'41'}]
-export default function Passport(){
-  const navigate=useNavigate()
-  return(
-    <div style={{minHeight:'100vh',background:'#f5f4f0',fontFamily:'Barlow, sans-serif',paddingBottom:'80px'}}>
-      {/* Profile header */}
-      <div style={{background:navy,padding:'48px 20px 20px',position:'relative',overflow:'hidden'}}>
-        <div style={{position:'absolute',right:'-20px',top:'50%',transform:'translateY(-50%)',fontFamily:'"Bebas Neue", sans-serif',fontSize:'100px',color:'transparent',WebkitTextStroke:'1px rgba(255,255,255,0.05)',pointerEvents:'none'}}>26.2</div>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:'16px',position:'relative',zIndex:1}}>
-          <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'10px',fontWeight:700,letterSpacing:'0.3em',textTransform:'uppercase',color:'rgba(255,255,255,0.35)'}}>My Passport</div>
-          <div style={{display:'flex',alignItems:'center',gap:'5px',background:'rgba(255,255,255,0.08)',border:'1px solid rgba(255,255,255,0.12)',padding:'6px 12px',borderRadius:'20px',cursor:'pointer'}}>
-            <span style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'9px',fontWeight:700,letterSpacing:'0.15em',textTransform:'uppercase',color:'rgba(255,255,255,0.5)'}}>Share Passport</span>
+import { useState, useEffect, useRef } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
+import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
+
+const MOCK_RACES = [
+  { id:1, distance:'26.2', name:'Marine Corps Marathon', location:'Arlington, VA', month:'Oct', year:'2024', time:'4:02:11', pr:true, photos:3, hasStrava:true, theme:'dark', filled:true },
+  { id:2, distance:'70.3', name:'IRONMAN 70.3', location:'Atlantic City, NJ', month:'Sept', year:'2024', time:'5:41:22', pr:false, photos:5, hasStrava:true, theme:'dark', filled:true },
+  { id:3, distance:'13.1', name:"Rock 'N' Roll Half", location:'Nashville, TN', month:'Apr', year:'2023', time:'1:52:04', pr:true, photos:2, hasStrava:false, theme:'light', filled:true },
+  { id:4, distance:'50K', name:'Seneca Creek Trail Ultra', location:'Gaithersburg, MD', month:'Mar', year:'2022', time:'6:14:38', pr:false, photos:0, hasStrava:false, theme:'dark', filled:false },
+  { id:5, distance:'10K', name:'Broad Street Run', location:'Philadelphia, PA', month:'May', year:'2023', time:'57:14', pr:false, photos:1, hasStrava:true, theme:'light', filled:true },
+  { id:6, distance:'5K', name:'Turkey Trot', location:'Chicago, IL', month:'Nov', year:'2023', time:'24:02', pr:false, photos:0, hasStrava:false, theme:'light', filled:false },
+  { id:7, distance:'5K', name:'Hot Cider Hustle', location:'Washington, DC', month:'Nov', year:'2022', time:'24:33', pr:false, photos:4, hasStrava:false, theme:'light', filled:true },
+]
+
+const STATS = { races: 14, miles: 341, prs: 3, countries: 2 }
+
+function isGold(dist) {
+  const d = dist.toLowerCase().replace(/\s/g,'')
+  if (['26.2','marathon','50k','50m','100k','100m','70.3','140.6'].includes(d)) return true
+  const n = parseFloat(d); return !isNaN(n) && n >= 26.2
+}
+
+function PassportCard({ race, index, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  const gold = isGold(race.distance)
+  const stampColor = gold ? '#C9A84C' : '#1B2A4A'
+  const cleaned = race.distance.replace(' mi','').replace(' miles','')
+  const fs = cleaned.length > 4 ? 14 : cleaned.length > 2 ? 17 : 24
+
+  return (
+    <div
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: '14px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        border: hovered ? '2px solid #C9A84C' : '1.5px solid #e2e6ed',
+        transition: 'all 0.2s',
+        transform: hovered ? 'translateY(-6px)' : 'none',
+        boxShadow: hovered ? '0 16px 40px rgba(27,42,74,0.16)' : '0 2px 12px rgba(27,42,74,0.07)',
+        background: '#fff',
+        animationDelay: `${index * 60}ms`,
+        animation: 'fadeUp 0.4s ease both',
+      }}
+    >
+      {/* Top — navy stamp area */}
+      <div style={{ background: '#1B2A4A', padding: '20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', position: 'relative', minHeight: '100px' }}>
+        {/* Page number */}
+        <div style={{ position: 'absolute', top: 10, left: 14, fontFamily: "'Barlow Condensed',sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '2px', color: 'rgba(255,255,255,0.25)', textTransform: 'uppercase' }}>
+          PAGE {String(index + 1).padStart(2, '0')}
+        </div>
+
+        {/* Stamp */}
+        <div style={{ marginTop: '16px' }}>
+          <div style={{ width: 72, height: 72, borderRadius: '50%', border: `2.5px solid ${stampColor}`, background: gold ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', position: 'relative' }}>
+            <div style={{ position: 'absolute', inset: 6, borderRadius: '50%', border: `1px dashed ${gold ? 'rgba(201,168,76,0.35)' : 'rgba(255,255,255,0.2)'}` }} />
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: fs, color: stampColor, letterSpacing: '0.04em', lineHeight: 1, position: 'relative', zIndex: 1 }}>{cleaned}</div>
           </div>
         </div>
-        <div style={{display:'flex',alignItems:'center',gap:'14px',marginBottom:'16px',position:'relative',zIndex:1}}>
-          <div style={{width:'60px',height:'60px',borderRadius:'50%',background:gold,display:'flex',alignItems:'center',justifyContent:'center',fontSize:'20px',fontWeight:700,color:'#ffffff',border:'2px solid rgba(255,255,255,0.15)',flexShrink:0}}>RG</div>
+
+        {/* Race info */}
+        <div style={{ flex: 1, marginLeft: '14px', marginTop: '18px' }}>
+          <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '18px', color: '#fff', letterSpacing: '0.5px', lineHeight: 1.15, marginBottom: '4px' }}>{race.name}</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: '11px', color: 'rgba(255,255,255,0.45)', letterSpacing: '0.5px' }}>{race.location}</div>
+          <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: '11px', color: 'rgba(255,255,255,0.35)', letterSpacing: '0.5px', marginTop: '2px' }}>{race.month} {race.year}</div>
+        </div>
+
+        {/* PR badge */}
+        {race.pr && (
+          <div style={{ position: 'absolute', top: 10, right: 12, background: '#C9A84C', borderRadius: '4px', padding: '2px 7px', fontFamily: "'Barlow Condensed',sans-serif", fontSize: '9px', fontWeight: 700, letterSpacing: '1.5px', color: '#1B2A4A' }}>PR</div>
+        )}
+      </div>
+
+      {/* Bottom — white info area */}
+      <div style={{ padding: '12px 16px 14px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px' }}>
           <div>
-            <div style={{fontFamily:'"Bebas Neue", sans-serif',fontSize:'26px',color:'#ffffff',letterSpacing:'0.03em',textTransform:'uppercase',lineHeight:1,marginBottom:'4px'}}>Ryan Groene</div>
-            <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'10px',fontWeight:400,color:'rgba(255,255,255,0.35)',letterSpacing:'0.1em'}}>racepassportapp.com/<span style={{color:gold}}>ryan-groene</span></div>
+            <div style={{ fontFamily: "'Bebas Neue',sans-serif", fontSize: '20px', color: '#1B2A4A', letterSpacing: '1px', lineHeight: 1 }}>{race.time}</div>
+            <div style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '1.5px', color: '#9aa5b4', textTransform: 'uppercase', marginTop: '2px' }}>Finish Time</div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            {race.hasStrava && (
+              <div style={{ width: 24, height: 24, borderRadius: '6px', background: '#FC4C02', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+              </div>
+            )}
+            {race.photos > 0 && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '3px', background: '#f4f5f7', borderRadius: '6px', padding: '4px 7px' }}>
+                <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><rect x="1" y="2.5" width="10" height="7" rx="1" stroke="#9aa5b4" strokeWidth="1.1"/><circle cx="6" cy="6" r="1.5" stroke="#9aa5b4" strokeWidth="1.1"/></svg>
+                <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: '10px', color: '#9aa5b4', fontWeight: 600 }}>{race.photos}</span>
+              </div>
+            )}
           </div>
         </div>
-        <div style={{display:'flex',justifyContent:'space-between',borderTop:'1px solid rgba(255,255,255,0.08)',paddingTop:'14px',position:'relative',zIndex:1}}>
-          {[['14','Races'],['341','Miles'],['4:02','PR Marathon'],['3','Upcoming']].map(([num,lbl],i)=>(
-            <div key={i} style={{textAlign:'center',flex:1,borderRight:i<3?'1px solid rgba(255,255,255,0.08)':'none'}}>
-              <div style={{fontFamily:'"Bebas Neue", sans-serif',fontSize:'22px',color:i===2?gold:'#ffffff',lineHeight:1}}>{num}</div>
-              <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'7px',fontWeight:600,letterSpacing:'0.18em',textTransform:'uppercase',color:'rgba(255,255,255,0.3)',marginTop:'3px'}}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* PRs */}
-      <div style={{padding:'14px 20px',background:'#ffffff',borderBottom:'1px solid rgba(27,42,74,0.07)'}}>
-        <SectionTitle title="Personal Records" />
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'8px'}}>
-          {[['5K','22:14'],['10K','46:38'],['Half','1:52:04'],['Full','4:02:11']].map(([d,t])=>(
-            <div key={d} style={{background:'rgba(27,42,74,0.04)',borderRadius:'8px',padding:'8px',textAlign:'center',border:'1px solid rgba(27,42,74,0.07)'}}>
-              <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'8px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:'rgba(27,42,74,0.4)',marginBottom:'3px'}}>{d}</div>
-              <div style={{fontFamily:'"Bebas Neue", sans-serif',fontSize:'14px',color:navy}}>{t}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* Stamps */}
-      <div style={{padding:'14px 20px',background:'#ffffff',borderBottom:'1px solid rgba(27,42,74,0.07)'}}>
-        <SectionTitle title="Race Stamps" count="14 collected" />
-        <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:'10px'}}>
-          {STAMPS.map((s,i)=>(
-            <div key={i} style={{aspectRatio:'1',borderRadius:'50%',border:`1.5px solid ${s.gold?gold:navy}`,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:s.gold?'rgba(201,168,76,0.04)':'#fff',cursor:'pointer'}}>
-              <div style={{fontFamily:'"Bebas Neue", sans-serif',fontSize:'13px',color:s.gold?gold:navy,lineHeight:1}}>{s.dist}</div>
-              <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'5px',fontWeight:700,letterSpacing:'0.07em',textTransform:'uppercase',color:'rgba(27,42,74,0.35)',textAlign:'center',padding:'0 4px',marginTop:'2px',lineHeight:1.2}}>{s.name}</div>
-              <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'5px',color:'rgba(27,42,74,0.22)'}}>{s.year}</div>
-            </div>
-          ))}
-          <div style={{aspectRatio:'1',borderRadius:'50%',border:'1.5px dashed rgba(27,42,74,0.15)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',cursor:'pointer'}} onClick={()=>{}}>
-            <div style={{fontSize:'18px',color:'rgba(27,42,74,0.2)'}}>+</div>
-            <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'5.5px',fontWeight:700,letterSpacing:'0.1em',textTransform:'uppercase',color:'rgba(27,42,74,0.2)',textAlign:'center'}}>Next Race</div>
+
+        {/* Fill indicator */}
+        {!race.filled ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '7px 10px', background: 'rgba(201,168,76,0.06)', border: '1px dashed rgba(201,168,76,0.3)', borderRadius: '6px' }}>
+            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#C9A84C', flexShrink: 0 }} />
+            <span style={{ fontFamily: "'Barlow Condensed',sans-serif", fontSize: '10px', fontWeight: 600, letterSpacing: '1px', color: '#C9A84C', textTransform: 'uppercase' }}>Add your story →</span>
           </div>
-        </div>
-      </div>
-      {/* Upcoming */}
-      <div style={{padding:'14px 20px',background:'#ffffff'}}>
-        <SectionTitle title="Upcoming Races" />
-        {UPCOMING.map((r,i)=>(
-          <div key={i} style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 0',borderBottom:i<UPCOMING.length-1?'1px solid rgba(27,42,74,0.06)':'none'}}>
-            <div style={{width:'40px',height:'40px',borderRadius:'50%',border:`1.5px solid ${navy}`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
-              <div style={{fontFamily:'"Bebas Neue", sans-serif',fontSize:'10px',color:navy}}>{r.dist}</div>
-            </div>
-            <div style={{flex:1}}>
-              <div style={{fontSize:'12px',fontWeight:600,color:navy}}>{r.name}</div>
-              <div style={{fontSize:'10px',fontWeight:300,color:'rgba(27,42,74,0.4)',marginTop:'1px'}}>{r.meta}</div>
-            </div>
-            <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'8px',fontWeight:700,letterSpacing:'0.12em',textTransform:'uppercase',color:gold,border:'1px solid rgba(201,168,76,0.3)',padding:'3px 7px',borderRadius:'10px',whiteSpace:'nowrap'}}>{r.days} days</div>
+        ) : (
+          <div style={{ display: 'flex', gap: '4px' }}>
+            {['Photo', 'Story', 'Stats'].map(tag => (
+              <div key={tag} style={{ padding: '3px 8px', background: '#f4f5f7', borderRadius: '4px', fontFamily: "'Barlow Condensed',sans-serif", fontSize: '9px', fontWeight: 600, letterSpacing: '1px', color: '#9aa5b4', textTransform: 'uppercase' }}>{tag}</div>
+            ))}
           </div>
-        ))}
-      </div>
-      {/* Bottom nav */}
-      <div style={{position:'fixed',bottom:0,left:0,right:0,background:'#ffffff',borderTop:'1px solid rgba(27,42,74,0.08)',display:'flex',padding:'12px 0 20px',zIndex:50}}>
-        {[{label:'Home',path:'/home',active:false},{label:'Discover',path:'/discover',active:false},{label:'Passport',path:'/passport',active:true},{label:'Profile',path:'/profile',active:false}].map((item,i)=>(
-          <div key={i} onClick={()=>navigate(item.path)} style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',gap:'4px',cursor:'pointer'}}>
-            <div style={{width:'20px',height:'20px'}}>
-              {i===0&&<svg viewBox="0 0 20 20" fill="none"><path d="M3 10L10 3l7 7" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5" strokeLinecap="round"/><path d="M5 8v7h4v-4h2v4h4V8" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-              {i===1&&<svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5"/><path d="M14 14l3 3" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5" strokeLinecap="round"/></svg>}
-              {i===2&&<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="7" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5"/><circle cx="10" cy="10" r="2" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5"/></svg>}
-              {i===3&&<svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5"/><path d="M4 17c0-3.314 2.686-6 6-6s6 2.686 6 6" stroke={item.active?gold:'rgba(27,42,74,0.3)'} strokeWidth="1.5" strokeLinecap="round"/></svg>}
-            </div>
-            <div style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'8px',fontWeight:600,letterSpacing:'0.15em',textTransform:'uppercase',color:item.active?gold:'rgba(27,42,74,0.3)'}}>{item.label}</div>
-          </div>
-        ))}
+        )}
       </div>
     </div>
   )
 }
-function SectionTitle({title,count}){
-  return(
-    <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'12px'}}>
-      <span style={{fontFamily:'"Barlow Condensed", sans-serif',fontSize:'9px',fontWeight:700,letterSpacing:'0.28em',textTransform:'uppercase',color:'rgba(27,42,74,0.35)'}}>{title}{count&&<span style={{color:'#C9A84C',marginLeft:'6px'}}>{count}</span>}</span>
-      <div style={{flex:1,height:'1px',background:'rgba(27,42,74,0.07)'}}/>
+
+export default function Passport() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { user, signOut } = useAuth()
+  const [profile, setProfile] = useState(null)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [filter, setFilter] = useState('ALL')
+  const dropdownRef = useRef(null)
+
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user || isDemo(user?.email)) { setProfile({ full_name: `${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      setProfile(data)
+    }
+    loadProfile()
+
+    const style = document.createElement('style')
+    style.id = 'rp-passport-styles'
+    style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
+      * { box-sizing: border-box; }
+      @keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; position:relative; border-bottom:2px solid transparent; white-space:nowrap; }
+      .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
+      .nav-tab:hover { color:#1B2A4A; }
+      .filter-btn { padding:6px 16px; border-radius:20px; border:1.5px solid #e2e6ed; background:#fff; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.15s; color:#9aa5b4; }
+      .filter-btn.active { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
+      .dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; color:#1B2A4A; cursor:pointer; transition:background 0.1s; white-space:nowrap; }
+      .dropdown-item:hover { background:#f4f5f7; }
+    `
+    if (!document.getElementById('rp-passport-styles')) document.head.appendChild(style)
+    const handleClick = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => { document.getElementById('rp-passport-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
+  }, [user])
+
+  const firstName = profile?.full_name?.split(' ')[0] || 'Runner'
+  const lastName = profile?.full_name?.split(' ').slice(1).join(' ') || ''
+  const initials = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
+  const handleSignOut = async () => { await signOut?.(); navigate('/login') }
+
+  const FILTERS = ['ALL', '5K', '10K', '13.1', '26.2', 'ULTRA', 'TRI']
+  const filteredRaces = filter === 'ALL' ? MOCK_RACES : MOCK_RACES.filter(r => {
+    if (filter === 'ULTRA') return ['50K','50M','100K','100M'].includes(r.distance.toUpperCase())
+    if (filter === 'TRI') return ['70.3','140.6'].includes(r.distance)
+    return r.distance === filter
+  })
+
+  const NAV_TABS = [
+    { label:'Home', path:'/home', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
+    { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
+    { label:'Profile', path:'/build-passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+  ]
+
+  return (
+    <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
+
+      {/* NAV */}
+      <div style={{ position:'sticky', top:0, zIndex:50, background:'#fff', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
+        <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
+            <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
+          </div>
+          <div style={{ display:'flex', alignItems:'stretch' }}>
+            {NAV_TABS.map(tab => (
+              <button key={tab.path} className={`nav-tab ${location.pathname === tab.path ? 'active' : ''}`} onClick={() => navigate(tab.path)}>
+                {tab.icon}{tab.label}
+              </button>
+            ))}
+          </div>
+          <div ref={dropdownRef} style={{ position:'relative', display:'flex', alignItems:'center' }}>
+            <div onClick={() => setShowDropdown(!showDropdown)}
+              style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid #e2e6ed', transition:'border-color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
+              onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
+            </div>
+            {showDropdown && (
+              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'#fff', border:'1px solid #e2e6ed', borderRadius:'10px', boxShadow:'0 8px 32px rgba(27,42,74,0.14)', minWidth:'190px', overflow:'hidden', zIndex:100 }}>
+                <div style={{ padding:'14px 18px 10px', borderBottom:'1px solid #f0f2f5' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A' }}>{profile?.full_name || 'Ryan Groene'}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>racepassportapp.com/ryan-groene</div>
+                </div>
+                <button className="dropdown-item" onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
+                <button className="dropdown-item" onClick={() => { navigate('/build-passport'); setShowDropdown(false) }}>Settings</button>
+                <div style={{ height:'1px', background:'#f0f2f5' }} />
+                <button className="dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}>Log Out</button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* HERO */}
+      <div style={{ background:'#1B2A4A', padding:'40px 40px 36px', position:'relative', overflow:'hidden' }}>
+        {/* Ghost background text */}
+        <div style={{ position:'absolute', right:'-20px', top:'-10px', fontFamily:"'Bebas Neue',sans-serif", fontSize:'180px', color:'transparent', WebkitTextStroke:'1px rgba(255,255,255,0.04)', lineHeight:1, userSelect:'none', pointerEvents:'none' }}>PASSPORT</div>
+
+        <div style={{ position:'relative', zIndex:1 }}>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', flexWrap:'wrap', gap:'24px' }}>
+            <div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.7)', textTransform:'uppercase', marginBottom:'8px' }}>Race Passport</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,60px)', color:'#fff', letterSpacing:'2px', lineHeight:1, marginBottom:'6px' }}>
+                {firstName.toUpperCase()} {lastName.toUpperCase()}
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'1px' }}>Endurance Athlete · Est. 2019</div>
+            </div>
+
+            {/* Stats row */}
+            <div style={{ display:'flex', gap:'32px' }}>
+              {[
+                { value: STATS.races, label: 'Races' },
+                { value: STATS.miles, label: 'Race Miles' },
+                { value: STATS.prs, label: 'PRs' },
+                { value: STATS.countries, label: 'States' },
+              ].map(stat => (
+                <div key={stat.label} style={{ textAlign:'center' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>{stat.value}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'4px' }}>{stat.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Gold divider */}
+          <div style={{ height:'3px', background:'linear-gradient(to right, #C9A84C, transparent)', marginTop:'28px', borderRadius:'2px' }} />
+        </div>
+      </div>
+
+      {/* FILTERS + CONTENT */}
+      <div style={{ padding:'28px 40px 80px' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', flexWrap:'wrap', gap:'12px' }}>
+          <div style={{ display:'flex', gap:'8px', flexWrap:'wrap' }}>
+            {FILTERS.map(f => (
+              <button key={f} className={`filter-btn ${filter === f ? 'active' : ''}`} onClick={() => setFilter(f)}>{f}</button>
+            ))}
+          </div>
+          <button onClick={() => navigate('/race-import')} style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 20px', background:'#1B2A4A', border:'none', borderRadius:'8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+            onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            Add Race
+          </button>
+        </div>
+
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px' }}>
+          {filteredRaces.map((race, i) => (
+            <PassportCard key={race.id} race={race} index={i} onClick={() => navigate(`/race/${race.id}`)} />
+          ))}
+        </div>
+
+        {filteredRaces.length === 0 && (
+          <div style={{ textAlign:'center', padding:'60px 20px' }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'8px' }}>NO RACES YET</div>
+            <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4' }}>Import your race history or add a race manually.</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
