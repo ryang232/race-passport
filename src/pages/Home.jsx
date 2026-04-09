@@ -29,7 +29,6 @@ const STATS_COLS = [
     { label:'Half PR', value:'1:52:04' },
     { label:'Marathon PR', value:'4:02:11' },
   ]},
-  { key:'upcoming', items:[{ label:'Upcoming', value:'3' }], link:'/discover' },
 ]
 
 const MOCK_NEARBY = [
@@ -63,34 +62,31 @@ function isGold(dist) {
   const n = parseFloat(d); return !isNaN(n) && n >= 26.2
 }
 
-function StatCol({ col, navigate: nav }) {
+function StatCol({ col }) {
   const [idx, setIdx] = useState(0)
   const items = col.items
   const prev = (e) => { e.stopPropagation(); setIdx(i => (i-1+items.length)%items.length) }
   const next = (e) => { e.stopPropagation(); setIdx(i => (i+1)%items.length) }
   const item = items[idx]
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 8px', cursor: col.link ? 'pointer' : 'default' }}
-      onClick={col.link ? () => nav(col.link) : undefined}>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 8px' }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(28px,3.5vw,48px)', color:'#fff', lineHeight:1, letterSpacing:'1px', textAlign:'center' }}>
         {item.value}
       </div>
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', marginBottom: items.length > 1 ? '10px' : '0', textAlign:'center' }}>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', marginBottom:'10px', textAlign:'center' }}>
         {item.label}
       </div>
-      {items.length > 1 && (
-        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-          <button onClick={prev} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.color='#C9A84C'}
-            onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>‹</button>
-          <div style={{ display:'flex', gap:'4px' }}>
-            {items.map((_,i) => <div key={i} style={{ width:4, height:4, borderRadius:'50%', background: i===idx ? '#C9A84C' : 'rgba(255,255,255,0.2)', transition:'background 0.2s' }} />)}
-          </div>
-          <button onClick={next} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.color='#C9A84C'}
-            onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>›</button>
+      <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+        <button onClick={prev} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color='#C9A84C'}
+          onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>‹</button>
+        <div style={{ display:'flex', gap:'4px' }}>
+          {items.map((_,i) => <div key={i} style={{ width:4, height:4, borderRadius:'50%', background: i===idx ? '#C9A84C' : 'rgba(255,255,255,0.2)', transition:'background 0.2s' }} />)}
         </div>
-      )}
+        <button onClick={next} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.color='#C9A84C'}
+          onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>›</button>
+      </div>
     </div>
   )
 }
@@ -102,7 +98,7 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
-    <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer' }} onClick={onClick}>
+    <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
       <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${color}`, background:bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
         onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${gold ? 'rgba(201,168,76,0.25)' : 'rgba(27,42,74,0.15)'}` }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
@@ -139,7 +135,6 @@ function NearbyCard({ race }) {
           </div>
         )}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        {/* Hover detail overlay */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s ease', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
             {[{ label:'Terrain', value:race.terrain }, { label:'Price', value:race.price }, { label:'Elevation', value:race.elevation }].map(stat => (
@@ -156,7 +151,6 @@ function NearbyCard({ race }) {
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'3px', letterSpacing:'0.5px' }}>based on your experience + history</div>
           </div>
         </div>
-        {/* Stamp bottom left — hidden on hover */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
           <div style={{ width:52, height:52, borderRadius:'50%', border:`2px solid ${gold ? '#C9A84C' : '#fff'}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${gold ? 'rgba(201,168,76,0.5)' : 'rgba(255,255,255,0.4)'}` }} />
@@ -164,12 +158,11 @@ function NearbyCard({ race }) {
           </div>
         </div>
       </div>
-      {/* Card footer — date moved here */}
       <div style={{ padding:'14px 16px' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#1B2A4A', letterSpacing:'0.5px' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -237,7 +230,7 @@ function ScrollRow({ children }) {
     <div style={{ position:'relative' }} onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
       {showLeft && hovering && <button onClick={() => scroll(-1)} style={{ ...btnStyle, left:-22 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}
       {showRight && hovering && <button onClick={() => scroll(1)} style={{ ...btnStyle, right:-22 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg></button>}
-      <div ref={ref} style={{ display:'flex', gap:'24px', overflowX:'auto', paddingBottom:'12px', scrollbarWidth:'none', msOverflowStyle:'none' }}>
+      <div ref={ref} style={{ display:'flex', gap:'24px', overflowX:'auto', paddingBottom:'12px', paddingTop:'4px', scrollbarWidth:'none', msOverflowStyle:'none' }}>
         {children}
       </div>
     </div>
@@ -301,7 +294,6 @@ export default function Home() {
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
 
-      {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'#fff', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
         <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
@@ -351,7 +343,6 @@ export default function Home() {
         </div>
       )}
 
-      {/* GREETING */}
       <div style={{ background:'#fff', borderBottom:'1px solid #e8eaed', padding:'40px 40px 34px' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>
           {greeting}, {firstName.toUpperCase()}.
@@ -363,30 +354,35 @@ export default function Home() {
 
       <div style={{ width:'100%', padding:'36px 40px 80px' }}>
 
-        {/* STATS — fixed grid using proper divider divs */}
+        {/* STATS — 3 data cols + Strava col */}
         <div style={{ background:'#1B2A4A', borderRadius:'16px', marginBottom:'48px', border:'1px solid rgba(201,168,76,0.15)', overflow:'hidden' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1px 1fr 1px 1fr 1px 1fr', padding:'28px 0', alignItems:'center' }}>
-            <StatCol col={STATS_COLS[0]} navigate={navigate} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'60%', alignSelf:'center' }} />
-            <StatCol col={STATS_COLS[1]} navigate={navigate} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'60%', alignSelf:'center' }} />
-            <StatCol col={STATS_COLS[2]} navigate={navigate} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'60%', alignSelf:'center' }} />
-            <StatCol col={STATS_COLS[3]} navigate={navigate} />
-          </div>
-          {/* Strava — original style */}
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', padding:'12px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', background:'rgba(0,0,0,0.15)' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.55)', letterSpacing:'0.5px' }}>
-                Connect Strava to sync your real miles, PRs, and activity data
-              </span>
+
+            <StatCol col={STATS_COLS[0]} />
+            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
+            <StatCol col={STATS_COLS[1]} />
+            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
+            <StatCol col={STATS_COLS[2]} />
+            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
+
+            {/* 4th column — Strava */}
+            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 16px', gap:'12px' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                <div style={{ width:28, height:28, borderRadius:'6px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                </div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#fff', whiteSpace:'nowrap' }}>Connect Strava</div>
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px', textAlign:'center', lineHeight:1.5 }}>
+                Sync real miles, PRs &amp; activity data automatically
+              </div>
+              <button style={{ background:'#FC4C02', border:'none', borderRadius:'6px', padding:'8px 20px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
+                onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                Connect Strava
+              </button>
             </div>
-            <button style={{ background:'#FC4C02', border:'none', borderRadius:'6px', padding:'6px 16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', cursor:'pointer', flexShrink:0, transition:'opacity 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
-              onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-              Connect Strava
-            </button>
+
           </div>
         </div>
 
@@ -412,7 +408,7 @@ export default function Home() {
               <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130}
                 onClick={() => navigate(`/race/${stamp.id}`)} />
             ))}
-            <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer' }}>
+            <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
               <div style={{ width:130, height:130, borderRadius:'50%', border:'2px dashed #d0d7e0', display:'flex', alignItems:'center', justifyContent:'center', background:'#fafbfc', transition:'border-color 0.15s, transform 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.transform='scale(1.05)' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='#d0d7e0'; e.currentTarget.style.transform='scale(1)' }}>
