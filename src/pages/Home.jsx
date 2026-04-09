@@ -3,18 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
-
-// Handpicked verified Unsplash photo IDs — each one confirmed correct
-const PHOTOS = {
-  marathon:  'https://images.unsplash.com/photo-1513593771513-7b58b6c4af38?w=800&q=80&fit=crop', // marathon crowd NYC
-  triathlon: 'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&q=80&fit=crop', // triathlon swim ocean
-  cherry:    'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800&q=80&fit=crop', // cherry blossom DC
-}
+import { fetchUnsplashPhoto, getFallback } from '../lib/unsplash'
 
 const MOCK_UPCOMING = [
-  { id:1, name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', photo: PHOTOS.marathon },
-  { id:2, name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', photo: PHOTOS.triathlon },
-  { id:3, name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', photo: PHOTOS.cherry },
+  { id:1, name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', query:'marathon runners city road crowd race' },
+  { id:2, name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', query:'ironman triathlon open water swim race start wetsuit' },
+  { id:3, name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', query:'cherry blossom Washington DC spring running race' },
 ]
 
 const MOCK_STAMPS = [
@@ -91,14 +85,27 @@ function Stamp({ distance, size = 72 }) {
 
 function RaceCard({ race }) {
   const [hovered, setHovered] = useState(false)
-  const gold = isGold(race.distance)
+  const [photo, setPhoto] = useState(null)
+
+  useEffect(() => {
+    const fallbackMap = { '26.2': 'marathon', '70.3': 'triathlon', '140.6': 'triathlon' }
+    const fallbackType = fallbackMap[race.distance] || 'running'
+    fetchUnsplashPhoto(race.query, fallbackType).then(url => setPhoto(url))
+  }, [race.query, race.distance])
+
   return (
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(280px,30vw,440px)' }}>
       <div style={{ position:'relative', height:240, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={race.photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+        {photo ? (
+          <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+        ) : (
+          <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <div style={{ width:40, height:40, border:'3px solid rgba(201,168,76,0.4)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+          </div>
+        )}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0) 30%,rgba(0,0,0,0.65))' }} />
         <div style={{ position:'absolute', top:14, right:14, background:'rgba(201,168,76,0.92)', borderRadius:'6px', padding:'4px 12px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>Registered</div>
         <div style={{ position:'absolute', bottom:14, left:14 }}>
@@ -122,6 +129,7 @@ export default function Home() {
   const [greeting, setGreeting] = useState('GOOD MORNING')
   const [showImportBanner, setShowImportBanner] = useState(!!location.state?.imported)
   const [importedCount] = useState(location.state?.imported || 0)
+  const [apiKeyStatus, setApiKeyStatus] = useState(null)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -129,6 +137,10 @@ export default function Home() {
     if (h >= 12 && h < 17) setGreeting('GOOD AFTERNOON')
     else if (h >= 17) setGreeting('GOOD EVENING')
     else setGreeting('GOOD MORNING')
+
+    // Check if API key is loaded
+    const key = import.meta.env.VITE_UNSPLASH_ACCESS_KEY
+    setApiKeyStatus(key ? `loaded (${key.slice(0,8)}...)` : 'NOT FOUND')
 
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) {
@@ -145,6 +157,7 @@ export default function Home() {
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
+      @keyframes spin { to { transform: rotate(360deg); } }
       .nav-tab {
         display: flex; flex-direction: column; align-items: center; gap: 4px;
         padding: 0 24px; height: 64px; justify-content: center;
@@ -154,7 +167,6 @@ export default function Home() {
         position: relative; border-bottom: 2px solid transparent; white-space: nowrap;
       }
       .nav-tab.active { color: #1B2A4A; border-bottom-color: #C9A84C; }
-      .nav-tab.active svg { color: #C9A84C; }
       .nav-tab:hover { color: #1B2A4A; }
       .dropdown-item { display: block; width: 100%; padding: 10px 18px; background: none; border: none; text-align: left; font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 1px; color: #1B2A4A; cursor: pointer; transition: background 0.1s; white-space: nowrap; }
       .dropdown-item:hover { background: #f4f5f7; }
@@ -246,6 +258,12 @@ export default function Home() {
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>
           THE START LINE IS CALLING.
         </div>
+        {/* Temporary API key debug — remove once photos are confirmed working */}
+        {apiKeyStatus && (
+          <div style={{ marginTop:'8px', fontSize:'11px', color:'#9aa5b4', fontFamily:'monospace' }}>
+            Unsplash API key: {apiKeyStatus}
+          </div>
+        )}
       </div>
 
       {/* MAIN */}
