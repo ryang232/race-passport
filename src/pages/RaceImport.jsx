@@ -2,23 +2,43 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
-import { fetchUnsplashPhoto } from '../lib/unsplash'
-
-const MOCK_RACES = [
-  { id:1, name:'Baltimore Running Festival 10K', date:'Oct 2024', location:'Baltimore, MD', distance:'10K', time:'58:42', source:'RUNSIGNUP', query:'Baltimore city skyline Maryland harbor' },
-  { id:2, name:'Bay Bridge Run', date:'Apr 2024', location:'Annapolis, MD', distance:'10K', time:'57:14', source:'RUNSIGNUP', query:'Chesapeake Bay Bridge Maryland waterfront' },
-  { id:3, name:'Marine Corps Marathon', date:'Oct 2023', location:'Washington, DC', distance:'26.2', time:'4:12:08', source:'ATHLINKS', query:'Washington DC National Mall Capitol runners marathon' },
-  { id:4, name:'Frederick Running Festival 5K', date:'May 2023', location:'Frederick, MD', distance:'5K', time:'24:33', source:'RUNSIGNUP', query:'Frederick Maryland historic street downtown' },
-  { id:5, name:'Cherry Blossom 10 Miler', date:'Apr 2023', location:'Washington, DC', distance:'10 mi', time:'1:38:55', source:'ATHLINKS', query:'cherry blossom Washington DC Tidal Basin spring pink' },
-  { id:6, name:'9/11 Memorial 5K', date:'Sept 2022', location:'Arlington, VA', distance:'5K', time:'23:11', source:'ATHLINKS', query:'Arlington Virginia Pentagon memorial' },
-  { id:7, name:'Hot Cider Hustle 5K', date:'Nov 2022', location:'Washington, DC', distance:'5K', time:'24:02', source:'RUNSIGNUP', query:'autumn fall foliage running park city' },
-  { id:8, name:'Suds & Soles 5K', date:'Jun 2022', location:'Rockville, MD', distance:'5K', time:'25:44', source:'RUNSIGNUP', query:'Maryland suburban park trail running summer' },
-]
+import { fetchUnsplashPhoto, getFallback } from '../lib/unsplash'
+import { isDemo, DEMO_EMAIL } from '../lib/demo'
 
 function isGoldDistance(dist) {
   const d = dist.toLowerCase().replace(/\s/g,'')
   if (['26.2','marathon','50k','50m','100k','100m','70.3','140.6'].includes(d)) return true
   const n = parseFloat(d); return !isNaN(n) && n >= 26.2
+}
+
+// Normalize distance string from RunSignup event names
+function normalizeDistance(event) {
+  const name = (event?.name || event?.event_name || '').toLowerCase()
+  const dist = (event?.distance || '').toString().toLowerCase()
+
+  if (name.includes('marathon') && !name.includes('half') && !name.includes('mini')) return '26.2'
+  if (name.includes('half marathon') || name.includes('half-marathon')) return '13.1'
+  if (name.includes('ironman 70.3') || name.includes('70.3')) return '70.3'
+  if (name.includes('ironman') || name.includes('140.6')) return '140.6'
+  if (name.includes('10k') || dist.includes('10k')) return '10K'
+  if (name.includes('5k') || dist.includes('5k')) return '5K'
+  if (name.includes('10 mile') || name.includes('10-mile') || name.includes('10mi')) return '10 mi'
+  if (name.includes('15k') || dist.includes('15k')) return '15K'
+  if (name.includes('50k') || dist.includes('50k')) return '50K'
+  if (name.includes('ultra')) return 'Ultra'
+
+  // Fall back to raw distance if available
+  if (dist) return dist.toUpperCase()
+  return 'Race'
+}
+
+function formatTime(seconds) {
+  if (!seconds) return null
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+  return `${m}:${String(s).padStart(2,'0')}`
 }
 
 function Stamp({ distance, size = 52 }) {
@@ -40,8 +60,11 @@ function RaceCard({ race, selected, onToggle }) {
   const [photo, setPhoto] = useState(null)
 
   useEffect(() => {
-    fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url))
-  }, [race.query])
+    const query = race.city
+      ? `${race.city} ${race.state || ''} city running race`
+      : 'running race road city'
+    fetchUnsplashPhoto(query, 'running').then(url => setPhoto(url))
+  }, [race.city, race.state])
 
   return (
     <div onClick={() => onToggle(race.id)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -49,7 +72,9 @@ function RaceCard({ race, selected, onToggle }) {
       <div style={{ position:'absolute', top:10, right:10, zIndex:10, width:24, height:24, borderRadius:'50%', background: selected ? '#C9A84C' : 'rgba(255,255,255,0.9)', border: selected ? '2px solid #C9A84C' : '2px solid rgba(255,255,255,0.7)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
         {selected && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
-      <div style={{ position:'absolute', top:10, left:10, zIndex:10, background:'rgba(0,0,0,0.55)', borderRadius:'4px', padding:'3px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>{race.source}</div>
+      <div style={{ position:'absolute', top:10, left:10, zIndex:10, background:'rgba(0,0,0,0.55)', borderRadius:'4px', padding:'3px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>
+        {race.source}
+      </div>
       <div style={{ position:'relative', height:160, background:'#1B2A4A', overflow:'hidden' }}>
         {photo ? (
           <img src={photo} alt={race.location} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
@@ -59,9 +84,10 @@ function RaceCard({ race, selected, onToggle }) {
           </div>
         )}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))' }} />
+        {/* Hover finish time */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.2s ease' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'8px' }}>Finish Time</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{race.time}</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color: race.time ? '#C9A84C' : 'rgba(255,255,255,0.3)', letterSpacing:'2px', lineHeight:1 }}>{race.time || 'N/A'}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginTop:'8px', textTransform:'uppercase' }}>{race.distance}</div>
         </div>
       </div>
@@ -77,38 +103,108 @@ function RaceCard({ race, selected, onToggle }) {
   )
 }
 
+// Parse RunSignup results response into our race format
+function parseRunSignupResults(data) {
+  const results = data?.results || data?.race_results || []
+  return results.map((r, idx) => {
+    const event = r.event || {}
+    const race = r.race || {}
+    const result = r.result || r
+
+    const city = race.address?.city || result.city || ''
+    const state = race.address?.state || result.state || ''
+
+    return {
+      id: `rs-${r.race_id || idx}-${r.event_id || idx}`,
+      name: race.name || result.race_name || 'Unknown Race',
+      date: r.start_time ? new Date(r.start_time).toLocaleDateString('en-US', { month:'short', year:'numeric' }) : (result.date || ''),
+      location: [city, state].filter(Boolean).join(', ') || 'Unknown',
+      city,
+      state,
+      distance: normalizeDistance(event),
+      time: result.clock_time ? formatTime(parseInt(result.clock_time)) : (result.chip_time || result.time || null),
+      source: 'RUNSIGNUP',
+      race_id: r.race_id,
+      event_id: r.event_id,
+    }
+  }).filter(r => r.name !== 'Unknown Race')
+}
+
 export default function RaceImport() {
   const navigate = useNavigate()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
+  const [loadingStatus, setLoadingStatus] = useState('Searching RunSignup...')
+  const [races, setRaces] = useState([])
   const [selected, setSelected] = useState({})
   const [activeSource, setActiveSource] = useState('ALL')
   const [saving, setSaving] = useState(false)
-  const [firstName, setFirstName] = useState('Ryan')
-  const [lastName, setLastName] = useState('Groene')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [dob, setDob] = useState('')
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     const loadAndSearch = async () => {
-      if (user) {
+      let fn = 'Ryan', ln = 'Groene', dobVal = ''
+
+      // Load profile data
+      if (user && !isDemo(user?.email)) {
         try {
           const { data } = await supabase.from('profiles').select('full_name,date_of_birth').eq('id', user.id).single()
           if (data) {
             const parts = (data.full_name || '').trim().split(' ')
-            setFirstName(parts[0] || 'Ryan')
-            setLastName(parts.slice(1).join(' ') || '')
-            setDob(data.date_of_birth || '')
+            fn = parts[0] || fn
+            ln = parts.slice(1).join(' ') || ln
+            dobVal = data.date_of_birth || ''
           }
         } catch(e) {}
       }
-      setTimeout(() => {
-        const init = {}
-        MOCK_RACES.forEach(r => { init[r.id] = true })
-        setSelected(init)
+
+      setFirstName(fn)
+      setLastName(ln)
+      setDob(dobVal)
+
+      // Search RunSignup
+      try {
+        setLoadingStatus('Searching RunSignup for your races...')
+
+        const params = new URLSearchParams({
+          action: 'search_results',
+          first_name: fn,
+          last_name: ln,
+        })
+        if (dobVal) params.append('dob', dobVal)
+
+        const res = await fetch(`/api/runsignup?${params}`)
+        if (!res.ok) throw new Error(`API error ${res.status}`)
+        const data = await res.json()
+
+        if (data.error) throw new Error(data.error)
+
+        setLoadingStatus('Processing results...')
+        const parsed = parseRunSignupResults(data)
+
+        if (parsed.length > 0) {
+          setRaces(parsed)
+          const init = {}
+          parsed.forEach(r => { init[r.id] = true })
+          setSelected(init)
+        } else {
+          // No results found — show empty state with option to try different name
+          setRaces([])
+          setError('no_results')
+        }
+      } catch (e) {
+        console.error('RunSignup search error:', e)
+        setError('api_error')
+      } finally {
         setLoading(false)
-      }, 2800)
+      }
     }
+
     loadAndSearch()
+
     const style = document.createElement('style')
     style.id = 'rp-ri-styles'
     style.textContent = `
@@ -130,18 +226,20 @@ export default function RaceImport() {
 
   const toggleRace = (id) => setSelected(prev => ({ ...prev, [id]: !prev[id] }))
   const selectedCount = Object.values(selected).filter(Boolean).length
-  const allSelected = selectedCount === MOCK_RACES.length
+  const allSelected = races.length > 0 && selectedCount === races.length
   const toggleAll = () => {
     const next = {}
-    MOCK_RACES.forEach(r => { next[r.id] = !allSelected })
+    races.forEach(r => { next[r.id] = !allSelected })
     setSelected(next)
   }
-  const filteredRaces = activeSource === 'ALL' ? MOCK_RACES : MOCK_RACES.filter(r => r.source === activeSource)
-  const runSignupCount = MOCK_RACES.filter(r => r.source === 'RUNSIGNUP').length
-  const athlinksCount = MOCK_RACES.filter(r => r.source === 'ATHLINKS').length
+
+  const filteredRaces = activeSource === 'ALL' ? races : races.filter(r => r.source === activeSource)
+  const runSignupCount = races.filter(r => r.source === 'RUNSIGNUP').length
+  const athlinksCount = races.filter(r => r.source === 'ATHLINKS').length
 
   const handleConfirm = async () => {
     setSaving(true)
+    // TODO: save selected races to race_history table in Supabase
     await new Promise(r => setTimeout(r, 800))
     setSaving(false)
     navigate('/home', { state: { imported: selectedCount } })
@@ -169,7 +267,7 @@ export default function RaceImport() {
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
           <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'42px', color:'#1B2A4A', margin:'0 0 8px', letterSpacing:'2px', lineHeight:1 }}>SEARCHING FOR YOUR RACES</h1>
-          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', letterSpacing:'1.5px', color:'#9aa5b4', margin:'0 0 28px', textTransform:'uppercase' }}>Searching RunSignup + Athlinks</p>
+          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', letterSpacing:'1.5px', color:'#9aa5b4', margin:'0 0 28px', textTransform:'uppercase' }}>{loadingStatus}</p>
           <div style={{ display:'flex', gap:'8px', justifyContent:'center' }}>
             {[0,1,2].map(i => <div key={i} style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', animation:`pulse 1.1s ease-in-out ${i*0.37}s infinite` }} />)}
           </div>
@@ -185,6 +283,8 @@ export default function RaceImport() {
           {TICKER.map((d,i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,24vw,340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.04)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>)}
         </div>
       </div>
+
+      {/* Header */}
       <div style={{ position:'relative', zIndex:1, background:'#fff', padding:'28px 20px 24px', borderBottom:'3px solid #C9A84C', textAlign:'center' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'8px' }}>
           <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
@@ -195,40 +295,64 @@ export default function RaceImport() {
           <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
         </div>
         <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 2 of 2 — Import Your Races</p>
-        <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
-          <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{MOCK_RACES.length} Races Found</span>
-        </div>
-        <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>ARE THESE YOUR RACES?</h1>
-        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7, maxWidth:'480px', marginLeft:'auto', marginRight:'auto' }}>
-          We searched using <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{firstName} {lastName}</strong>
-          {dob && <span> with DOB <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{formatDob(dob)}</strong></span>}.
-          {' '}Uncheck anything you don't recognize, or don't want to include on your Race Passport. You can add them back later!
-        </p>
+
+        {error === 'no_results' ? (
+          <>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(27,42,74,0.06)', border:'1px solid rgba(27,42,74,0.15)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>No races found</span>
+            </div>
+            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'42px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>NO RESULTS FOUND</h1>
+            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:'0 auto', fontWeight:300, lineHeight:1.7, maxWidth:'480px' }}>
+              We searched RunSignup for <strong style={{ color:'#1B2A4A' }}>{firstName} {lastName}</strong>{dob ? ` with DOB ${formatDob(dob)}` : ''} but didn't find any results. Make sure your name and date of birth match what you used when registering for races.
+            </p>
+          </>
+        ) : error === 'api_error' ? (
+          <>
+            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'42px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>SEARCH UNAVAILABLE</h1>
+            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:'0 auto', fontWeight:300, lineHeight:1.7, maxWidth:'480px' }}>
+              We couldn't reach RunSignup right now. You can skip this step and add races manually later.
+            </p>
+          </>
+        ) : (
+          <>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
+              <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{races.length} Races Found on RunSignup</span>
+            </div>
+            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>ARE THESE YOUR RACES?</h1>
+            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7, maxWidth:'480px', marginLeft:'auto', marginRight:'auto' }}>
+              We searched using <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{firstName} {lastName}</strong>
+              {dob && <span> with DOB <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{formatDob(dob)}</strong></span>}.
+              {' '}Uncheck anything you don't recognize, or don't want to include on your Race Passport.
+            </p>
+          </>
+        )}
       </div>
+
       <div style={{ position:'relative', zIndex:1, maxWidth:'960px', margin:'0 auto', padding:'0 20px' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 0 12px' }}>
-          <div style={{ display:'flex', gap:'8px' }}>
-            {[
-              { key:'ALL', label:'All', count:MOCK_RACES.length },
-              { key:'RUNSIGNUP', label:'RunSignup', count:runSignupCount },
-              { key:'ATHLINKS', label:'Athlinks', count:athlinksCount },
-            ].map(tab => (
-              <button key={tab.key} className={`source-tab ${activeSource === tab.key ? 'active' : ''}`} onClick={() => setActiveSource(tab.key)}>
-                {tab.label} {tab.count}
-              </button>
-            ))}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{selectedCount} of {MOCK_RACES.length} selected</span>
-            <button onClick={toggleAll} style={{ background:'none', border:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', padding:0 }}>
-              {allSelected ? 'Deselect All' : 'Select All'}
-            </button>
-          </div>
-        </div>
-        <div className="cards-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'16px', marginBottom:'20px' }}>
-          {filteredRaces.map(race => <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} />)}
-        </div>
+
+        {races.length > 0 && (
+          <>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'16px 0 12px' }}>
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button className={`source-tab ${activeSource === 'ALL' ? 'active' : ''}`} onClick={() => setActiveSource('ALL')}>All {races.length}</button>
+                {runSignupCount > 0 && <button className={`source-tab ${activeSource === 'RUNSIGNUP' ? 'active' : ''}`} onClick={() => setActiveSource('RUNSIGNUP')}>RunSignup {runSignupCount}</button>}
+                {athlinksCount > 0 && <button className={`source-tab ${activeSource === 'ATHLINKS' ? 'active' : ''}`} onClick={() => setActiveSource('ATHLINKS')}>Athlinks {athlinksCount}</button>}
+              </div>
+              <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{selectedCount} of {races.length} selected</span>
+                <button onClick={toggleAll} style={{ background:'none', border:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', padding:0 }}>
+                  {allSelected ? 'Deselect All' : 'Select All'}
+                </button>
+              </div>
+            </div>
+
+            <div className="cards-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))', gap:'16px', marginBottom:'20px' }}>
+              {filteredRaces.map(race => <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} />)}
+            </div>
+          </>
+        )}
+
         <div style={{ border:'1.5px dashed #e2e6ed', borderRadius:'8px', padding:'14px 16px', marginBottom:'20px', background:'rgba(255,255,255,0.9)' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Missing a race?</div>
           <p style={{ fontSize:'13px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6 }}>
@@ -239,9 +363,13 @@ export default function RaceImport() {
             {' '}after confirming.
           </p>
         </div>
-        <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
-          {saving ? 'Saving...' : `Confirm My Races (${selectedCount}) →`}
-        </button>
+
+        {races.length > 0 && (
+          <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
+            {saving ? 'Saving...' : `Confirm My Races (${selectedCount}) →`}
+          </button>
+        )}
+
         <p onClick={() => navigate('/home')} style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'14px', cursor:'pointer', letterSpacing:'0.5px' }}>
           Skip import — I'll add races later
         </p>
