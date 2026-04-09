@@ -10,7 +10,7 @@ import BuildPassport from './pages/BuildPassport'
 import RaceImport from './pages/RaceImport'
 import Home from './pages/Home'
 import Discover from './pages/Discover'
-import RaceDetail from './pages/RaceDetail'
+import RacePage from './pages/RacePage'
 import Passport from './pages/Passport'
 import PublicProfile from './pages/PublicProfile'
 
@@ -30,7 +30,7 @@ export default function App() {
           <Route path="/race-import" element={<RaceImport />} />
           <Route path="/home" element={<Home />} />
           <Route path="/discover" element={<Discover />} />
-          <Route path="/race/:id" element={<RaceDetail />} />
+          <Route path="/race/:id" element={<RacePage />} />
           <Route path="/passport" element={<Passport />} />
           <Route path="/:username" element={<PublicProfile />} />
         </Routes>
@@ -38,4 +38,3 @@ export default function App() {
     </AuthProvider>
   )
 }
-
