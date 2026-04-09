@@ -2,25 +2,23 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
+import { fetchUnsplashPhoto, getFallback } from '../lib/unsplash'
 
-// Verified Unsplash city photos
-const CITY_PHOTOS = {
-  'Baltimore':         'https://images.unsplash.com/photo-1609868824796-e2a99d2a6b9f?w=600&q=80&fit=crop',
-  'Annapolis':         'https://images.unsplash.com/photo-1590077428593-a55bb07c4665?w=600&q=80&fit=crop',
-  'Washington DC':     'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=600&q=80&fit=crop',
-  'Frederick Maryland':'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?w=600&q=80&fit=crop',
-  'Arlington Virginia':'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=600&q=80&fit=crop',
-  'Maryland running':  'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80&fit=crop',
-}
+const MOCK_RACES = [
+  { id:1, name:'Baltimore Running Festival 10K', date:'Oct 2024', location:'Baltimore, MD', city:'Baltimore', distance:'10K', time:'58:42', source:'RUNSIGNUP', query:'Baltimore city skyline Maryland' },
+  { id:2, name:'Bay Bridge Run', date:'Apr 2024', location:'Annapolis, MD', city:'Annapolis', distance:'10K', time:'57:14', source:'RUNSIGNUP', query:'Chesapeake Bay Bridge Maryland' },
+  { id:3, name:'Marine Corps Marathon', date:'Oct 2023', location:'Washington, DC', city:'Washington DC', distance:'26.2', time:'4:12:08', source:'ATHLINKS', query:'Washington DC marathon runners National Mall' },
+  { id:4, name:'Frederick Running Festival 5K', date:'May 2023', location:'Frederick, MD', city:'Frederick', distance:'5K', time:'24:33', source:'RUNSIGNUP', query:'Frederick Maryland historic downtown' },
+  { id:5, name:'Cherry Blossom 10 Miler', date:'Apr 2023', location:'Washington, DC', city:'Washington DC', distance:'10 mi', time:'1:38:55', source:'ATHLINKS', query:'cherry blossom Washington DC spring runners' },
+  { id:6, name:'9/11 Memorial 5K', date:'Sept 2022', location:'Arlington, VA', city:'Arlington', distance:'5K', time:'23:11', source:'ATHLINKS', query:'Arlington Virginia Pentagon memorial' },
+  { id:7, name:'Hot Cider Hustle 5K', date:'Nov 2022', location:'Washington, DC', city:'Washington DC', distance:'5K', time:'24:02', source:'RUNSIGNUP', query:'autumn fall running race city' },
+  { id:8, name:'Suds & Soles 5K', date:'Jun 2022', location:'Rockville, MD', city:'Rockville', distance:'5K', time:'25:44', source:'RUNSIGNUP', query:'Maryland suburban running race' },
+]
 
-// Distances >= 26.2 miles get gold stamps
-const isGoldDistance = (dist) => {
+function isGoldDistance(dist) {
   const d = dist.toLowerCase().replace(/\s/g,'')
-  if (d === '26.2' || d === '26.2mi' || d === 'marathon') return true
-  if (d === '50k' || d === '50m' || d === '100k' || d === '100m') return true
-  if (d === '70.3' || d === '140.6') return true
-  const num = parseFloat(d)
-  return !isNaN(num) && num >= 26.2
+  if (['26.2','marathon','50k','50m','100k','100m','70.3','140.6'].includes(d)) return true
+  const n = parseFloat(d); return !isNaN(n) && n >= 26.2
 }
 
 function Stamp({ distance, size = 52 }) {
@@ -30,51 +28,46 @@ function Stamp({ distance, size = 52 }) {
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 10 : cleaned.length > 2 ? 13 : 17
   return (
-    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${color}`, background:bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${color}`, background:bg, display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
       <div style={{ position:'absolute', inset:4, borderRadius:'50%', border:`0.75px dashed ${gold ? 'rgba(201,168,76,0.35)' : 'rgba(27,42,74,0.2)'}` }} />
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 3px' }}>{cleaned}</div>
     </div>
   )
 }
 
-const MOCK_RACES = [
-  { id:1, name:'Baltimore Running Festival 10K', date:'Oct 2024', location:'Baltimore, MD', city:'Baltimore', distance:'10K', time:'58:42', source:'RUNSIGNUP' },
-  { id:2, name:'Bay Bridge Run', date:'Apr 2024', location:'Annapolis, MD', city:'Annapolis', distance:'10K', time:'57:14', source:'RUNSIGNUP' },
-  { id:3, name:'Marine Corps Marathon', date:'Oct 2023', location:'Washington, DC', city:'Washington DC', distance:'26.2', time:'4:12:08', source:'ATHLINKS' },
-  { id:4, name:'Frederick Running Festival 5K', date:'May 2023', location:'Frederick, MD', city:'Frederick Maryland', distance:'5K', time:'24:33', source:'RUNSIGNUP' },
-  { id:5, name:'Cherry Blossom 10 Miler', date:'Apr 2023', location:'Washington, DC', city:'Washington DC', distance:'10 mi', time:'1:38:55', source:'ATHLINKS' },
-  { id:6, name:'9/11 Memorial 5K', date:'Sept 2022', location:'Arlington, VA', city:'Arlington Virginia', distance:'5K', time:'23:11', source:'ATHLINKS' },
-  { id:7, name:'Hot Cider Hustle 5K', date:'Nov 2022', location:'Washington, DC', city:'Washington DC', distance:'5K', time:'24:02', source:'RUNSIGNUP' },
-  { id:8, name:'Suds & Soles 5K', date:'Jun 2022', location:'Rockville, MD', city:'Maryland running', distance:'5K', time:'25:44', source:'RUNSIGNUP' },
-]
-
-function getPhoto(city) {
-  return CITY_PHOTOS[city] || 'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=600&q=80&fit=crop'
-}
-
 function RaceCard({ race, selected, onToggle }) {
   const [hovered, setHovered] = useState(false)
-  return (
-    <div onClick={() => onToggle(race.id)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'10px', overflow:'hidden', border: selected ? '2.5px solid #C9A84C' : '1.5px solid #e2e6ed', background:'#fff', cursor:'pointer', transition:'border-color 0.15s,transform 0.2s', transform: hovered ? 'translateY(-3px)' : 'translateY(0)', position:'relative' }}>
+  const [photo, setPhoto] = useState(getFallback('running'))
 
+  useEffect(() => {
+    fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url))
+  }, [race.query])
+
+  return (
+    <div
+      onClick={() => onToggle(race.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{ borderRadius:'10px', overflow:'hidden', border: selected ? '2.5px solid #C9A84C' : '1.5px solid #e2e6ed', background:'#fff', cursor:'pointer', transition:'border-color 0.15s,transform 0.2s', transform: hovered ? 'translateY(-3px)' : 'translateY(0)', position:'relative' }}
+    >
+      {/* Checkbox */}
       <div style={{ position:'absolute', top:10, right:10, zIndex:10, width:24, height:24, borderRadius:'50%', background: selected ? '#C9A84C' : 'rgba(255,255,255,0.9)', border: selected ? '2px solid #C9A84C' : '2px solid rgba(255,255,255,0.7)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
         {selected && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
-
+      {/* Source badge */}
       <div style={{ position:'absolute', top:10, left:10, zIndex:10, background:'rgba(0,0,0,0.55)', borderRadius:'4px', padding:'3px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>{race.source}</div>
-
+      {/* Image */}
       <div style={{ position:'relative', height:160, background:'#1B2A4A', overflow:'hidden' }}>
-        <img src={getPhoto(race.city)} alt={race.location}
-          style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
+        <img src={photo} alt={race.location} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s ease', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.4))' }} />
+        {/* Hover finish time */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.2s ease' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'8px' }}>Finish Time</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{race.time}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginTop:'8px', textTransform:'uppercase' }}>{race.distance}</div>
         </div>
       </div>
-
+      {/* Card body */}
       <div style={{ padding:'12px 14px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'10px' }}>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'4px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
@@ -191,7 +184,6 @@ export default function RaceImport() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#fff', fontFamily:"'Barlow',sans-serif", paddingBottom:'40px', position:'relative', overflow:'hidden' }}>
-
       {/* Ghost ticker */}
       <div style={{ position:'fixed', top:'50%', transform:'translateY(-55%)', left:0, whiteSpace:'nowrap', pointerEvents:'none', zIndex:0 }}>
         <div style={{ display:'inline-flex', alignItems:'center', animation:'tickerScroll 60s linear infinite' }}>
@@ -199,25 +191,21 @@ export default function RaceImport() {
         </div>
       </div>
 
-      {/* White header with navy text */}
+      {/* White header */}
       <div style={{ position:'relative', zIndex:1, background:'#fff', padding:'28px 20px 24px', borderBottom:'3px solid #C9A84C', textAlign:'center' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'8px' }}>
           <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'11px', letterSpacing:'3px', color:'#9aa5b4' }}>RACE PASSPORT</span>
         </div>
-
-        {/* Step indicator */}
         <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'12px' }}>
           <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
         </div>
         <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 2 of 2 — Import Your Races</p>
-
         <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
           <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{MOCK_RACES.length} Races Found</span>
         </div>
-
         <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>ARE THESE YOUR RACES?</h1>
         <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7, maxWidth:'480px', marginLeft:'auto', marginRight:'auto' }}>
           We searched using <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{firstName} {lastName}</strong>
