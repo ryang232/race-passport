@@ -31,15 +31,17 @@ const STATS_COLS = [
   ]},
 ]
 
+// Discovery races — link to /race-detail/
 const MOCK_NEARBY = [
-  { id:1, name:'Parks Half Marathon', date:'Sept 21, 2026', location:'Bethesda, MD', distance:'13.1', query:'half marathon running race road crowd runners', terrain:'Road', elevation:'180ft', price:'$95', weeks:10 },
-  { id:2, name:'Suds & Soles 5K', date:'Jun 13, 2026', location:'Rockville, MD', distance:'5K', query:'5K running race community street finish line', terrain:'Road', elevation:'85ft', price:'$35', weeks:4 },
-  { id:3, name:'Baltimore 10 Miler', date:'Jun 6, 2026', location:'Baltimore, MD', distance:'10 mi', query:'Baltimore Inner Harbor waterfront Maryland cityscape', terrain:'Road', elevation:'210ft', price:'$65', weeks:8 },
-  { id:4, name:'Annapolis Run Across the Bay', date:'Oct 12, 2026', location:'Annapolis, MD', distance:'10K', query:'Chesapeake Bay Bridge Maryland aerial water scenic', terrain:'Bridge/Road', elevation:'140ft', price:'$55', weeks:6 },
-  { id:5, name:'DC Half Marathon', date:'Mar 15, 2026', location:'Washington, DC', distance:'13.1', query:'Washington DC Capitol monument running race road', terrain:'Road', elevation:'190ft', price:'$110', weeks:10 },
-  { id:6, name:'Frederick Festival 5K', date:'May 2, 2026', location:'Frederick, MD', distance:'5K', query:'Frederick Maryland historic brick downtown street', terrain:'Road', elevation:'95ft', price:'$30', weeks:4 },
+  { id:'d1', name:'Parks Half Marathon', date:'Sept 21, 2026', location:'Bethesda, MD', distance:'13.1', query:'half marathon running race road crowd runners', terrain:'Road', elevation:'180ft', price:'$95', weeks:10 },
+  { id:'d2', name:'Suds & Soles 5K', date:'Jun 13, 2026', location:'Rockville, MD', distance:'5K', query:'5K running race community street finish line', terrain:'Road', elevation:'85ft', price:'$35', weeks:4 },
+  { id:'d3', name:'Baltimore 10 Miler', date:'Jun 6, 2026', location:'Baltimore, MD', distance:'10 mi', query:'Baltimore Inner Harbor waterfront Maryland cityscape', terrain:'Road', elevation:'210ft', price:'$65', weeks:8 },
+  { id:'d4', name:'Annapolis Run Across the Bay', date:'Oct 12, 2026', location:'Annapolis, MD', distance:'10K', query:'Chesapeake Bay Bridge Maryland aerial water scenic', terrain:'Bridge/Road', elevation:'140ft', price:'$55', weeks:6 },
+  { id:'d5', name:'DC Half Marathon', date:'Mar 15, 2026', location:'Washington, DC', distance:'13.1', query:'Washington DC Capitol monument running race road', terrain:'Road', elevation:'190ft', price:'$110', weeks:10 },
+  { id:'d6', name:'Frederick Festival 5K', date:'May 2, 2026', location:'Frederick, MD', distance:'5K', query:'Frederick Maryland historic brick downtown street', terrain:'Road', elevation:'95ft', price:'$30', weeks:4 },
 ]
 
+// User's passport stamps — link to /race/
 const MOCK_STAMPS = [
   { id:1, distance:'26.2', name:'Marine Corps Marathon', location:'Arlington, VA', month:'Oct', year:'2024' },
   { id:2, distance:'10K', name:'Broad Street Run', location:'Philadelphia, PA', month:'May', year:'2023' },
@@ -50,10 +52,11 @@ const MOCK_STAMPS = [
   { id:7, distance:'5K', name:'Hot Cider Hustle', location:'Washington, DC', month:'Nov', year:'2022' },
 ]
 
+// User's upcoming registered races — link to /race-detail/
 const MOCK_UPCOMING = [
-  { id:101, name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', query:'Washington DC marathon runners National Mall crowd street race' },
-  { id:102, name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', query:'triathlon ocean swim wetsuit athletes open water race start' },
-  { id:103, name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', query:'cherry blossom Washington DC Tidal Basin spring pink trees' },
+  { id:'101', name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', query:'Washington DC marathon runners National Mall crowd street race' },
+  { id:'102', name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', query:'triathlon ocean swim wetsuit athletes open water race start' },
+  { id:'103', name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', query:'cherry blossom Washington DC Tidal Basin spring pink trees' },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -96,9 +99,9 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
       <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${color}`, background:bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${gold ? 'rgba(201,168,76,0.25)' : 'rgba(27,42,74,0.15)'}` }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${gold?'rgba(201,168,76,0.25)':'rgba(27,42,74,0.15)'}` }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
-        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${gold ? 'rgba(201,168,76,0.3)' : 'rgba(27,42,74,0.15)'}` }} />
+        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${gold?'rgba(201,168,76,0.3)':'rgba(27,42,74,0.15)'}` }} />
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
         {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.65 }}>{name}</div>}
       </div>
@@ -110,6 +113,7 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   )
 }
 
+// NearbyCard — routes to /race-detail/ (public discovery page)
 function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
@@ -118,12 +122,13 @@ function NearbyCard({ race }) {
   const gold = isGold(race.distance)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(`/race/${race.id}`)}
+      onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+        {/* Hover overlay */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.88)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s ease', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
             {[{ label:'Terrain', value:race.terrain }, { label:'Price', value:race.price }, { label:'Elevation', value:race.elevation }].map(stat => (
@@ -158,6 +163,7 @@ function NearbyCard({ race }) {
   )
 }
 
+// UpcomingCard — routes to /race-detail/ (public discovery page, registered view)
 function UpcomingCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
@@ -168,7 +174,7 @@ function UpcomingCard({ race }) {
   }, [race.query, race.distance])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(`/race/${race.id}`)}
+      onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
@@ -221,7 +227,6 @@ function ScrollRow({ children }) {
   )
 }
 
-// Scroll-parallax background — moves with user scroll, not auto-animate
 function ParallaxBackground() {
   const [offsetX, setOffsetX] = useState(0)
   useEffect(() => {
@@ -297,7 +302,6 @@ export default function Home() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif", position:'relative' }}>
-
       <ParallaxBackground />
 
       {/* NAV */}
@@ -350,7 +354,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* GREETING — slightly transparent so bg shows through */}
+      {/* GREETING */}
       <div style={{ position:'relative', zIndex:10, background:'rgba(255,255,255,0.88)', backdropFilter:'blur(2px)', borderBottom:'1px solid #e8eaed', padding:'40px 40px 34px' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>
           {greeting}, {firstName.toUpperCase()}.
@@ -382,15 +386,14 @@ export default function Home() {
                 Sync real miles, PRs &amp; activity data automatically
               </div>
               <button style={{ background:'#FC4C02', border:'none', borderRadius:'6px', padding:'8px 20px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
-                onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
-                onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+                onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                 Connect Strava
               </button>
             </div>
           </div>
         </div>
 
-        {/* RACES NEAR YOU */}
+        {/* RACES NEAR YOU — discovery, routes to /race-detail/ */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Races Near You</span>
@@ -399,7 +402,7 @@ export default function Home() {
           <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} />)}</ScrollRow>
         </div>
 
-        {/* STAMPS */}
+        {/* STAMPS — personal passport, routes to /race/ */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
             <span className="section-title">Your Stamps</span>
@@ -423,7 +426,7 @@ export default function Home() {
           </ScrollRow>
         </div>
 
-        {/* UPCOMING */}
+        {/* UPCOMING — discovery (registered), routes to /race-detail/ */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Upcoming Races</span>
