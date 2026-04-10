@@ -6,35 +6,58 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
 import { getDistanceColor } from '../lib/colors'
 
+// ── Ryan's real race stats ─────────────────────────────────────────────────────
 const STATS_COLS = [
-  { key:'races', items:[{ label:'Total Races', value:'14' },{ label:'5K Races', value:'6' },{ label:'10K Races', value:'3' },{ label:'13.1 Races', value:'2' },{ label:'26.2 Races', value:'2' },{ label:'70.3 Races', value:'1' }]},
-  { key:'miles', items:[{ label:'Miles Today', value:'6.2' },{ label:'Miles This Week', value:'28.4' },{ label:'Miles This Month', value:'112' },{ label:'Miles This Year', value:'847' },{ label:'Race Miles', value:'341' },{ label:'Miles All Time', value:'2,841' }]},
-  { key:'prs', items:[{ label:'5K PR', value:'22:14' },{ label:'10K PR', value:'46:38' },{ label:'10 Mile PR', value:'1:18:22' },{ label:'Half PR', value:'1:52:04' },{ label:'Marathon PR', value:'4:02:11' }]},
+  { key:'races', items:[
+    { label:'Total Races', value:'10' },
+    { label:'5K Races', value:'2' },
+    { label:'10K Races', value:'3' },
+    { label:'Half Marathons', value:'3' },
+    { label:'Marathons', value:'2' },
+    { label:'Triathlons', value:'1' },
+  ]},
+  { key:'miles', items:[
+    { label:'Race Miles (Est.)', value:'199' },
+    { label:'10K Miles', value:'18.6' },
+    { label:'Half Miles', value:'39.3' },
+    { label:'Marathon Miles', value:'52.4' },
+    { label:'Triathlon Miles', value:'70.3' },
+    { label:'5K Miles', value:'6.2' },
+  ]},
+  { key:'prs', items:[
+    { label:'5K PR', value:'28:16' },
+    { label:'10K PR', value:'47:49' },
+    { label:'Half PR', value:'1:57:40' },
+    { label:'Marathon PR', value:'4:44:47' },
+    { label:'70.3 PR', value:'6:32:08' },
+  ]},
 ]
 
+// ── Ryan's stamps (personal passport pages → /race/:id) ──────────────────────
+const RYAN_STAMPS = [
+  { id:9,  distance:'70.3',  name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD',    month:'Jun', year:'2025' },
+  { id:8,  distance:'13.1',  name:'Austin Half Marathon',   location:'Austin, TX',       month:'Feb', year:'2025' },
+  { id:7,  distance:'5K',    name:'Turkey Trot',            location:'Columbia, MD',     month:'Nov', year:'2024' },
+  { id:6,  distance:'26.2',  name:'Marine Corps Marathon',  location:'Washington, DC',   month:'Oct', year:'2023' },
+  { id:5,  distance:'26.2',  name:'LA Marathon',            location:'Los Angeles, CA',  month:'Mar', year:'2023' },
+  { id:4,  distance:'13.1',  name:'Holiday Half',           location:'Annandale, VA',    month:'Dec', year:'2021' },
+  { id:1,  distance:'10K',   name:'Sole of the City',       location:'Baltimore, MD',    month:'Oct', year:'2021' },
+]
+
+// ── Nearby discovery races → /race-detail/:id ────────────────────────────────
 const MOCK_NEARBY = [
-  { id:'d1', name:'Parks Half Marathon', date:'Sept 21, 2026', location:'Bethesda, MD', distance:'13.1', query:'half marathon running race road crowd runners', terrain:'Road', elevation:'180ft', price:'$95', weeks:10 },
-  { id:'d2', name:'Suds & Soles 5K', date:'Jun 13, 2026', location:'Rockville, MD', distance:'5K', query:'5K running race community street finish line', terrain:'Road', elevation:'85ft', price:'$35', weeks:4 },
-  { id:'d3', name:'Baltimore 10 Miler', date:'Jun 6, 2026', location:'Baltimore, MD', distance:'10 mi', query:'Baltimore Inner Harbor waterfront Maryland cityscape', terrain:'Road', elevation:'210ft', price:'$65', weeks:8 },
-  { id:'d4', name:'Annapolis Run Across the Bay', date:'Oct 12, 2026', location:'Annapolis, MD', distance:'10K', query:'Chesapeake Bay Bridge Maryland aerial water scenic', terrain:'Bridge/Road', elevation:'140ft', price:'$55', weeks:6 },
-  { id:'d5', name:'DC Half Marathon', date:'Mar 15, 2026', location:'Washington, DC', distance:'13.1', query:'Washington DC Capitol monument running race road', terrain:'Road', elevation:'190ft', price:'$110', weeks:10 },
-  { id:'d6', name:'Frederick Festival 5K', date:'May 2, 2026', location:'Frederick, MD', distance:'5K', query:'Frederick Maryland historic brick downtown street', terrain:'Road', elevation:'95ft', price:'$30', weeks:4 },
+  { id:'d1', name:'Parks Half Marathon',       date:'Sept 21, 2026', location:'Bethesda, MD',   distance:'13.1',  query:'half marathon road crowd runners',   terrain:'Road',       elevation:'180ft', price:'$95',  weeks:10 },
+  { id:'d2', name:'Suds & Soles 5K',           date:'Jun 13, 2026',  location:'Rockville, MD',  distance:'5K',    query:'5K community street finish line',    terrain:'Road',       elevation:'85ft',  price:'$35',  weeks:4  },
+  { id:'d3', name:'Baltimore 10 Miler',        date:'Jun 6, 2026',   location:'Baltimore, MD',  distance:'10 mi', query:'Baltimore Inner Harbor waterfront',  terrain:'Road',       elevation:'210ft', price:'$65',  weeks:8  },
+  { id:'d4', name:'Annapolis Bay Bridge Run',  date:'Oct 12, 2026',  location:'Annapolis, MD',  distance:'10K',   query:'Chesapeake Bay Bridge Maryland',     terrain:'Bridge/Road',elevation:'140ft', price:'$55',  weeks:6  },
+  { id:'d5', name:'DC Half Marathon',          date:'Mar 15, 2027',  location:'Washington, DC', distance:'13.1',  query:'Washington DC Capitol monument',     terrain:'Road',       elevation:'190ft', price:'$110', weeks:10 },
+  { id:'d6', name:'Marine Corps Marathon',     date:'Oct 26, 2026',  location:'Arlington, VA',  distance:'26.2',  query:'Washington DC marathon National Mall',terrain:'Road',       elevation:'912ft', price:'$140', weeks:16 },
 ]
 
-const MOCK_STAMPS = [
-  { id:1, distance:'26.2', name:'Marine Corps Marathon', location:'Arlington, VA', month:'Oct', year:'2024' },
-  { id:2, distance:'10K', name:'Broad Street Run', location:'Philadelphia, PA', month:'May', year:'2023' },
-  { id:3, distance:'5K', name:'Turkey Trot', location:'Chicago, IL', month:'Nov', year:'2023' },
-  { id:4, distance:'50K', name:'Seneca Creek Trail Ultra', location:'Gaithersburg, MD', month:'Mar', year:'2022' },
-  { id:5, distance:'13.1', name:"Rock 'N' Roll Half", location:'Nashville, TN', month:'Apr', year:'2023' },
-  { id:6, distance:'70.3', name:'IRONMAN 70.3', location:'Atlantic City, NJ', month:'Sept', year:'2024' },
-  { id:7, distance:'5K', name:'Hot Cider Hustle', location:'Washington, DC', month:'Nov', year:'2022' },
-]
-
+// ── Upcoming registered → /race-detail/:id ────────────────────────────────────
 const MOCK_UPCOMING = [
-  { id:'101', name:'Marine Corps Marathon', date:'Oct 29, 2026', location:'Washington, DC', distance:'26.2', query:'Washington DC marathon runners National Mall crowd street race' },
-  { id:'102', name:'IRONMAN 70.3 Atlantic City', date:'Sept 13, 2026', location:'Atlantic City, NJ', distance:'70.3', query:'triathlon ocean swim wetsuit athletes open water race start' },
-  { id:'103', name:'Cherry Blossom 10 Miler', date:'Apr 8, 2026', location:'Washington, DC', distance:'10 mi', query:'cherry blossom Washington DC Tidal Basin spring pink trees' },
+  { id:'u1', name:'Cherry Blossom 10 Miler', date:'Apr 6, 2026',  location:'Washington, DC',  distance:'10 mi', query:'cherry blossom DC Tidal Basin spring' },
+  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD', distance:'26.2',  query:'Baltimore marathon waterfront running' },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -62,7 +85,6 @@ function StatCol({ col }) {
   )
 }
 
-// Color-coded stamp
 function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   const colors = getDistanceColor(distance)
   const cleaned = distance.replace(' mi','').replace(' miles','')
@@ -70,11 +92,11 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
       <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${colors.light.replace('0.08','0.3').replace('0.09','0.3')}` }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${colors.light}` }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
         <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.primary, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
-        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.65 }}>{name}</div>}
+        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.65 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
       </div>
       <div style={{ textAlign:'center' }}>
         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', lineHeight:1.4 }}>{location}</div>
@@ -84,7 +106,6 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   )
 }
 
-// Color-coded nearby card with distance-matched hover overlay
 function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
@@ -96,34 +117,29 @@ function NearbyCard({ race }) {
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
+      <div style={{ height:'3px', background:colors.primary }} />
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
-        {/* Color accent top */}
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary, zIndex:3 }} />
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        {/* Color-coded hover overlay */}
-        <div style={{ position:'absolute', inset:0, background:`rgba(27,42,74,0.9)`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s ease', padding:'20px' }}>
-          {/* Colored top border inside overlay */}
+        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
-            {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(stat => (
-              <div key={stat.label} style={{ textAlign:'center' }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{stat.label}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{stat.value}</div>
+            {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
+              <div key={s.label} style={{ textAlign:'center' }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{s.value}</div>
               </div>
             ))}
           </div>
           <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
           <div style={{ textAlign:'center' }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training Time</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training</div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:colors.primary, letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.4)', marginTop:'3px' }}>based on your experience + history</div>
           </div>
         </div>
-        {/* Color-coded stamp */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <div style={{ width:52, height:52, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+          <div style={{ width:50, height:50, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 13, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
           </div>
@@ -146,21 +162,19 @@ function UpcomingCard({ race }) {
   const navigate = useNavigate()
   const colors = getDistanceColor(race.distance)
   const cleaned = race.distance.replace(' mi','')
-  useEffect(() => {
-    fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url))
-  }, [race.query])
+  useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
+      <div style={{ height:'3px', background:colors.primary }} />
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary, zIndex:3 }} />
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', top:12, right:12, background:`${colors.primary}ee`, borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>Registered</div>
         <div style={{ position:'absolute', bottom:12, left:12 }}>
-          <div style={{ width:48, height:48, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+          <div style={{ width:46, height:46, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 12, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
           </div>
@@ -187,11 +201,7 @@ function ScrollRow({ children }) {
     setShowLeft(el.scrollLeft > 10)
     setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
   }
-  useEffect(() => {
-    const el = ref.current
-    if (el) { el.addEventListener('scroll', checkScroll); checkScroll() }
-    return () => el?.removeEventListener('scroll', checkScroll)
-  }, [])
+  useEffect(() => { const el = ref.current; if (el) { el.addEventListener('scroll', checkScroll); checkScroll() }; return () => el?.removeEventListener('scroll', checkScroll) }, [])
   const scroll = (dir) => ref.current?.scrollBy({ left: dir * 420, behavior:'smooth' })
   const btnStyle = { position:'absolute', top:'40%', transform:'translateY(-50%)', zIndex:10, width:44, height:44, borderRadius:'50%', background:'#1B2A4A', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(27,42,74,0.25)', transition:'background 0.15s' }
   return (
@@ -216,9 +226,7 @@ function ParallaxBackground() {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, pointerEvents:'none', zIndex:0, overflow:'hidden' }}>
       <div style={{ position:'absolute', top:'50%', transform:`translateY(-50%) translateX(-${offsetX % 600}px)`, whiteSpace:'nowrap', willChange:'transform' }}>
-        {items.map((d, i) => (
-          <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.04)', lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>
-        ))}
+        {items.map((d, i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.04)', lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>)}
       </div>
     </div>
   )
@@ -239,7 +247,6 @@ export default function Home() {
     const h = new Date().getHours()
     if (h >= 12 && h < 17) setGreeting('GOOD AFTERNOON')
     else if (h >= 17) setGreeting('GOOD EVENING')
-    else setGreeting('GOOD MORNING')
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -252,10 +259,10 @@ export default function Home() {
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; position:relative; border-bottom:2px solid transparent; white-space:nowrap; }
+      .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
       .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
       .nav-tab:hover { color:#1B2A4A; }
-      .dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; color:#1B2A4A; cursor:pointer; transition:background 0.1s; white-space:nowrap; }
+      .dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; color:#1B2A4A; cursor:pointer; transition:background 0.1s; }
       .dropdown-item:hover { background:#f4f5f7; }
       .section-title { font-family:'Bebas Neue',sans-serif; font-size:26px; color:#1B2A4A; letter-spacing:1px; }
       .view-all-btn { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:1.5px; color:#C9A84C; text-transform:uppercase; cursor:pointer; border:none; background:none; padding:0; }
@@ -267,20 +274,22 @@ export default function Home() {
     return () => { document.getElementById('rp-home-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
 
-  const firstName = profile?.full_name?.split(' ')[0] || user?.user_metadata?.first_name || 'Runner'
+  const firstName = profile?.full_name?.split(' ')[0] || user?.user_metadata?.first_name || 'Ryan'
   const initials = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
 
   const NAV_TABS = [
-    { label:'Home', path:'/home', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
+    { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
     { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
     { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
-    { label:'Profile', path:'/profile', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
 
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif", position:'relative' }}>
       <ParallaxBackground />
+
+      {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
         <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
@@ -308,7 +317,7 @@ export default function Home() {
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>racepassportapp.com/ryan-groene</div>
                 </div>
                 <button className="dropdown-item" onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
-                <button className="dropdown-item" onClick={() => { navigate('/build-passport'); setShowDropdown(false) }}>Settings</button>
+                <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowDropdown(false) }}>Settings</button>
                 <div style={{ height:'1px', background:'#f0f2f5' }} />
                 <button className="dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}>Log Out</button>
               </div>
@@ -330,12 +339,14 @@ export default function Home() {
         </div>
       )}
 
+      {/* GREETING */}
       <div style={{ position:'relative', zIndex:10, background:'rgba(255,255,255,0.88)', backdropFilter:'blur(2px)', borderBottom:'1px solid #e8eaed', padding:'40px 40px 34px' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>{greeting}, {firstName.toUpperCase()}.</div>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
       </div>
 
       <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
+
         {/* STATS */}
         <div style={{ background:'#1B2A4A', borderRadius:'16px', marginBottom:'48px', border:'1px solid rgba(201,168,76,0.15)', overflow:'hidden' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1px 1fr 1px 1fr 1px 1fr', padding:'28px 0', alignItems:'center' }}>
@@ -352,13 +363,14 @@ export default function Home() {
                 </div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#fff', whiteSpace:'nowrap' }}>Connect Strava</div>
               </div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px', textAlign:'center', lineHeight:1.5 }}>Sync real miles, PRs &amp; activity data automatically</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px', textAlign:'center', lineHeight:1.5 }}>Sync miles, PRs &amp; activities automatically</div>
               <button style={{ background:'#FC4C02', border:'none', borderRadius:'6px', padding:'8px 20px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
                 onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>Connect Strava</button>
             </div>
           </div>
         </div>
 
+        {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Races Near You</span>
@@ -367,14 +379,16 @@ export default function Home() {
           <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} />)}</ScrollRow>
         </div>
 
+        {/* YOUR STAMPS */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
             <span className="section-title">Your Stamps</span>
             <button className="view-all-btn" onClick={() => navigate('/passport')}>View Passport →</button>
           </div>
           <ScrollRow>
-            {MOCK_STAMPS.map(stamp => (
-              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} onClick={() => navigate(`/race/${stamp.id}`)} />
+            {RYAN_STAMPS.map(stamp => (
+              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130}
+                onClick={() => navigate(`/race/${stamp.id}`)} />
             ))}
             <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
               <div style={{ width:130, height:130, borderRadius:'50%', border:'2px dashed #d0d7e0', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.8)', transition:'border-color 0.15s, transform 0.15s' }}
@@ -387,6 +401,7 @@ export default function Home() {
           </ScrollRow>
         </div>
 
+        {/* UPCOMING */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Upcoming Races</span>
@@ -394,6 +409,7 @@ export default function Home() {
           </div>
           <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} />)}</ScrollRow>
         </div>
+
       </div>
     </div>
   )
