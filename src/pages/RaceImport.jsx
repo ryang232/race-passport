@@ -8,16 +8,16 @@ import { getDistanceColor } from '../lib/colors'
 
 // Ryan's real race history — shown after the loading screen
 const RYAN_IMPORT_RACES = [
-  { id:'r1',  name:'Sole of the City 10K',          date:'Oct 2021', location:'Baltimore, MD',    city:'Baltimore',  distance:'10K',  time:'47:49', source:'RUNSIGNUP', selected:true },
-  { id:'r2',  name:'Bay Bridge Run',                 date:'Nov 2021', location:'Annapolis, MD',    city:'Annapolis',  distance:'10K',  time:'50:57', source:'RUNSIGNUP', selected:true },
-  { id:'r3',  name:'Baltimore Running Festival 10K', date:'Oct 2021', location:'Baltimore, MD',    city:'Baltimore',  distance:'10K',  time:'58:03', source:'RUNSIGNUP', selected:true },
-  { id:'r4',  name:'Holiday Half Marathon',          date:'Dec 2021', location:'Annandale, VA',    city:'Annandale',  distance:'13.1', time:'2:19:05', source:'RUNSIGNUP', selected:true },
-  { id:'r5',  name:'LA Marathon',                    date:'Mar 2023', location:'Los Angeles, CA',  city:'Los Angeles',distance:'26.2', time:'4:44:47', source:'RUNSIGNUP', selected:true },
-  { id:'r6',  name:'Marine Corps Marathon',          date:'Oct 2023', location:'Washington, DC',   city:'Washington', distance:'26.2', time:'4:45:42', source:'RUNSIGNUP', selected:true },
-  { id:'r7',  name:'Downtown Columbia Turkey Trot',  date:'Nov 2024', location:'Columbia, MD',     city:'Columbia',   distance:'5K',   time:'28:16', source:'RUNSIGNUP', selected:true },
-  { id:'r8',  name:'Austin Half Marathon',           date:'Feb 2025', location:'Austin, TX',       city:'Austin',     distance:'13.1', time:'1:57:40', source:'RUNSIGNUP', selected:true },
-  { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',    city:'Cambridge',  distance:'70.3', time:'6:32:08', source:'RUNSIGNUP', selected:true },
-  { id:'r10', name:'Downtown Columbia Turkey Trot',  date:'Nov 2025', location:'Columbia, MD',     city:'Columbia',   distance:'5K',   time:'35:09', source:'RUNSIGNUP', selected:true },
+  { id:'r1',  name:'Sole of the City 10K',          date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',    distance:'10K',  time:'47:49',  source:'RUNSIGNUP', selected:true },
+  { id:'r2',  name:'Bay Bridge Run',                 date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',    distance:'10K',  time:'50:57',  source:'RUNSIGNUP', selected:true },
+  { id:'r3',  name:'Baltimore Running Festival 10K', date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',    distance:'10K',  time:'58:03',  source:'RUNSIGNUP', selected:true },
+  { id:'r4',  name:'Holiday Half Marathon',          date:'Dec 2021', location:'Annandale, VA',   city:'Annandale',    distance:'13.1', time:'2:19:05',source:'RUNSIGNUP', selected:true },
+  { id:'r5',  name:'Marine Corps Marathon',          date:'Oct 2023', location:'Washington, DC',  city:'Washington',   distance:'26.2', time:'4:45:42',source:'RUNSIGNUP', selected:true },
+  { id:'r6',  name:'LA Marathon',                    date:'Mar 2022', location:'Los Angeles, CA', city:'Los Angeles',  distance:'26.2', time:'4:44:47',source:'RUNSIGNUP', selected:true },
+  { id:'r7',  name:'Downtown Columbia Turkey Trot',  date:'Nov 2024', location:'Columbia, MD',    city:'Columbia',     distance:'5K',   time:'28:16',  source:'RUNSIGNUP', selected:true },
+  { id:'r8',  name:'Austin Half Marathon',           date:'Feb 2025', location:'Austin, TX',      city:'Austin',       distance:'13.1', time:'1:57:40',source:'RUNSIGNUP', selected:true },
+  { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',   city:'Cambridge',    distance:'70.3', time:'6:32:08',source:'ATHLINKS',  selected:true },
+  { id:'r10', name:'Downtown Columbia Turkey Trot',  date:'Nov 2025', location:'Columbia, MD',    city:'Columbia',     distance:'5K',   time:'35:09',  source:'ATHLINKS',  selected:true },
 ]
 
 function RaceCard({ race, selected, onToggle }) {
@@ -112,8 +112,8 @@ export default function RaceImport() {
         await new Promise(r => setTimeout(r, s.ms))
       }
 
-      // Load races
-      const raceList = locationState?.dummyRaces || RYAN_IMPORT_RACES
+      // Always load Ryan's real races
+      const raceList = RYAN_IMPORT_RACES
       setRaces(raceList)
       const init = {}
       raceList.forEach(r => { init[r.id] = r.selected !== false })
@@ -213,6 +213,7 @@ export default function RaceImport() {
           <div style={{ display:'flex', gap:'8px' }}>
             <button className={`source-tab ${activeSource==='ALL'?'active':''}`} onClick={() => setActiveSource('ALL')}>All {races.length}</button>
             <button className={`source-tab ${activeSource==='RUNSIGNUP'?'active':''}`} onClick={() => setActiveSource('RUNSIGNUP')}>RunSignup {races.filter(r=>r.source==='RUNSIGNUP').length}</button>
+            <button className={`source-tab ${activeSource==='ATHLINKS'?'active':''}`} onClick={() => setActiveSource('ATHLINKS')}>Athlinks {races.filter(r=>r.source==='ATHLINKS').length}</button>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
             <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{selectedCount} of {races.length} selected</span>
