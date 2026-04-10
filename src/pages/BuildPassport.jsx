@@ -3,6 +3,97 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
+// ── Month/Day/Year DOB Picker ─────────────────────────────────────────────────
+function DobPicker({ value, onChange }) {
+  const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
+  const currentYear = new Date().getFullYear()
+  const years = Array.from({ length: 100 }, (_, i) => currentYear - 18 - i)
+
+  // Parse existing value (YYYY-MM-DD)
+  const [month, setMonth] = useState('')
+  const [day, setDay] = useState('')
+  const [year, setYear] = useState('')
+
+  useEffect(() => {
+    if (value && value.includes('-')) {
+      const parts = value.split('-')
+      if (parts.length === 3) {
+        setYear(parts[0])
+        setMonth(String(parseInt(parts[1])))
+        setDay(String(parseInt(parts[2])))
+      }
+    }
+  }, [])
+
+  const daysInMonth = month && year
+    ? new Date(parseInt(year), parseInt(month), 0).getDate()
+    : 31
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
+
+  const handleChange = (newMonth, newDay, newYear) => {
+    if (newMonth && newDay && newYear) {
+      const m = String(newMonth).padStart(2, '0')
+      const d = String(newDay).padStart(2, '0')
+      onChange(`${newYear}-${m}-${d}`)
+    }
+  }
+
+  const sel = {
+    padding: '10px 12px', borderRadius: '6px', border: '1.5px solid #e2e6ed',
+    background: '#fafbfc', color: '#1B2A4A', fontSize: '14px',
+    fontFamily: "'Barlow', sans-serif", outline: 'none',
+    appearance: 'none', cursor: 'pointer', width: '100%',
+    transition: 'border-color 0.15s',
+  }
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: '1.8fr 1fr 1.4fr', gap: '8px' }}>
+      <select value={month} style={sel}
+        onChange={e => { setMonth(e.target.value); handleChange(e.target.value, day, year) }}
+        onFocus={e => e.target.style.borderColor='#C9A84C'}
+        onBlur={e => e.target.style.borderColor='#e2e6ed'}>
+        <option value="">Month</option>
+        {MONTHS.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+      </select>
+      <select value={day} style={sel}
+        onChange={e => { setDay(e.target.value); handleChange(month, e.target.value, year) }}
+        onFocus={e => e.target.style.borderColor='#C9A84C'}
+        onBlur={e => e.target.style.borderColor='#e2e6ed'}>
+        <option value="">Day</option>
+        {days.map(d => <option key={d} value={d}>{d}</option>)}
+      </select>
+      <select value={year} style={sel}
+        onChange={e => { setYear(e.target.value); handleChange(month, day, e.target.value) }}
+        onFocus={e => e.target.style.borderColor='#C9A84C'}
+        onBlur={e => e.target.style.borderColor='#e2e6ed'}>
+        <option value="">Year</option>
+        {years.map(y => <option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  )
+}
+
+// ── Yes/No toggle ─────────────────────────────────────────────────────────────
+function YesNo({ value, onChange }) {
+  return (
+    <div style={{ display: 'flex', gap: '8px' }}>
+      {['Yes', 'No'].map(opt => (
+        <button key={opt} onClick={() => onChange(opt === 'Yes')}
+          style={{
+            flex: 1, padding: '10px', border: '1.5px solid', borderRadius: '6px',
+            fontFamily: "'Barlow Condensed', sans-serif", fontSize: '13px',
+            fontWeight: 600, letterSpacing: '1px', cursor: 'pointer', transition: 'all 0.15s',
+            background: (value === true && opt === 'Yes') || (value === false && opt === 'No') ? '#1B2A4A' : '#fafbfc',
+            borderColor: (value === true && opt === 'Yes') || (value === false && opt === 'No') ? '#1B2A4A' : '#e2e6ed',
+            color: (value === true && opt === 'Yes') || (value === false && opt === 'No') ? '#fff' : '#9aa5b4',
+          }}>
+          {opt}
+        </button>
+      ))}
+    </div>
+  )
+}
+
 function ErrorBox({ children }) {
   return (
     <div style={{ background: 'rgba(27,42,74,0.06)', border: '1px solid rgba(27,42,74,0.2)', borderRadius: '6px', padding: '12px 14px', fontSize: '13px', marginBottom: '16px', lineHeight: 1.6, display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
@@ -12,95 +103,80 @@ function ErrorBox({ children }) {
   )
 }
 
-function DobPicker({ value, onChange }) {
-  const months = ['January','February','March','April','May','June','July','August','September','October','November','December']
-  const parsed = value ? new Date(value + 'T12:00:00') : null
-  const selMonth = parsed ? parsed.getMonth() + 1 : ''
-  const selDay   = parsed ? parsed.getDate() : ''
-  const selYear  = parsed ? parsed.getFullYear() : ''
-
-  const daysInMonth = (m, y) => { if (!m) return 31; return new Date(y || 2000, m, 0).getDate() }
-
-  const update = (m, d, y) => {
-    const mm = m !== undefined ? m : selMonth
-    const dd = d !== undefined ? d : selDay
-    const yy = y !== undefined ? y : selYear
-    if (mm && dd && yy && yy.toString().length === 4) {
-      const safeDay = Math.min(dd, daysInMonth(mm, yy))
-      onChange(`${yy}-${String(mm).padStart(2,'0')}-${String(safeDay).padStart(2,'0')}`)
-    }
-  }
-
-  const currentYear = new Date().getFullYear()
-  const years = Array.from({ length: 100 }, (_, i) => currentYear - 18 - i)
-  const days = Array.from({ length: daysInMonth(selMonth, selYear) }, (_, i) => i + 1)
-
-  const sel = {
-    padding: '11px 14px', borderRadius: '6px', border: '1.5px solid #e2e6ed',
-    background: '#fafbfc', color: selMonth || selDay || selYear ? '#1B2A4A' : '#b0b8c4',
-    fontSize: '14px', fontFamily: "'Barlow', sans-serif", outline: 'none',
-    boxSizing: 'border-box', appearance: 'none', cursor: 'pointer',
-    transition: 'border-color 0.15s',
-    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%239aa5b4' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E")`,
-    backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px', width: '100%',
-  }
-
-  return (
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.5fr', gap: '8px' }}>
-      <select value={selMonth} onChange={e => update(parseInt(e.target.value), undefined, undefined)} style={sel}
-        onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
-        <option value="">Month</option>
-        {months.map((m,i) => <option key={m} value={i+1}>{m}</option>)}
-      </select>
-      <select value={selDay} onChange={e => update(undefined, parseInt(e.target.value), undefined)} style={sel}
-        onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
-        <option value="">Day</option>
-        {days.map(d => <option key={d} value={d}>{d}</option>)}
-      </select>
-      <select value={selYear} onChange={e => update(undefined, undefined, parseInt(e.target.value))} style={sel}
-        onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
-        <option value="">Year</option>
-        {years.map(y => <option key={y} value={y}>{y}</option>)}
-      </select>
-    </div>
-  )
-}
+// ── Dummy race data for RaceImport flow ───────────────────────────────────────
+const DUMMY_RACES = [
+  { id:'rs1', name:'Marine Corps Marathon', date:'Oct 29, 2023', location:'Arlington, VA', distance:'26.2', time:'4:12:08', source:'RunSignup', city:'Arlington', country:'US', cityPhoto:'https://images.unsplash.com/photo-1578037970687-42b0e2d8d553?w=400&h=300&fit=crop', selected:true },
+  { id:'rs2', name:"Rock 'N' Roll Nashville Half", date:'Apr 30, 2022', location:'Nashville, TN', distance:'13.1', time:'1:58:44', source:'RunSignup', city:'Nashville', country:'US', cityPhoto:'https://images.unsplash.com/photo-1545419913-a2b1c5f56a0a?w=400&h=300&fit=crop', selected:true },
+  { id:'rs3', name:'Broad Street Run', date:'May 1, 2022', location:'Philadelphia, PA', distance:'10K', time:'1:01:22', source:'Athlinks', city:'Philadelphia', country:'US', cityPhoto:'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?w=400&h=300&fit=crop', selected:true },
+  { id:'rs4', name:'Turkey Trot 5K', date:'Nov 24, 2022', location:'Chicago, IL', distance:'5K', time:'26:14', source:'RunSignup', city:'Chicago', country:'US', cityPhoto:'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=300&fit=crop', selected:false },
+]
 
 export default function BuildPassport() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
+  // Personal info
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
+
+  // Address
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
   const [country, setCountry] = useState('United States')
+
+  // Race info
   const [raceName, setRaceName] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [shirtSize, setShirtSize] = useState('')
   const [experience, setExperience] = useState('')
+
+  // Racing background questions
+  const [favoriteDistance, setFavoriteDistance] = useState('')
+  const [doneMarathon, setDoneMarathon] = useState(null)
+  const [doneIronman, setDoneIronman] = useState(null)
+
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return
+
+      // Always pull email from auth object first — most reliable source
+      setEmail(user.email || '')
+
+      // Pull name from auth metadata (set during CreateAccount)
+      const meta = user.user_metadata || {}
+      const metaFirst = meta.first_name || ''
+      const metaLast = meta.last_name || ''
+      const metaFull = meta.full_name || ''
+
+      // Try Supabase profile row for saved data
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+
       if (data) {
-        const metaFirst = user.user_metadata?.first_name
-        const metaLast = user.user_metadata?.last_name
-        const fullName = data.full_name || user.user_metadata?.full_name || ''
-        const parts = fullName.trim().split(' ')
-        setFirstName(metaFirst || parts[0] || '')
-        setLastName(metaLast || parts.slice(1).join(' ') || '')
-        setEmail(user.email || '')
+        // Name: prefer dedicated first/last from metadata, fall back to splitting full_name
+        if (metaFirst) {
+          setFirstName(metaFirst)
+          setLastName(metaLast)
+        } else if (data.full_name) {
+          const parts = data.full_name.trim().split(' ')
+          setFirstName(parts[0] || '')
+          setLastName(parts.slice(1).join(' ') || '')
+        } else if (metaFull) {
+          const parts = metaFull.trim().split(' ')
+          setFirstName(parts[0] || '')
+          setLastName(parts.slice(1).join(' ') || '')
+        }
+
+        // All other profile fields
         setPhone(data.phone || '')
         setDob(data.date_of_birth || '')
         setGender(data.gender || '')
@@ -114,13 +190,16 @@ export default function BuildPassport() {
         setContactPhone(data.emergency_contact_phone || '')
         setShirtSize(data.shirt_size || '')
         setExperience(data.experience_level || '')
+        setFavoriteDistance(data.favorite_distance || '')
+        if (data.done_marathon !== null && data.done_marathon !== undefined) setDoneMarathon(data.done_marathon)
+        if (data.done_ironman !== null && data.done_ironman !== undefined) setDoneIronman(data.done_ironman)
       } else {
-        const meta = user.user_metadata || {}
-        const fullName = meta.full_name || ''
-        const parts = fullName.trim().split(' ')
-        setFirstName(meta.first_name || parts[0] || '')
-        setLastName(meta.last_name || parts.slice(1).join(' ') || '')
-        setEmail(user.email || '')
+        // No profile row yet — name from metadata only
+        if (metaFirst) { setFirstName(metaFirst); setLastName(metaLast) }
+        else if (metaFull) {
+          const parts = metaFull.trim().split(' ')
+          setFirstName(parts[0] || ''); setLastName(parts.slice(1).join(' ') || '')
+        }
       }
     }
     loadProfile()
@@ -131,57 +210,27 @@ export default function BuildPassport() {
     style.id = 'rp-bp-styles'
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
-      @keyframes tickerScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-      .rp-input {
-        width: 100%; padding: 11px 14px; border-radius: 6px;
-        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
-        font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
-        box-sizing: border-box; transition: border-color 0.15s, background 0.15s;
-      }
-      .rp-input:focus { border-color: #C9A84C; background: #fff; }
-      .rp-input::placeholder { color: #b0b8c4; }
-      .rp-input.readonly { background: #f4f5f7; color: #9aa5b4; cursor: default; }
-      .rp-select {
-        width: 100%; padding: 11px 14px; border-radius: 6px;
-        border: 1.5px solid #e2e6ed; background: #fafbfc; color: #1B2A4A;
-        font-size: 14px; font-family: 'Barlow', sans-serif; outline: none;
-        box-sizing: border-box; appearance: none; cursor: pointer; transition: border-color 0.15s;
-      }
-      .rp-select:focus { border-color: #C9A84C; background: #fff; }
-      .rp-primary {
-        width: 100%; padding: 13px; border: none; background: #1B2A4A; color: #fff;
-        font-family: 'Barlow Condensed', sans-serif; font-size: 13px; font-weight: 600;
-        letter-spacing: 0.25em; text-transform: uppercase; cursor: pointer;
-        transition: background 0.2s, transform 0.1s; border-radius: 6px;
-      }
-      .rp-primary:hover:not(:disabled) { background: #C9A84C; }
-      .rp-primary:active:not(:disabled) { transform: scale(0.985); }
-      .rp-primary:disabled { opacity: 0.5; cursor: not-allowed; }
-      .rp-secondary {
-        width: 100%; padding: 12px; border: 1.5px solid #e2e6ed;
-        background: #fff; color: #1B2A4A; font-family: 'Barlow Condensed', sans-serif;
-        font-size: 13px; font-weight: 600; letter-spacing: 0.25em; text-transform: uppercase;
-        cursor: pointer; transition: border-color 0.2s, background 0.2s; border-radius: 6px;
-      }
-      .rp-secondary:hover { border-color: #1B2A4A; background: #f8f9fb; }
-      .size-btn {
-        padding: 9px 0; border-radius: 6px; border: 1.5px solid #e2e6ed;
-        background: #fafbfc; color: #1B2A4A; font-family: 'Barlow Condensed', sans-serif;
-        font-size: 12px; font-weight: 600; letter-spacing: 1px; cursor: pointer;
-        transition: all 0.15s; flex: 1;
-      }
-      .size-btn:hover { border-color: #1B2A4A; }
-      .size-btn.selected { background: #1B2A4A; color: #fff; border-color: #1B2A4A; }
-      .section-header {
-        font-family: 'Bebas Neue', sans-serif; font-size: 20px; color: #1B2A4A;
-        letter-spacing: 1px; padding: 14px 0 8px; border-bottom: 2px solid #1B2A4A;
-        margin-bottom: 14px; margin-top: 8px;
-      }
-      .field-label {
-        display: block; font-size: 10px; font-weight: 600; letter-spacing: 1.5px;
-        color: #9aa5b4; margin-bottom: 5px; text-transform: uppercase;
-        font-family: 'Barlow Condensed', sans-serif;
-      }
+      @keyframes tickerScroll { from{transform:translateX(0);}to{transform:translateX(-50%);} }
+      .rp-input { width:100%; padding:11px 14px; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-size:14px; font-family:'Barlow',sans-serif; outline:none; box-sizing:border-box; transition:border-color 0.15s, background 0.15s; }
+      .rp-input:focus { border-color:#C9A84C; background:#fff; }
+      .rp-input::placeholder { color:#b0b8c4; }
+      .rp-input.readonly { background:#f4f5f7; color:#6b7a8d; cursor:default; border-color:#e8eaed; }
+      .rp-select { width:100%; padding:11px 14px; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-size:14px; font-family:'Barlow',sans-serif; outline:none; box-sizing:border-box; appearance:none; cursor:pointer; transition:border-color 0.15s; }
+      .rp-select:focus { border-color:#C9A84C; background:#fff; }
+      .rp-primary { width:100%; padding:13px; border:none; background:#1B2A4A; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; cursor:pointer; transition:background 0.2s, transform 0.1s; border-radius:6px; }
+      .rp-primary:hover:not(:disabled) { background:#C9A84C; }
+      .rp-primary:active:not(:disabled) { transform:scale(0.985); }
+      .rp-primary:disabled { opacity:0.5; cursor:not-allowed; }
+      .rp-secondary { width:100%; padding:12px; border:1.5px solid #e2e6ed; background:#fff; color:#1B2A4A; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; cursor:pointer; transition:border-color 0.2s, background 0.2s; border-radius:6px; }
+      .rp-secondary:hover { border-color:#1B2A4A; background:#f8f9fb; }
+      .size-btn { padding:9px 0; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:all 0.15s; flex:1; }
+      .size-btn:hover { border-color:#1B2A4A; }
+      .size-btn.selected { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
+      .dist-btn { padding:9px 0; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:all 0.15s; flex:1; text-align:center; }
+      .dist-btn:hover { border-color:#1B2A4A; }
+      .dist-btn.selected { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
+      .section-header { font-family:'Bebas Neue',sans-serif; font-size:20px; color:#1B2A4A; letter-spacing:1px; padding:14px 0 8px; border-bottom:2px solid #1B2A4A; margin-bottom:14px; margin-top:8px; }
+      .field-label { display:block; font-size:10px; font-weight:600; letter-spacing:1.5px; color:#9aa5b4; margin-bottom:5px; text-transform:uppercase; font-family:'Barlow Condensed',sans-serif; }
     `
     if (!document.getElementById('rp-bp-styles')) document.head.appendChild(style)
     return () => document.getElementById('rp-bp-styles')?.remove()
@@ -189,92 +238,99 @@ export default function BuildPassport() {
 
   const handleSaveAndContinue = async () => {
     setError(null)
-    if (!firstName.trim() || !lastName.trim() || !dob) {
-      setError(
-        <span>
-          <strong>First name, last name, and date of birth are required</strong> to search for your past race results on RunSignup.
-          <br /><br />
-          If you'd like to set this up later, press <strong>Skip for Now</strong> below.
-        </span>
-      )
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('First name and last name are required.')
       return
     }
+
     setSaving(true)
-    const { error } = await supabase.from('profiles').update({
-      full_name: `${firstName.trim()} ${lastName.trim()}`,
-      race_name: raceName.trim() || null,
-      phone: phone.trim() || null,
-      emergency_contact_name: contactName.trim() || null,
-      emergency_contact_phone: contactPhone.trim() || null,
-      date_of_birth: dob || null,
-      gender: gender || null,
-      shirt_size: shirtSize || null,
-      experience_level: experience || null,
-      address: address.trim() || null,
-      city: city.trim() || null,
-      state: state.trim() || null,
-      zip_code: zip.trim() || null,
-      country: country.trim() || null,
-    }).eq('id', user?.id)
+    try {
+      await supabase.from('profiles').update({
+        full_name: `${firstName.trim()} ${lastName.trim()}`,
+        race_name: raceName.trim() || null,
+        phone: phone.trim() || null,
+        emergency_contact_name: contactName.trim() || null,
+        emergency_contact_phone: contactPhone.trim() || null,
+        date_of_birth: dob || null,
+        gender: gender || null,
+        shirt_size: shirtSize || null,
+        experience_level: experience || null,
+        favorite_distance: favoriteDistance || null,
+        done_marathon: doneMarathon,
+        done_ironman: doneIronman,
+        address: address.trim() || null,
+        city: city.trim() || null,
+        state: state.trim() || null,
+        zip_code: zip.trim() || null,
+        country: country.trim() || null,
+      }).eq('id', user?.id)
+    } catch (e) {
+      // Don't block — proceed to RaceImport regardless
+    }
+
     setSaving(false)
-    if (error) setError('Something went wrong saving your profile. Please try again.')
-    else navigate('/race-import')
+    // Navigate to RaceImport with dummy races pre-loaded
+    navigate('/race-import', { state: { dummyRaces: DUMMY_RACES, firstName: firstName.trim() } })
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
   const SIZES = ['XS','S','M','L','XL','XXL','XXXL']
+  const DISTANCES = ['5K','10K','10 Mile','Half Marathon','Marathon','Ultra','Triathlon']
 
   return (
-    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow', sans-serif", padding:'40px 0' }}>
+    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 0' }}>
+
+      {/* Ghost ticker */}
       <div style={{ position:'fixed', top:'50%', transform:'translateY(-55%)', left:0, whiteSpace:'nowrap', pointerEvents:'none', zIndex:0 }}>
         <div style={{ display:'inline-flex', alignItems:'center', animation:'tickerScroll 60s linear infinite' }}>
-          {TICKER.map((d,i) => (
-            <span key={i} style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:'clamp(180px, 24vw, 340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.055)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>
-          ))}
+          {TICKER.map((d,i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,24vw,340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.055)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>)}
         </div>
       </div>
 
-      <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'36px 36px 32px', width:'100%', maxWidth:'460px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
+      <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'36px 36px 32px', width:'100%', maxWidth:'480px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
 
+        {/* Header */}
         <div style={{ textAlign:'center', marginBottom:'20px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'14px' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
-            <span style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <h1 style={{ fontFamily:"'Bebas Neue', sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 4px', letterSpacing:'1.5px', lineHeight:1 }}>BUILD YOUR PASSPORT</h1>
-          <p style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 1 of 2 — Your Racing Profile</p>
+          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 4px', letterSpacing:'1.5px', lineHeight:1 }}>BUILD YOUR PASSPORT</h1>
+          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 1 of 2 — Your Racing Profile</p>
           <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'14px' }}>
             <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
             <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
           </div>
           <p style={{ fontSize:'12px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6, textAlign:'left', background:'#f8f9fb', border:'1px solid #e2e6ed', borderRadius:'6px', padding:'12px 14px' }}>
-            <strong style={{ color:'#1B2A4A' }}>Why do we ask for this?</strong> When you find a race through Race Passport, you're currently directed to the race's own registration page. In a future version, you'll be able to register directly inside Race Passport using the details below — so we want them ready when that day comes.
+            <strong style={{ color:'#1B2A4A' }}>Why do we ask for this?</strong> In a future version, you'll register for races directly inside Race Passport using these details — so we want them ready when that day comes.
           </p>
         </div>
 
+        {/* Skip */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'#f8f9fb', border:'1px solid #e2e6ed', borderRadius:'6px', padding:'10px 14px', marginBottom:'16px' }}>
           <span style={{ fontSize:'12px', color:'#6b7a8d', fontWeight:300 }}>This can wait — explore Race Passport first.</span>
-          <button onClick={() => navigate('/home')} style={{ background:'none', border:'none', color:'#C9A84C', fontFamily:"'Barlow Condensed', sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', cursor:'pointer', textTransform:'uppercase', padding:0, flexShrink:0, marginLeft:'12px' }}>Skip →</button>
+          <button onClick={() => navigate('/home')} style={{ background:'none', border:'none', color:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', cursor:'pointer', textTransform:'uppercase', padding:0, flexShrink:0, marginLeft:'12px' }}>Skip →</button>
         </div>
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
+        {/* YOUR RACE PASSPORT INFORMATION */}
         <div className="section-header">Your Race Passport Information</div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">First Name <span style={{ color:'#C9A84C' }}>*</span></label>
-            <input className="rp-input" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="William" />
+            <input className="rp-input" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ryan" />
           </div>
           <div>
             <label className="field-label">Last Name <span style={{ color:'#C9A84C' }}>*</span></label>
-            <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" />
+            <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Groene" />
           </div>
         </div>
 
         <div style={{ marginBottom:'10px' }}>
-          <label className="field-label">Email</label>
-          <input className="rp-input readonly" type="email" value={email} readOnly />
+          <label className="field-label">Email <span style={{ fontWeight:400, color:'#b0b8c4' }}>(from your account)</span></label>
+          <input className="rp-input readonly" type="email" value={email} readOnly tabIndex={-1} />
         </div>
 
         <div style={{ marginBottom:'10px' }}>
@@ -284,7 +340,7 @@ export default function BuildPassport() {
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
-            <label className="field-label">Date of Birth <span style={{ color:'#C9A84C' }}>*</span></label>
+            <label className="field-label">Date of Birth</label>
             <DobPicker value={dob} onChange={setDob} />
           </div>
           <div>
@@ -307,18 +363,18 @@ export default function BuildPassport() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">City</label>
-            <input className="rp-input" type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="New York" />
+            <input className="rp-input" type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Highland" />
           </div>
           <div>
             <label className="field-label">State</label>
-            <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="NY" />
+            <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="MD" />
           </div>
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'16px' }}>
           <div>
             <label className="field-label">Zip Code</label>
-            <input className="rp-input" type="text" value={zip} onChange={e => setZip(e.target.value)} placeholder="10001" />
+            <input className="rp-input" type="text" value={zip} onChange={e => setZip(e.target.value)} placeholder="20777" />
           </div>
           <div>
             <label className="field-label">Country</label>
@@ -326,14 +382,18 @@ export default function BuildPassport() {
           </div>
         </div>
 
+        {/* RACE INFO */}
         <div className="section-header">Race Info</div>
+
         <div style={{ marginBottom:'16px' }}>
-          <label className="field-label">Race Name (Bib Name)</label>
-          <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Billy" />
-          <p style={{ fontSize:'11px', color:'#b0b8c4', margin:'4px 0 0' }}>The name that appears on your bib. Leave blank to use your full name.</p>
+          <label className="field-label">Bib Name</label>
+          <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Ryan" />
+          <p style={{ fontSize:'11px', color:'#b0b8c4', margin:'4px 0 0' }}>The name printed on your race bib. Leave blank to use your full name.</p>
         </div>
 
+        {/* EMERGENCY CONTACT */}
         <div className="section-header">Emergency Contact</div>
+
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Contact Name</label>
           <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" />
@@ -343,8 +403,10 @@ export default function BuildPassport() {
           <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
         </div>
 
+        {/* RUNNING BACKGROUND */}
         <div className="section-header">Running Background</div>
-        <div style={{ marginBottom:'12px' }}>
+
+        <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Shirt Size</label>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
             {SIZES.map(size => (
@@ -352,7 +414,8 @@ export default function BuildPassport() {
             ))}
           </div>
         </div>
-        <div style={{ marginBottom:'24px' }}>
+
+        <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Experience Level</label>
           <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)}>
             <option value="">Select your level</option>
@@ -364,17 +427,41 @@ export default function BuildPassport() {
           </select>
         </div>
 
+        <div style={{ marginBottom:'14px' }}>
+          <label className="field-label">Favorite Race Distance</label>
+          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
+            {DISTANCES.map(d => (
+              <button key={d} className={`dist-btn ${favoriteDistance === d ? 'selected' : ''}`} onClick={() => setFavoriteDistance(d === favoriteDistance ? '' : d)}>{d}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ marginBottom:'14px' }}>
+          <label className="field-label">Have you run a marathon (26.2)?</label>
+          <YesNo value={doneMarathon} onChange={setDoneMarathon} />
+        </div>
+
+        {doneMarathon === true && (
+          <div style={{ marginBottom:'14px' }}>
+            <label className="field-label">Have you completed an IRONMAN triathlon?</label>
+            <YesNo value={doneIronman} onChange={setDoneIronman} />
+          </div>
+        )}
+
+        <div style={{ height:'1px', background:'#f0f2f5', margin:'8px 0 20px' }} />
+
         <button className="rp-primary" onClick={handleSaveAndContinue} disabled={saving} style={{ marginBottom:'10px' }}>
           {saving ? 'Saving...' : 'Save & Continue →'}
         </button>
         <button className="rp-secondary" onClick={() => navigate('/home')}>Skip for Now</button>
 
         <div style={{ marginTop:'20px', padding:'14px', background:'#f8f9fb', borderRadius:'6px', border:'1px solid #e2e6ed' }}>
-          <p style={{ fontFamily:"'Barlow Condensed', sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', margin:'0 0 4px' }}>Next Up</p>
+          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', margin:'0 0 4px' }}>Next Up</p>
           <p style={{ fontSize:'12px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6 }}>
-            We'll search <strong style={{ color:'#1B2A4A' }}>RunSignup</strong> for your past results to add them to your Race Passport.
+            We'll search <strong style={{ color:'#1B2A4A' }}>RunSignup</strong> for your past results and add them to your Race Passport.
           </p>
         </div>
+
       </div>
     </div>
   )
