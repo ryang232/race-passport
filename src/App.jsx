@@ -13,6 +13,7 @@ import Discover from './pages/Discover'
 import RacePage from './pages/RacePage'
 import RaceDetail from './pages/RaceDetail'
 import Passport from './pages/Passport'
+import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
 
 export default function App() {
@@ -31,11 +32,14 @@ export default function App() {
           <Route path="/race-import" element={<RaceImport />} />
           <Route path="/home" element={<Home />} />
           <Route path="/discover" element={<Discover />} />
-          {/* User's personal passport race pages */}
+          {/* User's personal passport race pages (scrapbook) */}
           <Route path="/race/:id" element={<RacePage />} />
-          {/* Public race discovery pages (Races Near You, Upcoming) */}
+          {/* Public race discovery pages */}
           <Route path="/race-detail/:id" element={<RaceDetail />} />
           <Route path="/passport" element={<Passport />} />
+          {/* Logged-in user's own settings/profile page */}
+          <Route path="/profile" element={<Profile />} />
+          {/* Public athlete profile pages */}
           <Route path="/:username" element={<PublicProfile />} />
         </Routes>
       </BrowserRouter>
