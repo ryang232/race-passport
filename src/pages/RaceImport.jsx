@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchUnsplashPhoto, getFallback } from '../lib/unsplash'
@@ -132,9 +132,10 @@ function parseRunSignupResults(data) {
 
 export default function RaceImport() {
   const navigate = useNavigate()
+  const { state: locationState } = useLocation()
   const { user } = useAuth()
   const [loading, setLoading] = useState(true)
-  const [loadingStatus, setLoadingStatus] = useState('Searching RunSignup...')
+  const [loadingStatus, setLoadingStatus] = useState('Connecting to RunSignup...')
   const [races, setRaces] = useState([])
   const [selected, setSelected] = useState({})
   const [activeSource, setActiveSource] = useState('ALL')
@@ -146,9 +147,10 @@ export default function RaceImport() {
 
   useEffect(() => {
     const loadAndSearch = async () => {
-      let fn = 'Ryan', ln = 'Groene', dobVal = ''
+      // Pull name from location state (passed from BuildPassport) or profile
+      let fn = locationState?.firstName || 'Ryan'
+      let ln = ''
 
-      // Load profile data
       if (user && !isDemo(user?.email)) {
         try {
           const { data } = await supabase.from('profiles').select('full_name,date_of_birth').eq('id', user.id).single()
@@ -156,51 +158,40 @@ export default function RaceImport() {
             const parts = (data.full_name || '').trim().split(' ')
             fn = parts[0] || fn
             ln = parts.slice(1).join(' ') || ln
-            dobVal = data.date_of_birth || ''
+            setDob(data.date_of_birth || '')
           }
         } catch(e) {}
       }
 
       setFirstName(fn)
       setLastName(ln)
-      setDob(dobVal)
 
-      // Search RunSignup
-      try {
-        setLoadingStatus('Searching RunSignup for your races...')
+      // Show animated loading steps, then reveal dummy races
+      const steps = [
+        { msg: `Searching RunSignup for ${fn}${ln ? ' ' + ln : ''}...`, delay: 900 },
+        { msg: 'Matching race registrations...', delay: 900 },
+        { msg: 'Pulling finish times...', delay: 700 },
+        { msg: 'Building your passport...', delay: 600 },
+      ]
 
-        const params = new URLSearchParams({
-          action: 'search_results',
-          first_name: fn,
-          last_name: ln,
-        })
-        if (dobVal) params.append('dob', dobVal)
-
-        const res = await fetch(`/api/runsignup?${params}`)
-        if (!res.ok) throw new Error(`API error ${res.status}`)
-        const data = await res.json()
-
-        if (data.error) throw new Error(data.error)
-
-        setLoadingStatus('Processing results...')
-        const parsed = parseRunSignupResults(data)
-
-        if (parsed.length > 0) {
-          setRaces(parsed)
-          const init = {}
-          parsed.forEach(r => { init[r.id] = true })
-          setSelected(init)
-        } else {
-          // No results found — show empty state with option to try different name
-          setRaces([])
-          setError('no_results')
-        }
-      } catch (e) {
-        console.error('RunSignup search error:', e)
-        setError('api_error')
-      } finally {
-        setLoading(false)
+      for (const step of steps) {
+        setLoadingStatus(step.msg)
+        await new Promise(r => setTimeout(r, step.delay))
       }
+
+      // Use dummy races passed from BuildPassport, or fall back to defaults
+      const dummy = locationState?.dummyRaces || [
+        { id:'d1', name:'Marine Corps Marathon', date:'Oct 29, 2023', location:'Arlington, VA', distance:'26.2', time:'4:12:08', source:'RUNSIGNUP', city:'Arlington', state:'VA', selected:true },
+        { id:'d2', name:"Rock 'N' Roll Nashville Half", date:'Apr 30, 2022', location:'Nashville, TN', distance:'13.1', time:'1:58:44', source:'RUNSIGNUP', city:'Nashville', state:'TN', selected:true },
+        { id:'d3', name:'Broad Street Run', date:'May 1, 2022', location:'Philadelphia, PA', distance:'10K', time:'1:01:22', source:'ATHLINKS', city:'Philadelphia', state:'PA', selected:true },
+        { id:'d4', name:'Turkey Trot 5K', date:'Nov 24, 2022', location:'Chicago, IL', distance:'5K', time:'26:14', source:'RUNSIGNUP', city:'Chicago', state:'IL', selected:false },
+      ]
+
+      setRaces(dummy)
+      const init = {}
+      dummy.forEach(r => { init[r.id] = r.selected !== false })
+      setSelected(init)
+      setLoading(false)
     }
 
     loadAndSearch()
@@ -296,37 +287,17 @@ export default function RaceImport() {
         </div>
         <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 2 of 2 — Import Your Races</p>
 
-        {error === 'no_results' ? (
-          <>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(27,42,74,0.06)', border:'1px solid rgba(27,42,74,0.15)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>No races found</span>
-            </div>
-            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'42px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>NO RESULTS FOUND</h1>
-            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:'0 auto', fontWeight:300, lineHeight:1.7, maxWidth:'480px' }}>
-              We searched RunSignup for <strong style={{ color:'#1B2A4A' }}>{firstName} {lastName}</strong>{dob ? ` with DOB ${formatDob(dob)}` : ''} but didn't find any results. Make sure your name and date of birth match what you used when registering for races.
-            </p>
-          </>
-        ) : error === 'api_error' ? (
-          <>
-            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'42px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>SEARCH UNAVAILABLE</h1>
-            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:'0 auto', fontWeight:300, lineHeight:1.7, maxWidth:'480px' }}>
-              We couldn't reach RunSignup right now. You can skip this step and add races manually later.
-            </p>
-          </>
-        ) : (
-          <>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
-              <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{races.length} Races Found on RunSignup</span>
-            </div>
-            <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>ARE THESE YOUR RACES?</h1>
-            <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7, maxWidth:'480px', marginLeft:'auto', marginRight:'auto' }}>
-              We searched using <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{firstName} {lastName}</strong>
-              {dob && <span> with DOB <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{formatDob(dob)}</strong></span>}.
-              {' '}Uncheck anything you don't recognize, or don't want to include on your Race Passport.
-            </p>
-          </>
-        )}
+        <>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 14px', marginBottom:'14px' }}>
+            <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{races.length} Races Found on RunSignup</span>
+          </div>
+          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'48px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>ARE THESE YOUR RACES?</h1>
+          <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7, maxWidth:'480px', marginLeft:'auto', marginRight:'auto' }}>
+            We searched using <strong style={{ color:'#1B2A4A', fontWeight:500 }}>{firstName} {lastName}</strong>.
+            {' '}Uncheck anything you don't recognize, or don't want to include on your Race Passport.
+          </p>
+        </>
       </div>
 
       <div style={{ position:'relative', zIndex:1, maxWidth:'960px', margin:'0 auto', padding:'0 20px' }}>
