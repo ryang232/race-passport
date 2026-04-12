@@ -6,7 +6,6 @@ import { fetchUnsplashPhoto } from '../lib/unsplash'
 import { isDemo } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 
-// Ryan's real race history — shown after the loading screen
 const RYAN_IMPORT_RACES = [
   { id:'r1',  name:'Sole of the City 10K',          date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',   distance:'10K',  time:'47:49',  source:'RUNSIGNUP', selected:true, query:'Sole of the City 10K Baltimore',           fallback:'Baltimore Inner Harbor waterfront' },
   { id:'r2',  name:'Bay Bridge Run',                 date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',   distance:'10K',  time:'50:57',  source:'RUNSIGNUP', selected:true, query:'Bay Bridge Run Annapolis Maryland',         fallback:'Chesapeake Bay Bridge aerial scenic' },
@@ -32,31 +31,26 @@ function RaceCard({ race, selected, onToggle }) {
   return (
     <div onClick={() => onToggle(race.id)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       style={{ borderRadius:'10px', overflow:'hidden', border: selected ? `2.5px solid ${colors.primary}` : '1.5px solid #e2e6ed', background:'#fff', cursor:'pointer', transition:'border-color 0.15s, transform 0.2s', transform: hovered ? 'translateY(-3px)' : 'translateY(0)', position:'relative' }}>
-      {/* Checkmark */}
       <div style={{ position:'absolute', top:10, right:10, zIndex:10, width:24, height:24, borderRadius:'50%', background: selected ? colors.primary : 'rgba(255,255,255,0.9)', border: selected ? `2px solid ${colors.primary}` : '2px solid rgba(255,255,255,0.7)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
         {selected && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
-      {/* Source badge */}
       <div style={{ position:'absolute', top:10, left:10, zIndex:10, background:'rgba(0,0,0,0.55)', borderRadius:'4px', padding:'3px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>
         {race.source}
       </div>
-      {/* Photo */}
       <div style={{ position:'relative', height:155, background:'#1B2A4A', overflow:'hidden' }}>
         {photo ? (
-          <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
+          <img src={photo} alt={race.city} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
         ) : (
           <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <div style={{ width:28, height:28, border:`2.5px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
           </div>
         )}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.45))' }} />
-        {/* Hover: finish time */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.2s' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'8px' }}>Finish Time</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'44px', color:colors.primary, letterSpacing:'2px', lineHeight:1 }}>{race.time}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginTop:'6px', textTransform:'uppercase' }}>{race.distance}</div>
         </div>
-        {/* Stamp bottom-left */}
         <div style={{ position:'absolute', bottom:10, left:10, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
           <div style={{ width:46, height:46, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
@@ -64,7 +58,6 @@ function RaceCard({ race, selected, onToggle }) {
           </div>
         </div>
       </div>
-      {/* Info */}
       <div style={{ padding:'11px 13px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px', borderTop:`2px solid ${colors.primary}22` }}>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'3px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
@@ -97,7 +90,6 @@ export default function RaceImport() {
         } catch(e) {}
       }
       setFirstName(fn)
-
       const steps = [
         { msg: `Connecting to RunSignup...`, ms: 800 },
         { msg: `Searching race history for ${fn}...`, ms: 1000 },
@@ -109,7 +101,6 @@ export default function RaceImport() {
         setLoadingStatus(s.msg)
         await new Promise(r => setTimeout(r, s.ms))
       }
-
       const raceList = RYAN_IMPORT_RACES
       setRaces(raceList)
       const init = {}
@@ -148,7 +139,7 @@ export default function RaceImport() {
     setSaving(true)
     await new Promise(r => setTimeout(r, 800))
     setSaving(false)
-    navigate('/home', { state: { imported: selectedCount } })
+    navigate('/goal-races', { state: { imported: selectedCount, firstName } })
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -184,17 +175,17 @@ export default function RaceImport() {
         </div>
       </div>
 
-      {/* Header */}
       <div style={{ position:'relative', zIndex:1, background:'#fff', padding:'28px 20px 24px', borderBottom:'3px solid #C9A84C', textAlign:'center' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'8px' }}>
           <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'11px', letterSpacing:'3px', color:'#9aa5b4' }}>RACE PASSPORT</span>
         </div>
         <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'12px' }}>
-          <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
+          <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
+          <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
         </div>
-        <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 14px', textTransform:'uppercase' }}>Step 2 of 2 — Import Your Races</p>
+        <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 14px', textTransform:'uppercase' }}>Step 2 of 3 — Import Your Races</p>
         <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'20px', padding:'5px 16px', marginBottom:'14px' }}>
           <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>{races.length} Races Found on RunSignup</span>
