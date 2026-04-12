@@ -8,6 +8,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import BuildPassport from './pages/BuildPassport'
 import RaceImport from './pages/RaceImport'
+import GoalRaces from './pages/GoalRaces'
 import Home from './pages/Home'
 import Discover from './pages/Discover'
 import RacePage from './pages/RacePage'
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/build-passport" element={<BuildPassport />} />
           <Route path="/race-import" element={<RaceImport />} />
+          <Route path="/goal-races" element={<GoalRaces />} />
           <Route path="/home" element={<Home />} />
           <Route path="/discover" element={<Discover />} />
           {/* User's personal passport race pages (scrapbook) */}
