@@ -3,21 +3,21 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
-import { isDemo, DEMO_EMAIL } from '../lib/demo'
+import { isDemo } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 
 // Ryan's real race history — shown after the loading screen
 const RYAN_IMPORT_RACES = [
-  { id:'r1',  name:'Sole of the City 10K',          date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',    distance:'10K',  time:'47:49',  source:'RUNSIGNUP', selected:true },
-  { id:'r2',  name:'Bay Bridge Run',                 date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',    distance:'10K',  time:'50:57',  source:'RUNSIGNUP', selected:true },
-  { id:'r3',  name:'Baltimore Running Festival 10K', date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',    distance:'10K',  time:'58:03',  source:'RUNSIGNUP', selected:true },
-  { id:'r4',  name:'Holiday Half Marathon',          date:'Dec 2021', location:'Annandale, VA',   city:'Annandale',    distance:'13.1', time:'2:19:05',source:'RUNSIGNUP', selected:true },
-  { id:'r5',  name:'Marine Corps Marathon',          date:'Oct 2023', location:'Washington, DC',  city:'Washington',   distance:'26.2', time:'4:45:42',source:'RUNSIGNUP', selected:true },
-  { id:'r6',  name:'LA Marathon',                    date:'Mar 2022', location:'Los Angeles, CA', city:'Los Angeles',  distance:'26.2', time:'4:44:47',source:'RUNSIGNUP', selected:true },
-  { id:'r7',  name:'Downtown Columbia Turkey Trot',  date:'Nov 2024', location:'Columbia, MD',    city:'Columbia',     distance:'5K',   time:'28:16',  source:'RUNSIGNUP', selected:true },
-  { id:'r8',  name:'Austin Half Marathon',           date:'Feb 2025', location:'Austin, TX',      city:'Austin',       distance:'13.1', time:'1:57:40',source:'RUNSIGNUP', selected:true },
-  { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',   city:'Cambridge',    distance:'70.3', time:'6:32:08',source:'ATHLINKS',  selected:true },
-  { id:'r10', name:'Downtown Columbia Turkey Trot',  date:'Nov 2025', location:'Columbia, MD',    city:'Columbia',     distance:'5K',   time:'35:09',  source:'ATHLINKS',  selected:true },
+  { id:'r1',  name:'Sole of the City 10K',          date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',   distance:'10K',  time:'47:49',  source:'RUNSIGNUP', selected:true, query:'Sole of the City 10K Baltimore',           fallback:'Baltimore Inner Harbor waterfront' },
+  { id:'r2',  name:'Bay Bridge Run',                 date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',   distance:'10K',  time:'50:57',  source:'RUNSIGNUP', selected:true, query:'Bay Bridge Run Annapolis Maryland',         fallback:'Chesapeake Bay Bridge aerial scenic' },
+  { id:'r3',  name:'Baltimore Running Festival 10K', date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',   distance:'10K',  time:'58:03',  source:'RUNSIGNUP', selected:true, query:'Baltimore Running Festival marathon',       fallback:'Baltimore Inner Harbor cityscape' },
+  { id:'r4',  name:'Holiday Half Marathon',          date:'Dec 2021', location:'Annandale, VA',   city:'Annandale',   distance:'13.1', time:'2:19:05',source:'RUNSIGNUP', selected:true, query:'Holiday Half Marathon Annandale Virginia',  fallback:'Northern Virginia autumn foliage running' },
+  { id:'r5',  name:'Marine Corps Marathon',          date:'Oct 2023', location:'Washington, DC',  city:'Washington',  distance:'26.2', time:'4:45:42',source:'RUNSIGNUP', selected:true, query:'Marine Corps Marathon Washington DC',       fallback:'Washington DC National Mall monument runners' },
+  { id:'r6',  name:'LA Marathon',                    date:'Mar 2022', location:'Los Angeles, CA', city:'Los Angeles', distance:'26.2', time:'4:44:47',source:'RUNSIGNUP', selected:true, query:'LA Marathon Los Angeles runners',           fallback:'Los Angeles Hollywood skyline city' },
+  { id:'r7',  name:'Downtown Columbia Turkey Trot',  date:'Nov 2024', location:'Columbia, MD',    city:'Columbia',    distance:'5K',   time:'28:16',  source:'RUNSIGNUP', selected:true, query:'Turkey Trot Columbia Maryland runners',     fallback:'Maryland autumn fall foliage park' },
+  { id:'r8',  name:'Austin Half Marathon',           date:'Feb 2025', location:'Austin, TX',      city:'Austin',      distance:'13.1', time:'1:57:40',source:'RUNSIGNUP', selected:true, query:'Austin Half Marathon Texas',               fallback:'Austin Texas Congress Avenue bridge skyline' },
+  { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',   city:'Cambridge',   distance:'70.3', time:'6:32:08',source:'ATHLINKS',  selected:true, query:'Ironman 70.3 Eagleman triathlon',           fallback:'Chesapeake Bay open water swim wetsuit' },
+  { id:'r10', name:'Downtown Columbia Turkey Trot',  date:'Nov 2025', location:'Columbia, MD',    city:'Columbia',    distance:'5K',   time:'35:09',  source:'ATHLINKS',  selected:true, query:'Turkey Trot Columbia Maryland 5K',          fallback:'Maryland park trail autumn leaves' },
 ]
 
 function RaceCard({ race, selected, onToggle }) {
@@ -26,8 +26,8 @@ function RaceCard({ race, selected, onToggle }) {
   const colors = getDistanceColor(race.distance)
 
   useEffect(() => {
-    fetchUnsplashPhoto(`${race.city} city skyline`, 'running').then(url => setPhoto(url))
-  }, [race.city])
+    fetchUnsplashPhoto(race.query, race.fallback).then(url => setPhoto(url))
+  }, [race.query])
 
   return (
     <div onClick={() => onToggle(race.id)} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -43,7 +43,7 @@ function RaceCard({ race, selected, onToggle }) {
       {/* Photo */}
       <div style={{ position:'relative', height:155, background:'#1B2A4A', overflow:'hidden' }}>
         {photo ? (
-          <img src={photo} alt={race.city} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
+          <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.06)' : 'scale(1)' }} />
         ) : (
           <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
             <div style={{ width:28, height:28, border:`2.5px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
@@ -89,7 +89,6 @@ export default function RaceImport() {
 
   useEffect(() => {
     const run = async () => {
-      // Pull name
       let fn = locationState?.firstName || 'Ryan'
       if (user && !isDemo(user?.email)) {
         try {
@@ -99,7 +98,6 @@ export default function RaceImport() {
       }
       setFirstName(fn)
 
-      // Animated loading steps
       const steps = [
         { msg: `Connecting to RunSignup...`, ms: 800 },
         { msg: `Searching race history for ${fn}...`, ms: 1000 },
@@ -112,7 +110,6 @@ export default function RaceImport() {
         await new Promise(r => setTimeout(r, s.ms))
       }
 
-      // Always load Ryan's real races
       const raceList = RYAN_IMPORT_RACES
       setRaces(raceList)
       const init = {}
