@@ -3,13 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../context/AuthContext'
 
-// ── Month/Day/Year DOB Picker ─────────────────────────────────────────────────
 function DobPicker({ value, onChange }) {
   const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 100 }, (_, i) => currentYear - 18 - i)
-
-  // Parse existing value (YYYY-MM-DD)
   const [month, setMonth] = useState('')
   const [day, setDay] = useState('')
   const [year, setYear] = useState('')
@@ -25,9 +22,7 @@ function DobPicker({ value, onChange }) {
     }
   }, [])
 
-  const daysInMonth = month && year
-    ? new Date(parseInt(year), parseInt(month), 0).getDate()
-    : 31
+  const daysInMonth = month && year ? new Date(parseInt(year), parseInt(month), 0).getDate() : 31
   const days = Array.from({ length: daysInMonth }, (_, i) => i + 1)
 
   const handleChange = (newMonth, newDay, newYear) => {
@@ -73,7 +68,6 @@ function DobPicker({ value, onChange }) {
   )
 }
 
-// ── Yes/No toggle ─────────────────────────────────────────────────────────────
 function YesNo({ value, onChange }) {
   return (
     <div style={{ display: 'flex', gap: '8px' }}>
@@ -103,98 +97,59 @@ function ErrorBox({ children }) {
   )
 }
 
-// ── Dummy race data for RaceImport flow ───────────────────────────────────────
-const DUMMY_RACES = [
-  { id:'rs1', name:'Marine Corps Marathon', date:'Oct 29, 2023', location:'Arlington, VA', distance:'26.2', time:'4:12:08', source:'RunSignup', city:'Arlington', country:'US', cityPhoto:'https://images.unsplash.com/photo-1578037970687-42b0e2d8d553?w=400&h=300&fit=crop', selected:true },
-  { id:'rs2', name:"Rock 'N' Roll Nashville Half", date:'Apr 30, 2022', location:'Nashville, TN', distance:'13.1', time:'1:58:44', source:'RunSignup', city:'Nashville', country:'US', cityPhoto:'https://images.unsplash.com/photo-1545419913-a2b1c5f56a0a?w=400&h=300&fit=crop', selected:true },
-  { id:'rs3', name:'Broad Street Run', date:'May 1, 2022', location:'Philadelphia, PA', distance:'10K', time:'1:01:22', source:'Athlinks', city:'Philadelphia', country:'US', cityPhoto:'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?w=400&h=300&fit=crop', selected:true },
-  { id:'rs4', name:'Turkey Trot 5K', date:'Nov 24, 2022', location:'Chicago, IL', distance:'5K', time:'26:14', source:'RunSignup', city:'Chicago', country:'US', cityPhoto:'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=300&fit=crop', selected:false },
-]
-
 export default function BuildPassport() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  // Personal info
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [dob, setDob] = useState('')
   const [gender, setGender] = useState('')
-
-  // Address
   const [address, setAddress] = useState('')
   const [city, setCity] = useState('')
   const [state, setState] = useState('')
   const [zip, setZip] = useState('')
   const [country, setCountry] = useState('United States')
-
-  // Race info
   const [raceName, setRaceName] = useState('')
   const [contactName, setContactName] = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [shirtSize, setShirtSize] = useState('')
   const [experience, setExperience] = useState('')
-
-  // Racing background questions
   const [favoriteDistance, setFavoriteDistance] = useState('')
   const [doneMarathon, setDoneMarathon] = useState(null)
   const [doneIronman, setDoneIronman] = useState(null)
-
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
       if (!user) return
-
-      // Always pull email from auth object first — most reliable source
       setEmail(user.email || '')
-
-      // Pull name from auth metadata (set during CreateAccount)
       const meta = user.user_metadata || {}
       const metaFirst = meta.first_name || ''
       const metaLast = meta.last_name || ''
       const metaFull = meta.full_name || ''
-
-      // Try Supabase profile row for saved data
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-
       if (data) {
-        // Name: prefer dedicated first/last from metadata, fall back to splitting full_name
-        if (metaFirst) {
-          setFirstName(metaFirst)
-          setLastName(metaLast)
-        } else if (data.full_name) {
+        if (metaFirst) { setFirstName(metaFirst); setLastName(metaLast) }
+        else if (data.full_name) {
           const parts = data.full_name.trim().split(' ')
-          setFirstName(parts[0] || '')
-          setLastName(parts.slice(1).join(' ') || '')
+          setFirstName(parts[0] || ''); setLastName(parts.slice(1).join(' ') || '')
         } else if (metaFull) {
           const parts = metaFull.trim().split(' ')
-          setFirstName(parts[0] || '')
-          setLastName(parts.slice(1).join(' ') || '')
+          setFirstName(parts[0] || ''); setLastName(parts.slice(1).join(' ') || '')
         }
-
-        // All other profile fields
-        setPhone(data.phone || '')
-        setDob(data.date_of_birth || '')
-        setGender(data.gender || '')
-        setAddress(data.address || '')
-        setCity(data.city || '')
-        setState(data.state || '')
-        setZip(data.zip_code || '')
-        setCountry(data.country || 'United States')
-        setRaceName(data.race_name || '')
-        setContactName(data.emergency_contact_name || '')
-        setContactPhone(data.emergency_contact_phone || '')
-        setShirtSize(data.shirt_size || '')
-        setExperience(data.experience_level || '')
-        setFavoriteDistance(data.favorite_distance || '')
+        setPhone(data.phone || ''); setDob(data.date_of_birth || ''); setGender(data.gender || '')
+        setAddress(data.address || ''); setCity(data.city || ''); setState(data.state || '')
+        setZip(data.zip_code || ''); setCountry(data.country || 'United States')
+        setRaceName(data.race_name || ''); setContactName(data.emergency_contact_name || '')
+        setContactPhone(data.emergency_contact_phone || ''); setShirtSize(data.shirt_size || '')
+        setExperience(data.experience_level || ''); setFavoriteDistance(data.favorite_distance || '')
         if (data.done_marathon !== null && data.done_marathon !== undefined) setDoneMarathon(data.done_marathon)
         if (data.done_ironman !== null && data.done_ironman !== undefined) setDoneIronman(data.done_ironman)
       } else {
-        // No profile row yet — name from metadata only
         if (metaFirst) { setFirstName(metaFirst); setLastName(metaLast) }
         else if (metaFull) {
           const parts = metaFull.trim().split(' ')
@@ -238,11 +193,7 @@ export default function BuildPassport() {
 
   const handleSaveAndContinue = async () => {
     setError(null)
-    if (!firstName.trim() || !lastName.trim()) {
-      setError('First name and last name are required.')
-      return
-    }
-
+    if (!firstName.trim() || !lastName.trim()) { setError('First name and last name are required.'); return }
     setSaving(true)
     try {
       await supabase.from('profiles').update({
@@ -264,13 +215,9 @@ export default function BuildPassport() {
         zip_code: zip.trim() || null,
         country: country.trim() || null,
       }).eq('id', user?.id)
-    } catch (e) {
-      // Don't block — proceed to RaceImport regardless
-    }
-
+    } catch (e) {}
     setSaving(false)
-    // Navigate to RaceImport with dummy races pre-loaded
-    navigate('/race-import', { state: { dummyRaces: DUMMY_RACES, firstName: firstName.trim() } })
+    navigate('/race-import', { state: { firstName: firstName.trim() } })
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -279,8 +226,6 @@ export default function BuildPassport() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 0' }}>
-
-      {/* Ghost ticker */}
       <div style={{ position:'fixed', top:'50%', transform:'translateY(-55%)', left:0, whiteSpace:'nowrap', pointerEvents:'none', zIndex:0 }}>
         <div style={{ display:'inline-flex', alignItems:'center', animation:'tickerScroll 60s linear infinite' }}>
           {TICKER.map((d,i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,24vw,340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.055)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>)}
@@ -288,17 +233,17 @@ export default function BuildPassport() {
       </div>
 
       <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'36px 36px 32px', width:'100%', maxWidth:'480px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10), 0 0 0 1px rgba(27,42,74,0.07)' }}>
-
-        {/* Header */}
         <div style={{ textAlign:'center', marginBottom:'20px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'14px' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
           <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 4px', letterSpacing:'1.5px', lineHeight:1 }}>BUILD YOUR PASSPORT</h1>
-          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 1 of 2 — Your Racing Profile</p>
+          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 1 of 3 — Your Racing Profile</p>
+          {/* 3-bar progress */}
           <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'14px' }}>
             <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
+            <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
             <div style={{ height:'3px', width:'40px', background:'#e2e6ed', borderRadius:'2px' }} />
           </div>
           <p style={{ fontSize:'12px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6, textAlign:'left', background:'#f8f9fb', border:'1px solid #e2e6ed', borderRadius:'6px', padding:'12px 14px' }}>
@@ -306,7 +251,6 @@ export default function BuildPassport() {
           </p>
         </div>
 
-        {/* Skip */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', background:'#f8f9fb', border:'1px solid #e2e6ed', borderRadius:'6px', padding:'10px 14px', marginBottom:'16px' }}>
           <span style={{ fontSize:'12px', color:'#6b7a8d', fontWeight:300 }}>This can wait — explore Race Passport first.</span>
           <button onClick={() => navigate('/home')} style={{ background:'none', border:'none', color:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', cursor:'pointer', textTransform:'uppercase', padding:0, flexShrink:0, marginLeft:'12px' }}>Skip →</button>
@@ -314,9 +258,7 @@ export default function BuildPassport() {
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
-        {/* YOUR RACE PASSPORT INFORMATION */}
         <div className="section-header">Your Race Passport Information</div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">First Name <span style={{ color:'#C9A84C' }}>*</span></label>
@@ -327,17 +269,14 @@ export default function BuildPassport() {
             <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Groene" />
           </div>
         </div>
-
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Email <span style={{ fontWeight:400, color:'#b0b8c4' }}>(from your account)</span></label>
           <input className="rp-input readonly" type="email" value={email} readOnly tabIndex={-1} />
         </div>
-
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Phone Number</label>
           <input className="rp-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
         </div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">Date of Birth</label>
@@ -354,12 +293,10 @@ export default function BuildPassport() {
             </select>
           </div>
         </div>
-
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Street Address</label>
           <input className="rp-input" type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" />
         </div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">City</label>
@@ -370,7 +307,6 @@ export default function BuildPassport() {
             <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="MD" />
           </div>
         </div>
-
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'16px' }}>
           <div>
             <label className="field-label">Zip Code</label>
@@ -382,18 +318,14 @@ export default function BuildPassport() {
           </div>
         </div>
 
-        {/* RACE INFO */}
         <div className="section-header">Race Info</div>
-
         <div style={{ marginBottom:'16px' }}>
           <label className="field-label">Bib Name</label>
           <input className="rp-input" type="text" value={raceName} onChange={e => setRaceName(e.target.value)} placeholder="Ryan" />
           <p style={{ fontSize:'11px', color:'#b0b8c4', margin:'4px 0 0' }}>The name printed on your race bib. Leave blank to use your full name.</p>
         </div>
 
-        {/* EMERGENCY CONTACT */}
         <div className="section-header">Emergency Contact</div>
-
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Contact Name</label>
           <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" />
@@ -403,9 +335,7 @@ export default function BuildPassport() {
           <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" />
         </div>
 
-        {/* RUNNING BACKGROUND */}
         <div className="section-header">Running Background</div>
-
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Shirt Size</label>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
@@ -414,7 +344,6 @@ export default function BuildPassport() {
             ))}
           </div>
         </div>
-
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Experience Level</label>
           <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)}>
@@ -426,7 +355,6 @@ export default function BuildPassport() {
             <option value="elite">Elite — podium contender</option>
           </select>
         </div>
-
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Favorite Race Distance</label>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
@@ -435,12 +363,10 @@ export default function BuildPassport() {
             ))}
           </div>
         </div>
-
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Have you run a marathon (26.2)?</label>
           <YesNo value={doneMarathon} onChange={setDoneMarathon} />
         </div>
-
         {doneMarathon === true && (
           <div style={{ marginBottom:'14px' }}>
             <label className="field-label">Have you completed an IRONMAN triathlon?</label>
@@ -449,7 +375,6 @@ export default function BuildPassport() {
         )}
 
         <div style={{ height:'1px', background:'#f0f2f5', margin:'8px 0 20px' }} />
-
         <button className="rp-primary" onClick={handleSaveAndContinue} disabled={saving} style={{ marginBottom:'10px' }}>
           {saving ? 'Saving...' : 'Save & Continue →'}
         </button>
@@ -461,7 +386,6 @@ export default function BuildPassport() {
             We'll search <strong style={{ color:'#1B2A4A' }}>RunSignup</strong> for your past results and add them to your Race Passport.
           </p>
         </div>
-
       </div>
     </div>
   )
