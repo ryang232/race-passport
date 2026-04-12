@@ -20,6 +20,17 @@ const RYAN_RACES = [
 
 const STATS = { races:10, miles:199, prs:4, states:5 }
 
+// Mock goal — in production this would come from profiles table
+const MOCK_GOAL = {
+  type: 'distance',
+  distance: 'Half Marathon',
+  label: '13.1',
+  color: '#1E5FA8',
+  targetDate: 'Sep 2026',
+  suggestedRace: 'Parks Half Marathon',
+  suggestedRaceId: 'd1',
+}
+
 function PassportCard({ race, index, onClick }) {
   const [hovered, setHovered] = useState(false)
   const colors = getDistanceColor(race.distance)
@@ -53,6 +64,84 @@ function PassportCard({ race, index, onClick }) {
           <div style={{ width:6, height:6, borderRadius:'50%', background:colors.primary, flexShrink:0 }} />
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase' }}>Add your story →</span>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function GoalSection({ goal, navigate }) {
+  const colors = getDistanceColor(goal.label)
+  return (
+    <div style={{ marginTop:'48px' }}>
+      {/* Section header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+        <div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>What You're Chasing</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px' }}>Goals</div>
+        </div>
+        <button
+          onClick={() => navigate('/goal-races')}
+          style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', background:'none', border:'1.5px solid #e2e6ed', borderRadius:'8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
+          Edit Goal
+        </button>
+      </div>
+
+      {/* Goal card */}
+      <div style={{ background:'#fff', border:`1.5px solid ${colors.primary}`, borderRadius:'14px', overflow:'hidden', marginBottom:'16px' }}>
+        <div style={{ height:'4px', background:colors.primary }} />
+        <div style={{ padding:'20px 24px', display:'flex', alignItems:'center', gap:'20px' }}>
+          {/* Stamp */}
+          <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+            <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: goal.label.length > 3 ? 14 : goal.label.length > 2 ? 18 : 24, color:colors.primary, position:'relative', zIndex:1, letterSpacing:'0.04em' }}>{goal.label}</span>
+          </div>
+
+          <div style={{ flex:1 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
+              <div style={{ background:`${colors.primary}18`, border:`1px solid ${colors.primary}44`, borderRadius:'5px', padding:'3px 9px' }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'2px', color:colors.primary, textTransform:'uppercase' }}>Active Goal</span>
+              </div>
+            </div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>{goal.distance}</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', letterSpacing:'0.5px' }}>
+              {goal.targetDate && `Target: ${goal.targetDate}`}
+              {goal.suggestedRace && ` · ${goal.suggestedRace} suggested`}
+            </div>
+          </div>
+
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px', alignItems:'flex-end', flexShrink:0 }}>
+            <button
+              onClick={() => navigate('/discover')}
+              style={{ padding:'7px 14px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:colors.primary, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.background=colors.primary; e.currentTarget.style.color='#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background=colors.light; e.currentTarget.style.color=colors.primary }}>
+              View Races →
+            </button>
+            <button
+              style={{ padding:'7px 14px', border:'1.5px solid rgba(27,42,74,0.15)', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'6px' }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h7l-1 7 8-11h-7l1-7z" stroke="#C9A84C" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+              Train w/ Runna
+              <span style={{ background:'rgba(201,168,76,0.2)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'4px', padding:'1px 6px', fontSize:'8px', letterSpacing:'1px', color:'#C9A84C' }}>SOON</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Empty state CTA */}
+      <div style={{ border:'1.5px dashed #e2e6ed', borderRadius:'12px', padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', background:'#fafbfc' }}>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'3px' }}>Add Another Goal</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>A new distance, a bucket-list race — keep adding to your list.</div>
+        </div>
+        <button
+          onClick={() => navigate('/goal-races')}
+          style={{ padding:'8px 18px', border:'1.5px solid #1B2A4A', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
+          onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+          onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
+          + Add Goal
+        </button>
       </div>
     </div>
   )
@@ -198,6 +287,9 @@ export default function Passport() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px' }}>
           {filteredRaces.map((race, i) => <PassportCard key={race.id} race={race} index={i} onClick={() => navigate(`/race/${race.id}`)} />)}
         </div>
+
+        {/* GOALS SECTION */}
+        <GoalSection goal={MOCK_GOAL} navigate={navigate} />
       </div>
     </div>
   )
