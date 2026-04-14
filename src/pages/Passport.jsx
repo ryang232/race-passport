@@ -38,20 +38,20 @@ function PassportCard({ race, index, onClick }) {
   const fs = cleaned.length > 4 ? 14 : cleaned.length > 2 ? 17 : 24
   return (
     <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer', border: hovered ? `2px solid ${colors.primary}` : '1.5px solid #e2e6ed', transition:'all 0.2s', transform: hovered ? 'translateY(-6px)' : 'none', boxShadow: hovered ? `0 16px 40px ${colors.light.replace('0.08','0.2').replace('0.09','0.2')}` : '0 2px 12px rgba(27,42,74,0.07)', background:'#fff', animation:'fadeUp 0.4s ease both', animationDelay:`${index * 60}ms` }}>
-      <div style={{ height:'4px', background:colors.primary }} />
+      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer', border: hovered ? '2px solid #C9A84C' : '1.5px solid #e2e6ed', transition:'all 0.2s', transform: hovered ? 'translateY(-6px)' : 'none', boxShadow: hovered ? '0 16px 40px rgba(201,168,76,0.15)' : '0 2px 12px rgba(27,42,74,0.07)', background:'#fff', animation:'fadeUp 0.4s ease both', animationDelay:`${index * 60}ms` }}>
+      <div style={{ height:'4px', background:'#C9A84C' }} />
       <div style={{ background:'#1B2A4A', padding:'20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', position:'relative', minHeight:'100px' }}>
         <div style={{ position:'absolute', top:10, left:14, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.2)', textTransform:'uppercase' }}>PAGE {String(index + 1).padStart(2, '0')}</div>
-        <div style={{ marginTop:'16px', width:72, height:72, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative' }}>
-          <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.primary, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
+        <div style={{ marginTop:'16px', width:72, height:72, borderRadius:'50%', border:'2.5px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative' }}>
+          <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
         </div>
         <div style={{ flex:1, marginLeft:'14px', marginTop:'18px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#fff', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'4px' }}>{race.name}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px' }}>{race.location}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)', letterSpacing:'0.5px', marginTop:'2px' }}>{race.month} {race.year}</div>
         </div>
-        {race.pr && <div style={{ position:'absolute', top:10, right:12, background:colors.primary, borderRadius:'4px', padding:'2px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'1.5px', color: colors.primary === '#C9A84C' ? '#1B2A4A' : '#fff' }}>PR</div>}
+        {race.pr && <div style={{ position:'absolute', top:10, right:12, background:'#C9A84C', borderRadius:'4px', padding:'2px 7px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A' }}>PR</div>}
       </div>
       <div style={{ padding:'12px 16px 14px' }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'10px' }}>
@@ -60,9 +60,9 @@ function PassportCard({ race, index, onClick }) {
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginTop:'2px' }}>Finish Time</div>
           </div>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 10px', background:colors.light, border:`1px dashed ${colors.dashed}`, borderRadius:'6px' }}>
-          <div style={{ width:6, height:6, borderRadius:'50%', background:colors.primary, flexShrink:0 }} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase' }}>Add your story →</span>
+        <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 10px', background:'rgba(201,168,76,0.08)', border:'1px dashed rgba(201,168,76,0.35)', borderRadius:'6px' }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase' }}>Add your story →</span>
         </div>
       </div>
     </div>
@@ -90,7 +90,7 @@ function GoalSection({ goal, navigate }) {
 
       {/* Goal card */}
       <div style={{ background:'#fff', border:`1.5px solid ${colors.primary}`, borderRadius:'14px', overflow:'hidden', marginBottom:'16px' }}>
-        <div style={{ height:'4px', background:colors.primary }} />
+        <div style={{ height:'4px', background:'#C9A84C' }} />
         <div style={{ padding:'20px 24px', display:'flex', alignItems:'center', gap:'20px' }}>
           {/* Stamp */}
           <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
@@ -202,12 +202,6 @@ export default function Passport() {
     { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
 
-  const LEGEND = [
-    { label:'5K · 10K · 13.1', color:'#1E5FA8' },
-    { label:'Marathon 26.2', color:'#C9A84C' },
-    { label:'Triathlon', color:'#B83232' },
-  ]
-
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
       <div style={{ position:'sticky', top:0, zIndex:50, background:'#fff', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
@@ -260,15 +254,7 @@ export default function Passport() {
               ))}
             </div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'20px', marginTop:'24px', paddingTop:'20px', borderTop:'1px solid rgba(255,255,255,0.08)', flexWrap:'wrap' }}>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.3)', textTransform:'uppercase' }}>Distance Colors:</span>
-            {LEGEND.map(l => (
-              <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:10, height:10, borderRadius:'50%', background:l.color, flexShrink:0 }} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.45)' }}>{l.label}</span>
-              </div>
-            ))}
-          </div>
+
           <div style={{ height:'3px', background:'linear-gradient(to right, #C9A84C, transparent)', marginTop:'20px', borderRadius:'2px' }} />
         </div>
       </div>
