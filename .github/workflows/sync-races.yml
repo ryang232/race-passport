@@ -24,7 +24,7 @@ jobs:
         run: |
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
           INPUT_STATES="${{ github.event.inputs.states }}"
-          BASE_URL="https://race-passport-4b941wv6g-ryans-projects-29f7f58e.vercel.app/api/runsignup"
+          BASE_URL="https://race-passport-git-app-ryans-projects-29f7f58e.vercel.app/api/runsignup"
 
           if [ -n "$INPUT_STATES" ]; then
             STATES="$INPUT_STATES"
