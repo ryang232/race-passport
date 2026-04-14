@@ -458,6 +458,119 @@ export default async function handler(req, res) {
       })
     }
 
+    // ── GET FULL RACE DETAIL ──────────────────────────────────────────────────
+    if (action === 'get_race_detail') {
+      if (!race_id) return res.status(400).json({ error: 'race_id required' })
+
+      // Strip 'rs_' prefix if present to get the numeric RunSignup ID
+      const numericId = race_id.replace('rs_', '')
+
+      // Fetch full race detail from RunSignup
+      const url = `${BASE}/race/${numericId}?${AUTH}&include_event_details=T&include_waiver=F&include_questions=F`
+      let rsData
+      try {
+        const response = await fetch(url)
+        rsData = await response.json()
+      } catch (e) {
+        return res.status(500).json({ error: 'Failed to fetch race detail', message: e.message })
+      }
+
+      const race = rsData?.race
+      if (!race) return res.status(404).json({ error: 'Race not found' })
+
+      // Derive terrain from name + description
+      const nameAndDesc = `${race.name || ''} ${race.description || ''}`.toLowerCase()
+      let terrain = 'Road'
+      if (nameAndDesc.includes('trail') || nameAndDesc.includes('mountain') || nameAndDesc.includes('ridge') || nameAndDesc.includes('forest') || nameAndDesc.includes('creek')) terrain = 'Trail'
+      else if (nameAndDesc.includes('triathlon') || nameAndDesc.includes('ironman') || nameAndDesc.includes('70.3') || nameAndDesc.includes('swim')) terrain = 'Multi'
+      else if (nameAndDesc.includes('bridge')) terrain = 'Bridge/Road'
+      else if (nameAndDesc.includes('track')) terrain = 'Track'
+      else if (nameAndDesc.includes('beach') || nameAndDesc.includes('sand')) terrain = 'Beach'
+
+      // Derive difficulty from distance
+      const distLower = (race.distance || '').toLowerCase()
+      let difficulty = 'Moderate'
+      if (distLower.includes('5k') || distLower === '5 km') difficulty = 'Beginner'
+      else if (distLower.includes('10k') || distLower === '10 km') difficulty = 'Easy'
+      else if (distLower.includes('half') || distLower.includes('13.1')) difficulty = 'Moderate'
+      else if (distLower.includes('marathon') && !distLower.includes('half')) difficulty = 'Hard'
+      else if (distLower.includes('ultra') || distLower.includes('50k') || distLower.includes('100')) difficulty = 'Expert'
+      else if (distLower.includes('70.3') || distLower.includes('ironman')) difficulty = 'Expert'
+
+      // Parse registration dates from events
+      const events = race.events || []
+      let regOpenDate = null
+      let regCloseDate = null
+      let cutoffTime = null
+      let minPrice = null
+      const eventsDetail = []
+
+      for (const ev of events) {
+        const e = ev?.event || ev
+        // Registration opens
+        const opens = e?.registration_opens?.[0]
+        if (opens?.opens_at) regOpenDate = opens.opens_at
+        if (opens?.closes_at) regCloseDate = opens.closes_at
+        if (opens?.fee) {
+          const p = parseFloat(opens.fee)
+          if (!isNaN(p) && (minPrice === null || p < minPrice)) minPrice = Math.round(p)
+        }
+        // Cutoff
+        if (e?.cutoff_time) cutoffTime = e.cutoff_time
+        // Store event summary
+        if (e?.name || e?.distance) {
+          eventsDetail.push({
+            name: e.name || '',
+            distance: e.distance || '',
+            fee: opens?.fee || null,
+            start_time: e.start_time || null,
+          })
+        }
+      }
+
+      // Build the enriched race object
+      const enriched = {
+        description:     race.description || null,
+        website_url:     race.url || null,
+        course_map_url:  race.course_map_url || null,
+        charity:         race.charity_name || race.beneficiary || null,
+        cutoff_time:     cutoffTime,
+        reg_open_date:   regOpenDate,
+        reg_close_date:  regCloseDate,
+        terrain,
+        difficulty,
+        events_detail:   eventsDetail.length > 0 ? eventsDetail : null,
+        detail_fetched:  true,
+        last_updated:    new Date().toISOString(),
+      }
+      // Also update price if we got a better value
+      if (minPrice !== null) enriched.price = minPrice
+
+      // Upsert enriched data back to Supabase
+      const supabaseId = `rs_${numericId}`
+      const { error: upsertError } = await supabaseAdmin
+        .from('races')
+        .update(enriched)
+        .eq('id', supabaseId)
+
+      if (upsertError) {
+        console.error('Supabase update error:', upsertError.message)
+      }
+
+      // Also fetch the full race row from Supabase to return
+      const { data: fullRace } = await supabaseAdmin
+        .from('races')
+        .select('*')
+        .eq('id', supabaseId)
+        .single()
+
+      return res.status(200).json({
+        action: 'get_race_detail',
+        race: fullRace || { id: supabaseId, ...enriched },
+        raw_rs_data: { name: race.name, description: race.description },
+      })
+    }
+
     if (action === 'search_results_in_race') {
       const url = `${BASE}/race/${race_id}/results/get-results?${AUTH}&event_id=${event_id}&first_name=${encodeURIComponent(first_name||'')}&last_name=${encodeURIComponent(last_name||'')}&results_per_page=20`
       const response = await fetch(url)
