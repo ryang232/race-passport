@@ -234,6 +234,12 @@ jobs:
                   city = (race.get('address') or {}).get('city', '')
                   st = (race.get('address') or {}).get('state', state)
                   coords = get_coords(city, st)
+                  # Description — strip HTML tags
+                  raw_desc = race.get('description') or ''
+                  import re as _re
+                  description = _re.sub(r'<[^>]+>', ' ', raw_desc).strip()
+                  description = _re.sub(r'\s+', ' ', description)[:1000] if description else None
+
                   # Get all text sources for distance extraction
                   event_name_str = first_event.get('name', '') or ''
                   dist_raw = first_event.get('distance', '') or ''
@@ -244,12 +250,6 @@ jobs:
                   sport = 'Triathlon' if ('ironman' in combined or 'triathlon' in combined or '70.3' in combined) else 'Running'
                   reg_url = race.get('url') or f"https://runsignup.com/Race/{race.get('race_id', '')}"
                   location = f"{city}, {st}" if city and st else (st or city or '')
-
-                  # Description — strip HTML tags
-                  raw_desc = race.get('description') or ''
-                  import re as _re
-                  description = _re.sub(r'<[^>]+>', ' ', raw_desc).strip()
-                  description = _re.sub(r'\s+', ' ', description)[:1000] if description else None
 
                   # Terrain from name/description
                   nd_lower = f"{name} {description or ''}".lower()
