@@ -6,34 +6,23 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
 import { getDistanceColor } from '../lib/colors'
 
-// ── Ryan's real race stats ─────────────────────────────────────────────────────
-const STATS_COLS = [
-  { key:'races', items:[
-    { label:'Total Races', value:'10' },
-    { label:'5K Races', value:'2' },
-    { label:'10K Races', value:'3' },
-    { label:'Half Marathons', value:'3' },
-    { label:'Marathons', value:'2' },
-    { label:'Triathlons', value:'1' },
-  ]},
-  { key:'miles', items:[
-    { label:'Race Miles (Est.)', value:'199' },
-    { label:'10K Miles', value:'18.6' },
-    { label:'Half Miles', value:'39.3' },
-    { label:'Marathon Miles', value:'52.4' },
-    { label:'Triathlon Miles', value:'70.3' },
-    { label:'5K Miles', value:'6.2' },
-  ]},
-  { key:'prs', items:[
-    { label:'5K PR', value:'28:16' },
-    { label:'10K PR', value:'47:49' },
-    { label:'Half PR', value:'1:57:40' },
-    { label:'Marathon PR', value:'4:44:47' },
-    { label:'70.3 PR', value:'6:32:08' },
-  ]},
+const STRAVA_CONNECTED = false // flip to true once Strava OAuth is wired
+
+const STAT_ITEMS = [
+  { label:'Total Races',    value:'10' },
+  { label:'Race Miles',     value:'199' },
+  { label:'5K PR',          value:'28:16' },
+  { label:'10K PR',         value:'47:49' },
+  { label:'Half PR',        value:'1:57:40' },
+  { label:'Marathon PR',    value:'4:44:47' },
+  { label:'70.3 PR',        value:'6:32:08' },
+  { label:'Marathons',      value:'2' },
+  { label:'Half Marathons', value:'3' },
+  { label:'Triathlons',     value:'1' },
+  { label:'10K Races',      value:'3' },
+  { label:'5K Races',       value:'2' },
 ]
 
-// ── Ryan's stamps (personal passport pages → /race/:id) ──────────────────────
 const RYAN_STAMPS = [
   { id:9,  distance:'70.3',  name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD',    month:'Jun', year:'2025' },
   { id:8,  distance:'13.1',  name:'Austin Half Marathon',   location:'Austin, TX',       month:'Feb', year:'2025' },
@@ -44,7 +33,6 @@ const RYAN_STAMPS = [
   { id:1,  distance:'10K',   name:'Sole of the City',       location:'Baltimore, MD',    month:'Oct', year:'2021' },
 ]
 
-// ── Nearby discovery races → /race-detail/:id ────────────────────────────────
 const MOCK_NEARBY = [
   { id:'d1', name:'Parks Half Marathon',       date:'Sept 21, 2026', location:'Bethesda, MD',   distance:'13.1',  query:'half marathon road crowd runners',   terrain:'Road',       elevation:'180ft', price:'$95',  weeks:10 },
   { id:'d2', name:'Suds & Soles 5K',           date:'Jun 13, 2026',  location:'Rockville, MD',  distance:'5K',    query:'5K community street finish line',    terrain:'Road',       elevation:'85ft',  price:'$35',  weeks:4  },
@@ -54,33 +42,78 @@ const MOCK_NEARBY = [
   { id:'d6', name:'Marine Corps Marathon',     date:'Oct 26, 2026',  location:'Arlington, VA',  distance:'26.2',  query:'Washington DC marathon National Mall',terrain:'Road',       elevation:'912ft', price:'$140', weeks:16 },
 ]
 
-// ── Upcoming registered → /race-detail/:id ────────────────────────────────────
 const MOCK_UPCOMING = [
-  { id:'u1', name:'Cherry Blossom 10 Miler', date:'Apr 6, 2026',  location:'Washington, DC',  distance:'10 mi', query:'cherry blossom DC Tidal Basin spring' },
-  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD', distance:'26.2',  query:'Baltimore marathon waterfront running' },
+  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC',  distance:'10 mi', query:'cherry blossom DC Tidal Basin spring' },
+  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',   distance:'26.2',  query:'Baltimore marathon waterfront running' },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
-function StatCol({ col }) {
-  const [idx, setIdx] = useState(0)
-  const items = col.items
-  const prev = (e) => { e.stopPropagation(); setIdx(i => (i-1+items.length)%items.length) }
-  const next = (e) => { e.stopPropagation(); setIdx(i => (i+1)%items.length) }
-  const item = items[idx]
+// ── Scrolling stats ticker ────────────────────────────────────────────────────
+function StatsTicker() {
+  const trackRef = useRef(null)
+  // Duplicate items enough to fill wide screens and loop seamlessly
+  const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
+
   return (
-    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 8px' }}>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(28px,3.5vw,48px)', color:'#fff', lineHeight:1, letterSpacing:'1px', textAlign:'center' }}>{item.value}</div>
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', marginBottom:'10px', textAlign:'center' }}>{item.label}</div>
-      <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-        <button onClick={prev} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color='#C9A84C'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>‹</button>
-        <div style={{ display:'flex', gap:'4px' }}>
-          {items.map((_,i) => <div key={i} style={{ width:4, height:4, borderRadius:'50%', background: i===idx ? '#C9A84C' : 'rgba(255,255,255,0.2)', transition:'background 0.2s' }} />)}
-        </div>
-        <button onClick={next} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.3)', cursor:'pointer', padding:'2px 6px', fontSize:'18px', lineHeight:1, transition:'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color='#C9A84C'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>›</button>
+    <div style={{ background:'#1B2A4A', borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)', position:'relative' }}>
+      {/* Fade edges */}
+      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:80, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:80, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+
+      {/* Scrolling track */}
+      <div ref={trackRef} style={{
+        display:'flex', alignItems:'center', gap:0,
+        padding:'28px 0',
+        animation:'statsTicker 40s linear infinite',
+        width:'max-content',
+      }}>
+        {items.map((item, i) => (
+          <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
+            <div style={{ textAlign:'center', padding:'0 40px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(52px,6vw,80px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>
+                {item.value}
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'8px', whiteSpace:'nowrap' }}>
+                {item.label}
+              </div>
+            </div>
+            {/* Separator dot */}
+            <div style={{ width:6, height:6, borderRadius:'50%', background:'rgba(201,168,76,0.3)', flexShrink:0 }} />
+          </div>
+        ))}
       </div>
+
+      {/* Strava note */}
+      <div style={{ position:'absolute', bottom:10, right:90, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
+        <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        </div>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.3)', letterSpacing:'1px' }}>Synced via Strava</span>
+      </div>
+    </div>
+  )
+}
+
+// ── Strava connect prompt (no Strava yet) ─────────────────────────────────────
+function StravaConnect() {
+  return (
+    <div style={{ background:'#1B2A4A', borderRadius:'16px', border:'1px solid rgba(201,168,76,0.15)', padding:'36px 48px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'20px' }}>
+        <div style={{ width:56, height:56, borderRadius:'12px', background:'rgba(252,76,2,0.12)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        </div>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#fff', letterSpacing:'1px', lineHeight:1, marginBottom:'6px' }}>Connect Strava to unlock your stats</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>
+            See total race miles, PRs by distance, activity history, and more — all pulled automatically from your Strava account.
+          </div>
+        </div>
+      </div>
+      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'10px', padding:'14px 32px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
+        onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+        Connect Strava
+      </button>
     </div>
   )
 }
@@ -259,6 +292,10 @@ export default function Home() {
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
       @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes statsTicker {
+        0%   { transform: translateX(0); }
+        100% { transform: translateX(-33.333%); }
+      }
       .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
       .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
       .nav-tab:hover { color:#1B2A4A; }
@@ -347,27 +384,9 @@ export default function Home() {
 
       <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
 
-        {/* STATS */}
-        <div style={{ background:'#1B2A4A', borderRadius:'16px', marginBottom:'48px', border:'1px solid rgba(201,168,76,0.15)', overflow:'hidden' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1px 1fr 1px 1fr 1px 1fr', padding:'28px 0', alignItems:'center' }}>
-            <StatCol col={STATS_COLS[0]} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
-            <StatCol col={STATS_COLS[1]} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
-            <StatCol col={STATS_COLS[2]} />
-            <div style={{ background:'rgba(255,255,255,0.08)', height:'70%', alignSelf:'center' }} />
-            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'4px 16px', gap:'12px' }}>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                <div style={{ width:28, height:28, borderRadius:'6px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-                </div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#fff', whiteSpace:'nowrap' }}>Connect Strava</div>
-              </div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px', textAlign:'center', lineHeight:1.5 }}>Sync miles, PRs &amp; activities automatically</div>
-              <button style={{ background:'#FC4C02', border:'none', borderRadius:'6px', padding:'8px 20px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
-                onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>Connect Strava</button>
-            </div>
-          </div>
+        {/* STATS BAR */}
+        <div style={{ marginBottom:'48px' }}>
+          {STRAVA_CONNECTED ? <StatsTicker /> : <StravaConnect />}
         </div>
 
         {/* RACES NEAR YOU */}
