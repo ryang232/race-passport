@@ -89,21 +89,34 @@ jobs:
               return CITY_COORDS[key]
             return STATE_COORDS.get(state, [None, None])
 
-          def normalize_distance(raw):
-            if not raw: return None
-            r = raw.lower().strip()
-            if 'marathon' in r and 'half' not in r: return '26.2'
-            if 'half' in r or '13.1' in r: return '13.1'
-            if '10k' in r or r == '10 km': return '10K'
-            if '5k' in r or r == '5 km': return '5K'
-            if '10 mi' in r or '10mile' in r: return '10 mi'
+          def _extract_distance(text):
+            if not text: return None
+            r = text.lower().strip()
+            if '140.6' in r or ('ironman' in r and '70' not in r and 'half' not in r): return '140.6'
             if '70.3' in r or 'half iron' in r: return '70.3'
-            if '140.6' in r: return '140.6'
-            if '50k' in r: return '50K'
-            if '50m' in r or '50 mi' in r: return '50M'
-            if '100k' in r: return '100K'
-            if 'tri' in r: return 'Tri'
-            return raw.strip()
+            if 'triathlon' in r: return 'Tri'
+            if '100 mile' in r or '100-mile' in r: return '100M'
+            if '100k' in r or '100 km' in r: return '100K'
+            if '50 mile' in r or '50-mile' in r: return '50M'
+            if '50k' in r or '50 km' in r: return '50K'
+            if 'marathon' in r and 'half' not in r and 'mini' not in r: return '26.2'
+            if 'half marathon' in r or 'half-marathon' in r or '13.1' in r: return '13.1'
+            if '15k' in r or '15 km' in r: return '15K'
+            if '10 mile' in r or '10-mile' in r or '10 miler' in r: return '10 mi'
+            if '10k' in r or '10 km' in r: return '10K'
+            if '8k' in r or '8 km' in r: return '8K'
+            if '5k' in r or '5 km' in r: return '5K'
+            if '1 mile' in r or 'one mile' in r: return '1 mi'
+            return None
+
+          def normalize_distance(raw):
+            return _extract_distance(raw)
+
+          def extract_distance_from_all(race_name, event_name, desc, dist_raw):
+            for source in [dist_raw, event_name, race_name, (desc or '')[:200]]:
+              result = _extract_distance(source or '')
+              if result: return result, (source or '')
+            return None, ''"""
 
           def parse_date(date_val):
             if not date_val:
@@ -221,8 +234,12 @@ jobs:
                   city = (race.get('address') or {}).get('city', '')
                   st = (race.get('address') or {}).get('state', state)
                   coords = get_coords(city, st)
-                  dist_raw = first_event.get('distance', '') or first_event.get('name', '') or ''
-                  distance = normalize_distance(dist_raw)
+                  # Get all text sources for distance extraction
+                  event_name_str = first_event.get('name', '') or ''
+                  dist_raw = first_event.get('distance', '') or ''
+                  # Try all sources: explicit distance field, event name, race name, description
+                  distance, dist_raw = extract_distance_from_all(name, event_name_str, description, dist_raw)
+                  if not dist_raw: dist_raw = event_name_str
                   combined = f"{dist_raw} {name}".lower()
                   sport = 'Triathlon' if ('ironman' in combined or 'triathlon' in combined or '70.3' in combined) else 'Running'
                   reg_url = race.get('url') or f"https://runsignup.com/Race/{race.get('race_id', '')}"
@@ -254,17 +271,27 @@ jobs:
                   elif any(w in dl for w in ['ultra','50k','50m','100k','100m','70.3','140.6']): difficulty = 'Expert'
                   else: difficulty = 'Moderate'
 
-                  # Price from events
+                  # Price from events — check multiple fields RunSignup uses
                   price = None
                   for ev in events:
                     e = ev.get('event', ev)
-                    opens = (e.get('registration_opens') or [{}])[0] if e.get('registration_opens') else {}
-                    fee = opens.get('fee') or e.get('fee')
-                    if fee:
-                      try:
-                        p = round(float(fee))
-                        if price is None or p < price: price = p
-                      except: pass
+                    # Try registration_opens array first
+                    reg_opens = e.get('registration_opens') or []
+                    for ro in reg_opens:
+                      fee = ro.get('fee') or ro.get('registration_fee')
+                      if fee:
+                        try:
+                          p = round(float(str(fee).replace('$','')))
+                          if p > 0 and (price is None or p < price): price = p
+                        except: pass
+                    # Also try direct fee fields on event
+                    for field in ['fee','registration_fee','price','cost']:
+                      fee = e.get(field)
+                      if fee:
+                        try:
+                          p = round(float(str(fee).replace('$','')))
+                          if p > 0 and (price is None or p < price): price = p
+                        except: pass
 
                   normalized.append({
                     'id': race_id,
