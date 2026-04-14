@@ -6,131 +6,98 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
 
-// Fallback hardcoded races shown while DB is empty / during dev
-const FALLBACK_RACES = [
-  { id:'d1',  name:'Parks Half Marathon',       date:'Sept 21, 2026', date_sort:'2026-09-21', location:'Bethesda, MD',      distance:'13.1',  price:95,  terrain:'Road',        elevation:'180ft',  weeks:10, est_finishers:1200,  lat:38.9807, lng:-77.1003, unsplash_query:'half marathon road crowd runners',          sport:'Running' },
-  { id:'d2',  name:'Suds & Soles 5K',           date:'Jun 13, 2026',  date_sort:'2026-06-13', location:'Rockville, MD',     distance:'5K',    price:35,  terrain:'Road',        elevation:'85ft',   weeks:4,  est_finishers:400,   lat:39.0840, lng:-77.1528, unsplash_query:'5K community street finish line',           sport:'Running' },
-  { id:'d3',  name:'Baltimore 10 Miler',        date:'Jun 6, 2026',   date_sort:'2026-06-06', location:'Baltimore, MD',     distance:'10 mi', price:65,  terrain:'Road',        elevation:'210ft',  weeks:8,  est_finishers:800,   lat:39.2904, lng:-76.6122, unsplash_query:'Baltimore Inner Harbor waterfront running',  sport:'Running' },
-  { id:'d4',  name:'Annapolis Bay Bridge Run',  date:'Oct 12, 2026',  date_sort:'2026-10-12', location:'Annapolis, MD',     distance:'10K',   price:55,  terrain:'Bridge/Road', elevation:'140ft',  weeks:6,  est_finishers:600,   lat:38.9784, lng:-76.4922, unsplash_query:'Chesapeake Bay Bridge Maryland aerial',      sport:'Running' },
-  { id:'d5',  name:'DC Half Marathon',          date:'Mar 15, 2027',  date_sort:'2027-03-15', location:'Washington, DC',    distance:'13.1',  price:110, terrain:'Road',        elevation:'190ft',  weeks:10, est_finishers:14000, lat:38.9072, lng:-77.0369, unsplash_query:'Washington DC Capitol monument runners',     sport:'Running' },
-  { id:'d6',  name:'Frederick Festival 5K',     date:'May 2, 2026',   date_sort:'2026-05-02', location:'Frederick, MD',     distance:'5K',    price:30,  terrain:'Road',        elevation:'95ft',   weeks:4,  est_finishers:300,   lat:39.4143, lng:-77.4105, unsplash_query:'Frederick Maryland historic brick street',   sport:'Running' },
-  { id:'d7',  name:'Marine Corps Marathon',     date:'Oct 26, 2026',  date_sort:'2026-10-26', location:'Arlington, VA',     distance:'26.2',  price:140, terrain:'Road',        elevation:'912ft',  weeks:16, est_finishers:19000, lat:38.8719, lng:-77.0563, unsplash_query:'Washington DC marathon runners National Mall',sport:'Running' },
-  { id:'d8',  name:'Richmond Marathon',         date:'Nov 15, 2026',  date_sort:'2026-11-15', location:'Richmond, VA',      distance:'26.2',  price:110, terrain:'Road',        elevation:'520ft',  weeks:16, est_finishers:8000,  lat:37.5407, lng:-77.4360, unsplash_query:'Richmond Virginia marathon city running',    sport:'Running' },
-  { id:'d9',  name:'Seneca Creek 50K',          date:'Mar 21, 2026',  date_sort:'2026-03-21', location:'Gaithersburg, MD',  distance:'50K',   price:85,  terrain:'Trail',       elevation:'2800ft', weeks:20, est_finishers:200,   lat:39.1434, lng:-77.2135, unsplash_query:'trail ultra running forest Maryland',        sport:'Running' },
-  { id:'d10', name:'IRONMAN 70.3 Atlantic City',date:'Sept 13, 2026', date_sort:'2026-09-13', location:'Atlantic City, NJ', distance:'70.3',  price:350, terrain:'Multi',       elevation:'1200ft', weeks:20, est_finishers:2000,  lat:39.3643, lng:-74.4229, unsplash_query:'triathlon ocean swim wetsuit athletes',      sport:'Triathlon' },
-]
+const STATE_NAME_TO_ABBR = {
+  'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
+  'colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA',
+  'hawaii':'HI','idaho':'ID','illinois':'IL','indiana':'IN','iowa':'IA','kansas':'KS',
+  'kentucky':'KY','louisiana':'LA','maine':'ME','maryland':'MD','massachusetts':'MA',
+  'michigan':'MI','minnesota':'MN','mississippi':'MS','missouri':'MO','montana':'MT',
+  'nebraska':'NE','nevada':'NV','new hampshire':'NH','new jersey':'NJ','new mexico':'NM',
+  'new york':'NY','north carolina':'NC','north dakota':'ND','ohio':'OH','oklahoma':'OK',
+  'oregon':'OR','pennsylvania':'PA','rhode island':'RI','south carolina':'SC',
+  'south dakota':'SD','tennessee':'TN','texas':'TX','utah':'UT','vermont':'VT',
+  'virginia':'VA','washington':'WA','west virginia':'WV','wisconsin':'WI','wyoming':'WY',
+  'dc':'DC','district of columbia':'DC',
+}
 
-const DIST_FILTERS   = [
-  { label:'All',   value:'ALL' },
-  { label:'5K',    value:'5K' },
-  { label:'10K',   value:'10K' },
-  { label:'13.1',  value:'13.1' },
-  { label:'26.2',  value:'26.2' },
-  { label:'Tri',   value:'TRI' },
-  { label:'Ultra', value:'ULTRA' },
+const PAGE_SIZE = 48
+
+const DIST_FILTERS = [
+  { label:'All', value:'ALL' },{ label:'5K', value:'5K' },{ label:'10K', value:'10K' },
+  { label:'13.1', value:'13.1' },{ label:'26.2', value:'26.2' },
+  { label:'Tri', value:'TRI' },{ label:'Ultra', value:'ULTRA' },
 ]
 const TERRAIN_OPTIONS = ['All','Road','Trail','Multi','Bridge/Road']
 const SPORT_OPTIONS   = ['All','Running','Triathlon','Cycling','Swimming']
 const SORT_OPTIONS    = [
-  { label:'Date (Soonest)',   value:'date-asc' },
-  { label:'Date (Latest)',    value:'date-desc' },
-  { label:'Price (Low→High)',  value:'price-asc' },
-  { label:'Price (High→Low)',  value:'price-desc' },
-  { label:'Finishers (Most)', value:'finishers-desc' },
+  { label:'Date (Soonest)', value:'date-asc' },{ label:'Date (Latest)', value:'date-desc' },
+  { label:'Price (Low→High)', value:'price-asc' },{ label:'Price (High→Low)', value:'price-desc' },
 ]
 
 function haversineDistance(lat1, lng1, lat2, lng2) {
-  const R = 3959 // miles
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLng/2)**2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+  const R = 3959
+  const dLat = (lat2-lat1)*Math.PI/180, dLng = (lng2-lng1)*Math.PI/180
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
 }
 
-function applyClientFilters(races, { distFilter, search, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo, sort, userLat, userLng, radius }) {
-  let filtered = races.filter(r => {
-    const d = (r.distance || '').toLowerCase()
-    const matchDist = distFilter === 'ALL' ? true
-      : distFilter === 'TRI'   ? ['70.3','140.6','tri'].some(t => d.includes(t))
-      : distFilter === 'ULTRA' ? ['50k','50m','100k','100m'].some(t => d.includes(t))
-      : d === distFilter.toLowerCase() || d.startsWith(distFilter.toLowerCase())
-    const q = search.toLowerCase()
-    const matchSearch   = !q || (r.name||'').toLowerCase().includes(q) || (r.location||'').toLowerCase().includes(q)
-    const matchPrice    = !r.price || r.price <= maxPrice
-    const matchTerrain  = terrainFilter === 'All' || (r.terrain||'').toLowerCase().includes(terrainFilter.toLowerCase())
-    const matchSport    = sportFilter === 'All' || r.sport === sportFilter
-    const matchDateFrom = !dateFrom || (r.date_sort||'') >= dateFrom
-    const matchDateTo   = !dateTo   || (r.date_sort||'') <= dateTo
-    return matchDist && matchSearch && matchPrice && matchTerrain && matchSport && matchDateFrom && matchDateTo
-  })
-
-  // Radius filter if location granted
-  if (userLat && userLng) {
-    filtered = filtered.filter(r => {
-      if (!r.lat || !r.lng) return false
-      const dist = haversineDistance(userLat, userLng, r.lat, r.lng)
-      r.distance_miles = Math.round(dist * 10) / 10
-      return dist <= radius
-    })
-  }
-
-  // Sort
-  filtered.sort((a, b) => {
-    if (userLat && userLng) return (a.distance_miles||999) - (b.distance_miles||999)
-    if (sort === 'date-asc')       return (a.date_sort||'').localeCompare(b.date_sort||'')
-    if (sort === 'date-desc')      return (b.date_sort||'').localeCompare(a.date_sort||'')
-    if (sort === 'price-asc')      return (a.price||0) - (b.price||0)
-    if (sort === 'price-desc')     return (b.price||0) - (a.price||0)
-    if (sort === 'finishers-desc') return (b.est_finishers||0) - (a.est_finishers||0)
-    return 0
-  })
-
-  return filtered
+function matchesSearch(race, q) {
+  if (!q) return true
+  const lower = q.toLowerCase().trim()
+  const abbr = STATE_NAME_TO_ABBR[lower]
+  if (abbr) return (race.state||'').toUpperCase() === abbr
+  return (race.name||'').toLowerCase().includes(lower) ||
+    (race.location||'').toLowerCase().includes(lower) ||
+    (race.city||'').toLowerCase().includes(lower) ||
+    (race.state||'').toLowerCase().includes(lower)
 }
 
 function RaceCard({ race, isActive, onClick }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto]     = useState(null)
+  const [visible, setVisible] = useState(false)
+  const cardRef = useRef(null)
   const colors  = getDistanceColor(race.distance)
   const cleaned = (race.distance||'').replace(' mi','')
 
   useEffect(() => {
-    if (race.unsplash_query) {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect() } },
+      { rootMargin:'200px' }
+    )
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (visible && race.unsplash_query && !photo) {
       fetchUnsplashPhoto(race.unsplash_query, 'running').then(url => setPhoto(url))
     }
-  }, [race.unsplash_query])
+  }, [visible, race.unsplash_query])
 
   return (
-    <div
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+    <div ref={cardRef}
+      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={onClick}
-      style={{
-        borderRadius:'14px', overflow:'hidden', background:'#fff',
+      style={{ borderRadius:'14px', overflow:'hidden', background:'#fff',
         boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)',
         cursor:'pointer', transition:'transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-5px)' : 'none',
-        outline: isActive ? `2.5px solid ${colors.primary}` : 'none',
-        outlineOffset: isActive ? '2px' : '0',
-      }}>
+        outline: isActive ? `2.5px solid ${colors.primary}` : 'none', outlineOffset:'2px' }}>
       <div style={{ height:'3px', background:colors.primary }} />
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         {photo
-          ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+          ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered?'scale(1.05)':'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+              {visible && <div style={{ width:28, height:28, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />}
             </div>
         }
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        {/* Hover overlay */}
-        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
+        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity: hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
-            {[
-              { label:'Price',     value: race.price ? `$${race.price}` : 'TBD' },
-              { label:'Terrain',   value: race.terrain || 'Road' },
-              { label:'Elevation', value: race.elevation || '—' },
-              { label:'Finishers', value: race.est_finishers ? race.est_finishers.toLocaleString() : '—' },
+            {[{ label:'Price', value: race.price?`$${race.price}`:'TBD' },{ label:'Terrain', value: race.terrain||'Road' },
+              { label:'Elevation', value: race.elevation||'—' },{ label:'Finishers', value: race.est_finishers?race.est_finishers.toLocaleString():'—' }
             ].map(s => (
               <div key={s.label} style={{ textAlign:'center' }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
@@ -146,11 +113,10 @@ function RaceCard({ race, isActive, onClick }) {
             </div>
           )}
         </div>
-        {/* Distance stamp */}
-        <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
+        <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered?0:1, transition:'opacity 0.2s' }}>
           <div style={{ width:50, height:50, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length>3?9:cleaned.length>2?11:14, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
           </div>
         </div>
       </div>
@@ -166,75 +132,57 @@ function RaceCard({ race, isActive, onClick }) {
 }
 
 export default function Discover() {
-  const navigate    = useNavigate()
-  const location    = useLocation()
+  const navigate = useNavigate()
+  const location = useLocation()
   const { user, signOut } = useAuth()
   const [profile, setProfile] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
-
-  // Race data
-  const [allRaces, setAllRaces]   = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [dataSource, setDataSource] = useState('fallback') // 'fallback' | 'live'
-
-  // Filters
-  const [distFilter, setDistFilter]       = useState('ALL')
-  const [search, setSearch]               = useState('')
-  const [sort, setSort]                   = useState('date-asc')
-  const [showFilters, setShowFilters]     = useState(false)
-  const [maxPrice, setMaxPrice]           = useState(400)
+  const [allRaces, setAllRaces] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
+  const [offset, setOffset] = useState(0)
+  const [distFilter, setDistFilter] = useState('ALL')
+  const [search, setSearch] = useState('')
+  const [sort, setSort] = useState('date-asc')
+  const [showFilters, setShowFilters] = useState(false)
+  const [maxPrice, setMaxPrice] = useState(400)
   const [terrainFilter, setTerrainFilter] = useState('All')
-  const [sportFilter, setSportFilter]     = useState('All')
-  const [dateFrom, setDateFrom]           = useState('')
-  const [dateTo, setDateTo]               = useState('')
-  const [radius, setRadius]               = useState(75)
-
-  // Location
-  const [userLat, setUserLat]                 = useState(null)
-  const [userLng, setUserLng]                 = useState(null)
-  const [locationStatus, setLocationStatus]   = useState('idle')
+  const [sportFilter, setSportFilter] = useState('All')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [radius, setRadius] = useState(75)
+  const [userLat, setUserLat] = useState(null)
+  const [userLng, setUserLng] = useState(null)
+  const [locationStatus, setLocationStatus] = useState('idle')
   const [showLocationBanner, setShowLocationBanner] = useState(true)
-
-  // Map
-  const mapRef          = useRef(null)
-  const mapInstanceRef  = useRef(null)
-  const markersRef      = useRef({})
+  const mapRef = useRef(null)
+  const mapInstanceRef = useRef(null)
+  const markersRef = useRef({})
   const [activeId, setActiveId] = useState(null)
-  const dropdownRef     = useRef(null)
+  const dropdownRef = useRef(null)
 
-  // ── Load races from Supabase ────────────────────────────────────────────────
-  useEffect(() => {
-    const loadRaces = async () => {
-      setLoading(true)
-      try {
-        const { data, error } = await supabase
-          .from('races')
-          .select('*')
-          .eq('is_past', false)
-          .order('date_sort', { ascending: true })
-          .limit(500)
-
-        if (error) throw error
-
-        if (data && data.length > 0) {
-          setAllRaces(data)
-          setDataSource('live')
-        } else {
-          // DB empty — use fallback until first sync runs
-          setAllRaces(FALLBACK_RACES)
-          setDataSource('fallback')
-        }
-      } catch (e) {
-        console.warn('Could not load races from Supabase, using fallback:', e.message)
-        setAllRaces(FALLBACK_RACES)
-        setDataSource('fallback')
+  const loadRaces = useCallback(async (currentOffset = 0, append = false) => {
+    if (currentOffset === 0) setLoading(true); else setLoadingMore(true)
+    try {
+      const { data, error } = await supabase
+        .from('races')
+        .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,sport,est_finishers,unsplash_query,is_past')
+        .eq('is_past', false)
+        .order('date_sort', { ascending: true })
+        .range(currentOffset, currentOffset + PAGE_SIZE - 1)
+      if (error) throw error
+      if (data) {
+        setAllRaces(prev => append ? [...prev, ...data] : data)
+        setHasMore(data.length === PAGE_SIZE)
+        setOffset(currentOffset + data.length)
       }
-      setLoading(false)
-    }
-    loadRaces()
+    } catch(e) { console.warn('Could not load races:', e.message) }
+    setLoading(false); setLoadingMore(false)
   }, [])
 
-  // ── Load profile ────────────────────────────────────────────────────────────
+  useEffect(() => { loadRaces(0, false) }, [])
+
   useEffect(() => {
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
@@ -242,34 +190,32 @@ export default function Discover() {
       setProfile(data)
     }
     loadProfile()
-
     const style = document.createElement('style')
     style.id = 'rp-discover-styles'
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
-      * { box-sizing: border-box; }
-      @keyframes fadeIn { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
-      @keyframes spin { to{transform:rotate(360deg);} }
-      @keyframes slideDown { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
-      @keyframes pulse { 0%,100%{opacity:0.6;}50%{opacity:1;} }
-      .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
-      .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
-      .nav-tab:hover { color:#1B2A4A; }
-      .dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; color:#1B2A4A; cursor:pointer; transition:background 0.1s; }
-      .dropdown-item:hover { background:#f4f5f7; }
-      .dist-pill { padding:6px 16px; border-radius:20px; border:1.5px solid; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; cursor:pointer; transition:all 0.15s; white-space:nowrap; }
-      .filter-chip { padding:6px 14px; border:1.5px solid #e2e6ed; border-radius:8px; background:#fff; font-family:'Barlow Condensed',sans-serif; font-size:11px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:all 0.15s; color:#9aa5b4; }
-      .filter-chip.active { background:#1B2A4A; color:#fff; border-color:#1B2A4A; }
-      .filter-chip:hover { border-color:#1B2A4A; color:#1B2A4A; }
-      .rp-map-pin { display:flex; align-items:center; justify-content:center; border-radius:50%; border:2.5px solid rgba(255,255,255,0.9); font-family:'Bebas Neue',sans-serif; color:#fff; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.3); transition:transform 0.15s; }
-      .rp-map-pin:hover { transform:scale(1.2); }
-      .rp-map-pin.active { transform:scale(1.35); box-shadow:0 6px 20px rgba(0,0,0,0.5); }
-      .leaflet-popup-content-wrapper { border-radius:10px !important; border:1px solid #e2e6ed !important; box-shadow:0 8px 24px rgba(27,42,74,0.15) !important; padding:0 !important; overflow:hidden !important; }
-      .leaflet-popup-content { margin:0 !important; }
-      .leaflet-popup-tip-container { display:none !important; }
-      .cards-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:20px; animation:fadeIn 0.4s ease both; }
-      .date-input { padding:8px 12px; border:1.5px solid #e2e6ed; border-radius:8px; font-family:'Barlow Condensed',sans-serif; font-size:12px; color:#1B2A4A; background:#fff; outline:none; transition:border-color 0.15s; }
-      .date-input:focus { border-color:#C9A84C; }
+      *{box-sizing:border-box;}
+      @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+      @keyframes spin{to{transform:rotate(360deg);}}
+      @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+      @keyframes pulse{0%,100%{opacity:0.5;}50%{opacity:1;}}
+      .nav-tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;height:64px;justify-content:center;cursor:pointer;border:none;background:none;color:#9aa5b4;transition:color 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;}
+      .nav-tab.active{color:#1B2A4A;border-bottom-color:#C9A84C;}
+      .nav-tab:hover{color:#1B2A4A;}
+      .dropdown-item{display:block;width:100%;padding:10px 18px;background:none;border:none;text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;color:#1B2A4A;cursor:pointer;transition:background 0.1s;}
+      .dropdown-item:hover{background:#f4f5f7;}
+      .dist-pill{padding:6px 16px;border-radius:20px;border:1.5px solid;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+      .filter-chip{padding:6px 14px;border:1.5px solid #e2e6ed;border-radius:8px;background:#fff;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.15s;color:#9aa5b4;}
+      .filter-chip.active{background:#1B2A4A;color:#fff;border-color:#1B2A4A;}
+      .filter-chip:hover{border-color:#1B2A4A;color:#1B2A4A;}
+      .rp-map-pin{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid rgba(255,255,255,0.9);font-family:'Bebas Neue',sans-serif;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.3);transition:transform 0.15s;}
+      .rp-map-pin:hover{transform:scale(1.2);}
+      .rp-map-pin.active{transform:scale(1.35);box-shadow:0 6px 20px rgba(0,0,0,0.5);}
+      .leaflet-popup-content-wrapper{border-radius:10px!important;border:1px solid #e2e6ed!important;box-shadow:0 8px 24px rgba(27,42,74,0.15)!important;padding:0!important;overflow:hidden!important;}
+      .leaflet-popup-content{margin:0!important;}
+      .leaflet-popup-tip-container{display:none!important;}
+      .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;animation:fadeIn 0.4s ease both;}
+      .date-input{padding:8px 12px;border:1.5px solid #e2e6ed;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#1B2A4A;background:#fff;outline:none;}
     `
     if (!document.getElementById('rp-discover-styles')) document.head.appendChild(style)
     const handleClick = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
@@ -277,57 +223,68 @@ export default function Discover() {
     return () => { document.getElementById('rp-discover-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
 
-  // ── Location permission ─────────────────────────────────────────────────────
   const requestLocation = () => {
     setLocationStatus('requesting')
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        setUserLat(pos.coords.latitude)
-        setUserLng(pos.coords.longitude)
-        setLocationStatus('granted')
-        setShowLocationBanner(false)
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([pos.coords.latitude, pos.coords.longitude], 10, { animate:true, duration:1.2 })
-        }
+        setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude)
+        setLocationStatus('granted'); setShowLocationBanner(false)
+        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([pos.coords.latitude, pos.coords.longitude], 10, { animate:true, duration:1.2 })
       },
       () => { setLocationStatus('denied'); setShowLocationBanner(false) },
       { timeout:10000 }
     )
   }
 
-  // ── Init Leaflet map ────────────────────────────────────────────────────────
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
     const loadLeaflet = async () => {
       if (!window.L) {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-        await new Promise(resolve => {
-          const script = document.createElement('script')
-          script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          script.onload = resolve
-          document.head.appendChild(script)
-        })
+        const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=resolve; document.head.appendChild(s) })
       }
       const L = window.L
-      const map = L.map(mapRef.current, { center:[39.0,-77.2], zoom:7, zoomControl:false })
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-        attribution:'© OpenStreetMap © CARTO', maxZoom:18,
-      }).addTo(map)
+      const map = L.map(mapRef.current, { center:[39.5,-98.35], zoom:4, zoomControl:false })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'© OpenStreetMap © CARTO', maxZoom:18 }).addTo(map)
       L.control.zoom({ position:'topright' }).addTo(map)
       mapInstanceRef.current = map
     }
     loadLeaflet()
   }, [])
 
-  // ── Filtered races ──────────────────────────────────────────────────────────
-  const filtered = applyClientFilters(allRaces, {
-    distFilter, search, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo, sort, userLat, userLng, radius,
-  })
+  const filtered = (() => {
+    let races = allRaces.filter(r => {
+      const d = (r.distance||'').toLowerCase()
+      const matchDist = distFilter==='ALL' ? true
+        : distFilter==='TRI'   ? ['70.3','140.6','tri'].some(t => d.includes(t))
+        : distFilter==='ULTRA' ? ['50k','50m','100k','100m'].some(t => d.includes(t))
+        : d===distFilter.toLowerCase() || d.startsWith(distFilter.toLowerCase())
+      return matchDist && matchesSearch(r, search) &&
+        (!r.price || r.price <= maxPrice) &&
+        (terrainFilter==='All' || (r.terrain||'').toLowerCase().includes(terrainFilter.toLowerCase())) &&
+        (sportFilter==='All' || r.sport===sportFilter) &&
+        (!dateFrom || (r.date_sort||'')>=dateFrom) &&
+        (!dateTo || (r.date_sort||'')<=dateTo)
+    })
+    if (userLat && userLng) {
+      races = races.filter(r => {
+        if (!r.lat||!r.lng) return false
+        const dist = haversineDistance(userLat, userLng, r.lat, r.lng)
+        r.distance_miles = Math.round(dist*10)/10
+        return dist <= radius
+      }).sort((a,b) => (a.distance_miles||999)-(b.distance_miles||999))
+    } else {
+      races.sort((a,b) => {
+        if (sort==='date-asc')  return (a.date_sort||'').localeCompare(b.date_sort||'')
+        if (sort==='date-desc') return (b.date_sort||'').localeCompare(a.date_sort||'')
+        if (sort==='price-asc') return (a.price||0)-(b.price||0)
+        if (sort==='price-desc') return (b.price||0)-(a.price||0)
+        return 0
+      })
+    }
+    return races
+  })()
 
-  // ── Update markers ──────────────────────────────────────────────────────────
   useEffect(() => {
     const L = window.L
     if (!L || !mapInstanceRef.current) return
@@ -336,67 +293,45 @@ export default function Discover() {
     markersRef.current = {}
 
     if (userLat && userLng) {
-      const userIcon = L.divIcon({
-        className: '',
-        html: `<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`,
-        iconSize:[14,14], iconAnchor:[7,7],
-      })
-      L.marker([userLat, userLng], { icon:userIcon }).addTo(map)
-        .bindTooltip('<span style="font-family:\'Barlow Condensed\',sans-serif;font-size:11px;color:#1B2A4A;font-weight:600;">You are here</span>', { direction:'top', offset:[0,-10] })
+      L.marker([userLat, userLng], { icon: L.divIcon({ className:'', html:`<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`, iconSize:[14,14], iconAnchor:[7,7] }) })
+        .addTo(map).bindTooltip('You are here', { direction:'top', offset:[0,-10] })
     }
 
-    filtered.forEach(race => {
-      if (!race.lat || !race.lng) return
-      const colors  = getDistanceColor(race.distance)
+    const mapRaces = filtered.filter(r => r.lat && r.lng).slice(0, 200)
+    mapRaces.forEach(race => {
+      const colors = getDistanceColor(race.distance)
       const cleaned = (race.distance||'').replace(' mi','')
-      const isActive = activeId === race.id
+      const isActive = activeId===race.id
       const size = isActive ? 42 : 36
-
-      const icon = L.divIcon({
-        className:'',
-        html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.primary};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`,
-        iconSize:[size,size], iconAnchor:[size/2,size/2],
-      })
-
-      const marker = L.marker([race.lat, race.lng], { icon })
-        .addTo(map)
-        .on('click', () => {
-          setActiveId(race.id)
-          const el = document.getElementById(`race-card-${race.id}`)
-          if (el) el.scrollIntoView({ behavior:'smooth', block:'center' })
-        })
-
-      marker.bindPopup(
-        `<div style="padding:12px 14px;min-width:190px;">
-          <div style="height:3px;background:${colors.primary};margin:-12px -14px 10px;"></div>
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;letter-spacing:0.5px;margin-bottom:3px;">${race.name}</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div>
-          <div style="display:flex;align-items:center;gap:10px;">
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${colors.primary};">${race.price?`$${race.price}`:'TBD'}</span>
-            <span style="font-family:'Barlow Condensed',sans-serif;font-size:10px;color:#9aa5b4;">${race.terrain||''}</span>
-          </div>
-        </div>`,
-        { maxWidth:220 }
-      )
+      const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.primary};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
+      const marker = L.marker([race.lat, race.lng], { icon }).addTo(map)
+        .on('click', () => { setActiveId(race.id); document.getElementById(`race-card-${race.id}`)?.scrollIntoView({ behavior:'smooth', block:'center' }) })
+      marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="height:3px;background:${colors.primary};margin:-12px -14px 10px;"></div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${colors.primary};">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
       markersRef.current[race.id] = marker
     })
+
+    // Fit bounds when search active
+    if (mapRaces.length > 0 && (search || distFilter !== 'ALL')) {
+      try {
+        map.fitBounds(L.latLngBounds(mapRaces.map(r => [r.lat, r.lng])), { padding:[40,40], maxZoom:12, animate:true, duration:0.8 })
+      } catch(e) {}
+    }
   }, [filtered, activeId, userLat, userLng])
 
-  const initials = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
+  const initials = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
   const activeFilterCount = [terrainFilter!=='All', sportFilter!=='All', maxPrice<400, dateFrom!=='', dateTo!==''].filter(Boolean).length
   const clearFilters = () => { setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDistFilter('ALL'); setSearch(''); setDateFrom(''); setDateTo('') }
 
   const NAV_TABS = [
-    { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
+    { label:'Home', path:'/home', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
     { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
     { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
-    { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Profile', path:'/profile', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
 
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
-
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)', display:'flex', alignItems:'stretch', justifyContent:'space-between', padding:'0 40px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
@@ -405,16 +340,12 @@ export default function Discover() {
         </div>
         <div style={{ display:'flex', alignItems:'stretch' }}>
           {NAV_TABS.map(tab => (
-            <button key={tab.path} className={`nav-tab ${location.pathname===tab.path?'active':''}`} onClick={() => navigate(tab.path)}>
-              {tab.icon}{tab.label}
-            </button>
+            <button key={tab.path} className={`nav-tab ${location.pathname===tab.path?'active':''}`} onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
           ))}
         </div>
         <div ref={dropdownRef} style={{ position:'relative', display:'flex', alignItems:'center' }}>
-          <div onClick={() => setShowDropdown(!showDropdown)}
-            style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid #e2e6ed', transition:'border-color 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
-            onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
+          <div onClick={() => setShowDropdown(!showDropdown)} style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid #e2e6ed', transition:'border-color 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'} onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C' }}>{initials}</span>
           </div>
           {showDropdown && (
@@ -433,20 +364,20 @@ export default function Discover() {
       </div>
 
       {/* LOCATION BANNER */}
-      {showLocationBanner && locationStatus === 'idle' && (
-        <div style={{ background:'#1B2A4A', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', animation:'slideDown 0.3s ease' }}>
+      {showLocationBanner && locationStatus==='idle' && (
+        <div style={{ background:'#1B2A4A', padding:'12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
             <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="#C9A84C" strokeWidth="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </div>
             <div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'0.5px', color:'#fff' }}>Find races near you</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)' }}>Share your location to see nearby races sorted by distance from you</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#fff' }}>Find races near you</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)' }}>Share your location to see nearby races sorted by distance</div>
             </div>
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
             <button onClick={requestLocation} disabled={locationStatus==='requesting'}
-              style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s', opacity: locationStatus==='requesting'?0.7:1 }}>
+              style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity: locationStatus==='requesting'?0.7:1 }}>
               {locationStatus==='requesting' ? 'Requesting...' : 'Allow Location'}
             </button>
             <button onClick={() => setShowLocationBanner(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.35)', cursor:'pointer', fontSize:'20px', lineHeight:1, padding:0 }}>✕</button>
@@ -456,11 +387,10 @@ export default function Discover() {
 
       {/* FILTER BAR */}
       <div style={{ background:'#fff', borderBottom:'1px solid #e8eaed', padding:'16px 40px', position:'sticky', top:'64px', zIndex:40 }}>
-        {/* Row 1 */}
         <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', background:'#f4f5f7', border:'1.5px solid #e2e6ed', borderRadius:'10px', padding:'10px 14px' }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="#9aa5b4" strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke="#9aa5b4" strokeWidth="1.3" strokeLinecap="round"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search races, cities, states..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search races, cities, states (e.g. Texas, Boston, 26.2)..."
               style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#1B2A4A', width:'100%' }} />
             {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:'#9aa5b4', fontSize:'16px', lineHeight:1, padding:0 }}>×</button>}
           </div>
@@ -472,9 +402,7 @@ export default function Discover() {
             style={{ display:'flex', alignItems:'center', gap:'6px', padding:'10px 18px', border:'1.5px solid', borderRadius:'10px', background: showFilters?'#1B2A4A':'#fff', borderColor: showFilters?'#1B2A4A':'#e2e6ed', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color: showFilters?'#fff':'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', position:'relative' }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 3h12M3 7h8M5 11h4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
             Filters
-            {activeFilterCount > 0 && (
-              <span style={{ position:'absolute', top:-6, right:-6, width:16, height:16, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, color:'#1B2A4A' }}>{activeFilterCount}</span>
-            )}
+            {activeFilterCount > 0 && <span style={{ position:'absolute', top:-6, right:-6, width:16, height:16, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, color:'#1B2A4A' }}>{activeFilterCount}</span>}
           </button>
           {locationStatus==='granted' && (
             <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'10px 14px', border:'1.5px solid rgba(201,168,76,0.3)', borderRadius:'10px', background:'rgba(201,168,76,0.06)' }}>
@@ -482,33 +410,22 @@ export default function Discover() {
               <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', whiteSpace:'nowrap' }}>Near You</span>
             </div>
           )}
-          {dataSource==='fallback' && (
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#b0b8c4', letterSpacing:'0.5px', whiteSpace:'nowrap' }}>Sample data · sync pending</div>
-          )}
         </div>
-
-        {/* Row 2: Distance pills */}
         <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
           {DIST_FILTERS.map(f => {
             const isActive = distFilter===f.value
             const colors = f.value==='ALL'?null:f.value==='TRI'?getDistanceColor('70.3'):f.value==='ULTRA'?getDistanceColor('50K'):getDistanceColor(f.value)
             return (
               <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
-                style={{
-                  color:       isActive?(colors?'#fff':'#fff'):(colors?colors.primary:'#9aa5b4'),
-                  borderColor: isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.dashed:'#e2e6ed'),
-                  background:  isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.light:'#fff'),
-                }}>
+                style={{ color: isActive?(colors?'#fff':'#fff'):(colors?colors.primary:'#9aa5b4'), borderColor: isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.dashed:'#e2e6ed'), background: isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.light:'#fff') }}>
                 {f.label}
               </button>
             )
           })}
-          <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4', letterSpacing:'0.5px' }}>
-            {loading ? 'Loading...' : `${filtered.length} race${filtered.length!==1?'s':''} found`}
+          <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>
+            {loading ? 'Loading...' : `${filtered.length} of ${allRaces.length} loaded`}
           </div>
         </div>
-
-        {/* Expanded filters */}
         {showFilters && (
           <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:'1px solid #f0f2f5', display:'flex', gap:'24px', alignItems:'flex-start', flexWrap:'wrap', animation:'slideDown 0.2s ease' }}>
             <div>
@@ -542,7 +459,7 @@ export default function Discover() {
               </div>
             </div>
             <button onClick={clearFilters}
-              style={{ alignSelf:'flex-end', padding:'7px 16px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+              style={{ alignSelf:'flex-end', padding:'7px 16px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor='#c53030'; e.currentTarget.style.color='#c53030' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
               Clear All
@@ -552,9 +469,9 @@ export default function Discover() {
       </div>
 
       {/* MAP */}
-      <div style={{ position:'relative', height:'62vh', background:'#e8eaed' }}>
+      <div style={{ position:'relative', height:'55vh', background:'#e8eaed' }}>
         <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
-        <div style={{ position:'absolute', bottom:16, left:16, background:'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:'1px solid #e2e6ed', zIndex:400, backdropFilter:'blur(4px)' }}>
+        <div style={{ position:'absolute', bottom:16, left:16, background:'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:'1px solid #e2e6ed', zIndex:400 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'8px' }}>Distance</div>
           {[{label:'5K · 10K · 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
             <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
@@ -570,16 +487,14 @@ export default function Discover() {
         </div>
       </div>
 
-      {/* RACE CARDS */}
+      {/* CARDS */}
       <div style={{ padding:'32px 40px 80px', background:'#f4f5f7' }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
-          <div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>
-              {locationStatus==='granted' ? 'Races Near You' : 'Upcoming Races'}
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'4px' }}>
-              {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
-            </div>
+        <div style={{ marginBottom:'24px' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>
+            {locationStatus==='granted' ? 'Races Near You' : search ? `Results for "${search}"` : 'Upcoming Races'}
+          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'4px' }}>
+            {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
           </div>
         </div>
 
@@ -599,30 +514,37 @@ export default function Discover() {
         ) : filtered.length === 0 ? (
           <div style={{ textAlign:'center', padding:'64px 24px', background:'#fff', borderRadius:'16px', border:'1.5px solid #e8eaed' }}>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'10px' }}>NO RACES FOUND</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Try adjusting your filters or expanding your search.</div>
-            <button onClick={clearFilters} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Try a different search — use a state name like "Texas" or a city like "Boston".</div>
+            <button onClick={clearFilters} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
               onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
               Clear All Filters
             </button>
           </div>
         ) : (
-          <div className="cards-grid">
-            {filtered.map(race => (
-              <div key={race.id} id={`race-card-${race.id}`}>
-                <RaceCard
-                  race={race}
-                  isActive={activeId===race.id}
-                  onClick={() => {
-                    setActiveId(race.id)
-                    if (mapInstanceRef.current && race.lat && race.lng) {
-                      mapInstanceRef.current.flyTo([race.lat, race.lng], 11, { animate:true, duration:0.8 })
-                    }
-                    navigate(`/race-detail/${race.id}`)
-                  }}
-                />
+          <>
+            <div className="cards-grid">
+              {filtered.map(race => (
+                <div key={race.id} id={`race-card-${race.id}`}>
+                  <RaceCard race={race} isActive={activeId===race.id}
+                    onClick={() => {
+                      setActiveId(race.id)
+                      if (mapInstanceRef.current && race.lat && race.lng) mapInstanceRef.current.flyTo([race.lat, race.lng], 11, { animate:true, duration:0.8 })
+                      navigate(`/race-detail/${race.id}`)
+                    }} />
+                </div>
+              ))}
+            </div>
+            {hasMore && !search && distFilter==='ALL' && (
+              <div style={{ textAlign:'center', marginTop:'40px' }}>
+                <button onClick={() => loadRaces(offset, true)} disabled={loadingMore}
+                  style={{ padding:'12px 40px', border:'1.5px solid #1B2A4A', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
+                  {loadingMore ? 'Loading...' : 'Load More Races'}
+                </button>
               </div>
-            ))}
-          </div>
+            )}
+          </>
         )}
       </div>
     </div>
