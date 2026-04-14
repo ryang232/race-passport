@@ -1,48 +1,35 @@
 // src/lib/colors.js
-// Distance color system — used across all race UI components
+// Unified navy/gold color system — consistent with brand across all UI
+// mapColor retains distance-based colors for map pin differentiation only
 
 export function getDistanceColor(dist) {
   const d = (dist || '').toLowerCase().replace(/\s/g, '')
 
-  // Triathlon — Red
-  if (['70.3', '140.6', 'tri', 'triathlon', 'ironman'].some(t => d.includes(t))) {
-    return {
-      primary:  '#B83232',
-      light:    'rgba(184,50,50,0.09)',
-      dashed:   'rgba(184,50,50,0.3)',
-      label:    'Triathlon',
-      bg:       '#B83232',
-    }
+  // Map pin colors — kept distinct for at-a-glance map differentiation
+  let mapColor = '#1B2A4A' // default navy
+  let label = dist || ''
+
+  if (['70.3','140.6','tri','triathlon','ironman'].some(t => d.includes(t))) {
+    mapColor = '#B83232'
+    label = 'Triathlon'
+  } else if (['50k','50m','100k','100m','ultra'].some(t => d.includes(t))) {
+    mapColor = '#9C7C4A'
+    label = 'Ultra'
+  } else if (d === '26.2' || d.includes('marathon')) {
+    mapColor = '#C9A84C'
+    label = 'Marathon'
+  } else if (['5k','10k','13.1','15k','8k','10mi','1mi'].some(t => d.includes(t))) {
+    mapColor = '#1E5FA8'
+    label = dist || ''
   }
 
-  // Ultra — Tan/Sand
-  if (['50k','50m','100k','100m','ultra'].some(t => d.includes(t))) {
-    return {
-      primary:  '#9C7C4A',
-      light:    'rgba(156,124,74,0.09)',
-      dashed:   'rgba(156,124,74,0.3)',
-      label:    'Ultra',
-      bg:       '#9C7C4A',
-    }
-  }
-
-  // Marathon 26.2 — Gold (matches app brand)
-  if (d === '26.2' || d === 'marathon') {
-    return {
-      primary:  '#C9A84C',
-      light:    'rgba(201,168,76,0.08)',
-      dashed:   'rgba(201,168,76,0.3)',
-      label:    'Marathon',
-      bg:       '#C9A84C',
-    }
-  }
-
-  // Short distances (5K, 10K, 13.1, 10mi etc.) — Blue
+  // Everything else uses navy/gold — stamps, cards, detail pages
   return {
-    primary:  '#1E5FA8',
-    light:    'rgba(30,95,168,0.08)',
-    dashed:   'rgba(30,95,168,0.3)',
-    label:    dist,
-    bg:       '#1E5FA8',
+    primary:  '#1B2A4A',          // navy — borders, text, stamp ring
+    light:    'rgba(201,168,76,0.08)', // gold tint background
+    dashed:   'rgba(201,168,76,0.35)', // gold dashed inner ring
+    label,
+    bg:       '#1B2A4A',
+    mapColor,                     // distance-specific — map pins only
   }
 }
