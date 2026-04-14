@@ -116,7 +116,7 @@ jobs:
             for source in [dist_raw, event_name, race_name, (desc or '')[:200]]:
               result = _extract_distance(source or '')
               if result: return result, (source or '')
-            return None, ''"""
+            return None, ''
 
           def parse_date(date_val):
             if not date_val:
