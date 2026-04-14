@@ -23,9 +23,14 @@ const STATE_NAME_TO_ABBR = {
 const PAGE_SIZE = 48
 
 const DIST_FILTERS = [
-  { label:'All', value:'ALL' },{ label:'5K', value:'5K' },{ label:'10K', value:'10K' },
-  { label:'13.1', value:'13.1' },{ label:'26.2', value:'26.2' },
-  { label:'Tri', value:'TRI' },{ label:'Ultra', value:'ULTRA' },
+  { label:'All',   value:'ALL' },
+  { label:'5K',    value:'5K' },
+  { label:'10K',   value:'10K' },
+  { label:'13.1',  value:'13.1' },
+  { label:'26.2',  value:'26.2' },
+  { label:'Tri',   value:'TRI' },
+  { label:'Ultra', value:'ULTRA' },
+  { label:'Other', value:'OTHER' },
 ]
 const TERRAIN_OPTIONS = ['All','Road','Trail','Multi','Bridge/Road']
 const SPORT_OPTIONS   = ['All','Running','Triathlon','Cycling','Swimming']
@@ -253,9 +258,11 @@ export default function Discover() {
   const filtered = (() => {
     let races = allRaces.filter(r => {
       const d = (r.distance||'').toLowerCase()
+      const knownDistances = ['5k','10k','13.1','26.2','70.3','140.6','tri','50k','50m','100k','100m']
       const matchDist = distFilter==='ALL' ? true
         : distFilter==='TRI'   ? ['70.3','140.6','tri'].some(t => d.includes(t))
         : distFilter==='ULTRA' ? ['50k','50m','100k','100m'].some(t => d.includes(t))
+        : distFilter==='OTHER' ? (!d || !knownDistances.some(t => d.includes(t)))
         : d===distFilter.toLowerCase() || d.startsWith(distFilter.toLowerCase())
       return matchDist && matchesSearch(r, search) &&
         (!r.price || r.price <= maxPrice) &&
@@ -301,7 +308,7 @@ export default function Discover() {
       const cleaned = (race.distance||'').replace(' mi','')
       const isActive = activeId===race.id
       const size = isActive ? 42 : 36
-      const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.primary};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
+      const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
       const marker = L.marker([race.lat, race.lng], { icon }).addTo(map)
         .on('click', () => { setActiveId(race.id); document.getElementById(`race-card-${race.id}`)?.scrollIntoView({ behavior:'smooth', block:'center' }) })
       marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="height:3px;background:${colors.primary};margin:-12px -14px 10px;"></div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${colors.primary};">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
@@ -412,10 +419,13 @@ export default function Discover() {
         <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
           {DIST_FILTERS.map(f => {
             const isActive = distFilter===f.value
-            const colors = f.value==='ALL'?null:f.value==='TRI'?getDistanceColor('70.3'):f.value==='ULTRA'?getDistanceColor('50K'):getDistanceColor(f.value)
             return (
               <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
-                style={{ color: isActive?(colors?'#fff':'#fff'):(colors?colors.primary:'#9aa5b4'), borderColor: isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.dashed:'#e2e6ed'), background: isActive?(colors?colors.primary:'#1B2A4A'):(colors?colors.light:'#fff') }}>
+                style={{
+                  color:       isActive ? '#fff' : '#9aa5b4',
+                  borderColor: isActive ? '#1B2A4A' : '#e2e6ed',
+                  background:  isActive ? '#1B2A4A' : '#fff',
+                }}>
                 {f.label}
               </button>
             )
