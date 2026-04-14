@@ -189,12 +189,36 @@ function NearbyCard({ race }) {
   )
 }
 
+function useCountdown(dateStr) {
+  const [countdown, setCountdown] = useState({ days:0, hours:0, mins:0, secs:0, past:false })
+  useEffect(() => {
+    const parse = () => {
+      const target = new Date(dateStr)
+      if (isNaN(target)) return
+      const diff = target - new Date()
+      if (diff <= 0) { setCountdown(c => ({ ...c, past:true })); return }
+      setCountdown({
+        days:  Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        mins:  Math.floor((diff % 3600000) / 60000),
+        secs:  Math.floor((diff % 60000) / 1000),
+        past:  false,
+      })
+    }
+    parse()
+    const t = setInterval(parse, 1000)
+    return () => clearInterval(t)
+  }, [dateStr])
+  return countdown
+}
+
 function UpcomingCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
   const colors = getDistanceColor(race.distance)
   const cleaned = race.distance.replace(' mi','')
+  const countdown = useCountdown(race.date)
   useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -205,8 +229,34 @@ function UpcomingCard({ race }) {
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        <div style={{ position:'absolute', top:12, right:12, background:`${colors.primary}ee`, borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>Registered</div>
-        <div style={{ position:'absolute', bottom:12, left:12 }}>
+
+        {/* Countdown overlay on hover */}
+        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
+          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>
+            {countdown.past ? 'Race Day!' : 'Countdown to Race Day'}
+          </div>
+          {countdown.past ? (
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:colors.primary, letterSpacing:'2px' }}>GO TIME!</div>
+          ) : (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', width:'100%' }}>
+              {[
+                { val: String(countdown.days).padStart(2,'0'),  label:'Days' },
+                { val: String(countdown.hours).padStart(2,'0'), label:'Hrs' },
+                { val: String(countdown.mins).padStart(2,'0'),  label:'Min' },
+                { val: String(countdown.secs).padStart(2,'0'),  label:'Sec' },
+              ].map(u => (
+                <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:`1px solid ${colors.primary}33` }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:colors.primary, letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginTop:'4px' }}>{u.label}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div style={{ position:'absolute', top:12, right:12, background:`${colors.primary}ee`, borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
+        <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
           <div style={{ width:46, height:46, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 12, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
