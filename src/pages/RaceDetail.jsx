@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { fetchUnsplashPhoto } from '../lib/unsplash'
+import { getRacePhoto } from '../lib/photos'
 import { getDistanceColor } from '../lib/colors'
 import { supabase } from '../lib/supabase'
 
@@ -33,7 +33,7 @@ export default function RaceDetail() {
 
         setRace(data)
         if (data.unsplash_query) {
-          fetchUnsplashPhoto(data.unsplash_query, 'running').then(url => setPhoto(url))
+          setPhoto(getRacePhoto(data.distance))
         }
 
         // If detail hasn't been fetched yet, fetch it now
