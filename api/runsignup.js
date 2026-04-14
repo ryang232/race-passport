@@ -445,14 +445,25 @@ export default async function handler(req, res) {
       const response = await fetch(url)
       const data = await response.json()
       const firstRace = data?.races?.[0]
-      const city  = firstRace?.race?.address?.city || ''
-      const st    = firstRace?.race?.address?.state || 'MD'
+      const race = firstRace?.race || {}
+      const city = race?.address?.city || ''
+      const st   = race?.address?.state || 'MD'
       const coords = getCoordsForRace(city, st)
+      const nextDate = race?.next_date
+      const events = (typeof nextDate === 'object' ? nextDate?.events : null) || race?.events || []
+      const firstEvent = events?.[0]?.event || events?.[0] || {}
       return res.status(200).json({
         action: 'debug',
         credentials_work: !data?.error,
+        race_name: race?.name,
+        race_keys: Object.keys(race).slice(0,20),
+        next_date_type: typeof nextDate,
+        next_date_value: typeof nextDate === 'string' ? nextDate : JSON.stringify(nextDate)?.slice(0,200),
+        events_count: events?.length,
+        first_event_keys: Object.keys(firstEvent),
+        first_event_distance: firstEvent?.distance,
+        first_event_name: firstEvent?.name,
         first_race_city: city,
-        first_race_state: st,
         coords_result: coords,
         supabase_connected: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
       })
