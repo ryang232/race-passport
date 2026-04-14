@@ -1,11 +1,8 @@
 name: Sync Races from RunSignup
 
 on:
-  # Run every day at 3:00 AM UTC (11pm ET / 10pm CT)
   schedule:
     - cron: '0 3 * * *'
-
-  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
     inputs:
       states:
@@ -23,30 +20,46 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      - name: Sync races from RunSignup
+      - name: Sync races state by state
         run: |
-          STATES="${{ github.event.inputs.states }}"
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
-
-          # Build the URL
+          INPUT_STATES="${{ github.event.inputs.states }}"
           BASE_URL="https://race-passport-3yy6sezil-ryans-projects-29f7f58e.vercel.app/api/runsignup"
-          PARAMS="action=sync_races&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}"
-          if [ -n "$STATES" ]; then
-            PARAMS="${PARAMS}&states=${STATES}"
+
+          if [ -n "$INPUT_STATES" ]; then
+            STATES="$INPUT_STATES"
+          else
+            STATES="MD,VA,DC,PA,NY,NJ,DE,WV,NC,SC,GA,FL,TX,CA,IL,OH,MA,CT,CO,WA"
           fi
 
-          echo "Calling: ${BASE_URL}?${PARAMS}"
-          
-          RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}?${PARAMS}")
-          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-          BODY=$(echo "$RESPONSE" | head -n -1)
+          TOTAL_ADDED=0
+          TOTAL_ERRORS=0
 
-          echo "HTTP Status: $HTTP_CODE"
-          echo "Response: $BODY"
+          IFS=',' read -ra STATE_LIST <<< "$STATES"
+          for STATE in "${STATE_LIST[@]}"; do
+            echo "Syncing $STATE..."
 
-          if [ "$HTTP_CODE" != "200" ]; then
-            echo "Sync failed with status $HTTP_CODE"
-            exit 1
-          fi
+            RESPONSE=$(curl -s -w "\n%{http_code}" \
+              "${BASE_URL}?action=sync_state&state=${STATE}&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}")
 
-          echo "Sync completed successfully"
+            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+            BODY=$(echo "$RESPONSE" | head -n -1)
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              ADDED=$(echo "$BODY" | grep -o '"added":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+              ERRORS=$(echo "$BODY" | grep -o '"errors":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+              TOTAL=$(echo "$BODY" | grep -o '"total":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
+              echo "  $STATE: fetched=$TOTAL added=$ADDED errors=$ERRORS"
+              TOTAL_ADDED=$((TOTAL_ADDED + ADDED))
+              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
+            else
+              echo "  $STATE: FAILED with HTTP $HTTP_CODE"
+              TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
+            fi
+
+            sleep 2
+          done
+
+          echo "============================="
+          echo "Sync complete: added=$TOTAL_ADDED errors=$TOTAL_ERRORS"
+          echo "============================="
