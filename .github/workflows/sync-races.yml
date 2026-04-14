@@ -92,30 +92,48 @@ jobs:
             if 'tri' in r: return 'Tri'
             return raw.strip()
 
-          def test_supabase_connection():
-            url = f"{SUPABASE_URL}/rest/v1/races?select=id&limit=1"
-            req = urllib.request.Request(url, headers={
-              'apikey': SERVICE_KEY,
-              'Authorization': f'Bearer {SERVICE_KEY}',
-            })
+          def parse_date(date_val):
+            """Parse date from any format RunSignup might return"""
+            if not date_val:
+              return None, None
+            # If it's a dict, look for start_time or date keys
+            if isinstance(date_val, dict):
+              date_val = (date_val.get('start_time') or 
+                         date_val.get('date') or 
+                         date_val.get('next_date') or '')
+            if not date_val:
+              return None, None
+            date_str = str(date_val).strip()
+            # Try multiple formats
+            formats = [
+              '%m/%d/%Y',      # 06/06/2026
+              '%Y-%m-%d',      # 2026-06-06
+              '%Y-%m-%dT%H:%M:%S',  # 2026-06-06T08:00:00
+              '%Y-%m-%d %H:%M:%S',  # 2026-06-06 08:00:00
+              '%m-%d-%Y',      # 06-06-2026
+            ]
+            for fmt in formats:
+              try:
+                d = datetime.strptime(date_str[:len(fmt)], fmt)
+                date_sort = d.strftime('%Y-%m-%d')
+                date_display = d.strftime('%b %-d, %Y')
+                return date_sort, date_display
+              except Exception:
+                pass
+            # Try ISO format
             try:
-              with urllib.request.urlopen(req, timeout=10) as resp:
-                print(f"Supabase connection OK (status {resp.status})")
-                return True
-            except urllib.error.HTTPError as e:
-              body = e.read().decode()
-              print(f"Supabase connection FAILED: {e.code} {body}")
-              return False
-            except Exception as e:
-              print(f"Supabase connection FAILED: {e}")
-              return False
+              d = datetime.fromisoformat(date_str.replace('Z','').split('.')[0])
+              return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
+            except Exception:
+              pass
+            print(f"  Could not parse date: {repr(date_str)}", file=sys.stderr)
+            return None, None
 
           def upsert_chunk(chunk):
             payload = json.dumps(chunk).encode('utf-8')
             url = f"{SUPABASE_URL}/rest/v1/races"
             req = urllib.request.Request(
-              url,
-              data=payload,
+              url, data=payload,
               headers={
                 'apikey': SERVICE_KEY,
                 'Authorization': f'Bearer {SERVICE_KEY}',
@@ -129,29 +147,36 @@ jobs:
                 return len(chunk), 0, None
             except urllib.error.HTTPError as e:
               body = e.read().decode('utf-8')
-              return 0, len(chunk), f"HTTP {e.code}: {body[:300]}"
+              return 0, len(chunk), f"HTTP {e.code}: {body[:500]}"
             except Exception as e:
               return 0, len(chunk), str(e)
 
-          # Test connection first
-          print(f"Testing Supabase connection to {SUPABASE_URL}...")
-          if not test_supabase_connection():
+          # Test connection
+          print(f"Testing Supabase connection...")
+          test_req = urllib.request.Request(
+            f"{SUPABASE_URL}/rest/v1/races?select=id&limit=1",
+            headers={'apikey': SERVICE_KEY, 'Authorization': f'Bearer {SERVICE_KEY}'}
+          )
+          try:
+            with urllib.request.urlopen(test_req, timeout=10) as resp:
+              print(f"Supabase OK (status {resp.status})")
+          except Exception as e:
+            print(f"Supabase FAILED: {e}")
             sys.exit(1)
 
           today = date.today().isoformat()
           one_year = (date.today() + timedelta(days=365)).isoformat()
-
           total_added = 0
           total_errors = 0
 
           for state in STATES:
             state = state.strip()
-            if not state:
-              continue
+            if not state: continue
             print(f"Syncing {state}...")
             state_added = 0
             state_errors = 0
             page = 1
+            first_race_printed = False
 
             while page <= 20:
               url = (
@@ -164,44 +189,61 @@ jobs:
                 with urllib.request.urlopen(url, timeout=30) as resp:
                   data = json.loads(resp.read())
               except Exception as e:
-                print(f"  Fetch error page {page}: {e}")
+                print(f"  Fetch error: {e}")
                 break
 
               races = data.get('races', [])
-              if not races:
-                break
-
+              if not races: break
               print(f"  Page {page}: {len(races)} races")
 
+              # Print first race structure once for debugging
+              if not first_race_printed and races:
+                first_race_printed = True
+                r = races[0].get('race', races[0])
+                print(f"  DEBUG first race keys: {list(r.keys())[:10]}")
+                print(f"  DEBUG name: {r.get('name','')}")
+                print(f"  DEBUG next_date type: {type(r.get('next_date')).__name__}")
+                print(f"  DEBUG next_date value: {str(r.get('next_date',''))[:100]}")
+                print(f"  DEBUG last_date: {r.get('last_date','')}")
+                print(f"  DEBUG start_time: {r.get('start_time','')}")
+
               normalized = []
+              skipped_no_name = 0
+              skipped_no_date = 0
+
               for item in races:
                 try:
                   race = item.get('race', item)
-                  events = (race.get('next_date') or {}).get('events', []) or race.get('events', [])
+                  name = race.get('name', '').strip()
+                  if not name:
+                    skipped_no_name += 1
+                    continue
+
+                  # Try all possible date fields
+                  date_val = (race.get('next_date') or 
+                             race.get('start_time') or 
+                             race.get('last_date') or
+                             race.get('next_date_utc') or '')
+                  date_sort, date_display = parse_date(date_val)
+
+                  if not date_sort:
+                    skipped_no_date += 1
+                    continue
+
+                  events = []
+                  nd = race.get('next_date')
+                  if isinstance(nd, dict):
+                    events = nd.get('events', [])
+                  if not events:
+                    events = race.get('events', [])
                   first_event = events[0].get('event', events[0]) if events else {}
 
                   race_id = f"rs_{race.get('race_id', '')}"
-                  name = race.get('name', '')
                   city = (race.get('address') or {}).get('city', '')
                   st = (race.get('address') or {}).get('state', state)
                   coords = get_coords(city, st)
                   dist_raw = first_event.get('distance', '') or first_event.get('name', '') or ''
                   distance = normalize_distance(dist_raw)
-
-                  date_str = (race.get('next_date') or {}).get('start_time') or race.get('start_time')
-                  date_sort = None
-                  date_display = None
-                  if date_str:
-                    try:
-                      d = datetime.fromisoformat(date_str.replace('Z', ''))
-                      date_sort = d.strftime('%Y-%m-%d')
-                      date_display = d.strftime('%b %-d, %Y')
-                    except Exception:
-                      pass
-
-                  if not name or not date_sort:
-                    continue
-
                   combined = f"{dist_raw} {name}".lower()
                   sport = 'Triathlon' if ('ironman' in combined or 'triathlon' in combined or '70.3' in combined) else 'Running'
                   reg_url = race.get('url') or f"https://runsignup.com/Race/{race.get('race_id', '')}"
@@ -228,7 +270,7 @@ jobs:
                 except Exception as e:
                   pass
 
-              print(f"  Normalized: {len(normalized)} valid races")
+              print(f"  Normalized: {len(normalized)} (skipped: {skipped_no_name} no-name, {skipped_no_date} no-date)")
 
               if normalized and not DRY_RUN:
                 for i in range(0, len(normalized), 50):
@@ -237,12 +279,11 @@ jobs:
                   if err_msg:
                     print(f"  UPSERT ERROR: {err_msg}")
                   else:
-                    print(f"  Upserted chunk {i//50 + 1}: {added} rows")
+                    print(f"  Upserted {added} rows")
                   state_added += added
                   state_errors += errors
 
-              if len(races) < 100:
-                break
+              if len(races) < 100: break
               page += 1
 
             print(f"  {state} TOTAL: added={state_added} errors={state_errors}")
