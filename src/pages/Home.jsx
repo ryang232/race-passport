@@ -6,7 +6,7 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
 import { getDistanceColor } from '../lib/colors'
 
-const STRAVA_CONNECTED = true // flip to true once Strava OAuth is wired
+const STRAVA_CONNECTED = false // flip to true once Strava OAuth is wired
 
 const STAT_ITEMS = [
   { label:'Total Races',    value:'10' },
