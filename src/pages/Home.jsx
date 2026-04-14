@@ -168,7 +168,7 @@ function NearbyCard({ race }) {
           <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
           <div style={{ textAlign:'center' }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:colors.primary, letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
           </div>
         </div>
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
@@ -237,7 +237,7 @@ function UpcomingCard({ race }) {
             {countdown.past ? 'Race Day!' : 'Countdown to Race Day'}
           </div>
           {countdown.past ? (
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:colors.primary, letterSpacing:'2px' }}>GO TIME!</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px' }}>GO TIME!</div>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', width:'100%' }}>
               {[
@@ -246,8 +246,8 @@ function UpcomingCard({ race }) {
                 { val: String(countdown.mins).padStart(2,'0'),  label:'Min' },
                 { val: String(countdown.secs).padStart(2,'0'),  label:'Sec' },
               ].map(u => (
-                <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:`1px solid ${colors.primary}33` }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:colors.primary, letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
+                <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:'1px solid rgba(201,168,76,0.2)' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginTop:'4px' }}>{u.label}</div>
                 </div>
               ))}
