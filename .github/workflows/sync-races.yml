@@ -23,7 +23,7 @@ jobs:
       - name: Write sync script
         run: |
           cat > /tmp/sync.py << 'EOF'
-          import sys, json, urllib.request, urllib.error, os
+          import sys, json, urllib.request, urllib.error, os, re
           from datetime import datetime, date, timedelta
 
           RUNSIGNUP_KEY = os.environ['RUNSIGNUP_API_KEY']
@@ -93,47 +93,35 @@ jobs:
             return raw.strip()
 
           def parse_date(date_val):
-            """Parse date from any format RunSignup might return"""
             if not date_val:
               return None, None
-            # If it's a dict, look for start_time or date keys
             if isinstance(date_val, dict):
-              date_val = (date_val.get('start_time') or 
-                         date_val.get('date') or 
-                         date_val.get('next_date') or '')
+              date_val = (date_val.get('start_time') or
+                         date_val.get('date') or '')
             if not date_val:
               return None, None
-            date_str = str(date_val).strip().strip("'").strip('"')
-            # Try multiple formats
-            formats = [
-              '%m/%d/%Y',      # 06/06/2026
-              '%Y-%m-%d',      # 2026-06-06
-              '%Y-%m-%dT%H:%M:%S',  # 2026-06-06T08:00:00
-              '%Y-%m-%d %H:%M:%S',  # 2026-06-06 08:00:00
-              '%m-%d-%Y',      # 06-06-2026
-            ]
-            for fmt in formats:
+            s = str(date_val).strip()
+            # MM/DD/YYYY
+            m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', s)
+            if m:
               try:
-                d = datetime.strptime(date_str[:len(fmt)], fmt)
-                date_sort = d.strftime('%Y-%m-%d')
-                date_display = d.strftime('%b %-d, %Y')
-                return date_sort, date_display
-              except Exception:
-                pass
-            # Try ISO format
-            try:
-              d = datetime.fromisoformat(date_str.replace('Z','').split('.')[0])
-              return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
-            except Exception:
-              pass
-            print(f"  Could not parse date: {repr(date_str)}", file=sys.stderr)
+                d = datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)))
+                return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
+              except: pass
+            # YYYY-MM-DD (with optional time)
+            m = re.match(r'^(\d{4})-(\d{2})-(\d{2})', s)
+            if m:
+              try:
+                d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+                return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
+              except: pass
             return None, None
 
           def upsert_chunk(chunk):
             payload = json.dumps(chunk).encode('utf-8')
-            url = f"{SUPABASE_URL}/rest/v1/races"
             req = urllib.request.Request(
-              url, data=payload,
+              f"{SUPABASE_URL}/rest/v1/races",
+              data=payload,
               headers={
                 'apikey': SERVICE_KEY,
                 'Authorization': f'Bearer {SERVICE_KEY}',
@@ -147,19 +135,19 @@ jobs:
                 return len(chunk), 0, None
             except urllib.error.HTTPError as e:
               body = e.read().decode('utf-8')
-              return 0, len(chunk), f"HTTP {e.code}: {body[:500]}"
+              return 0, len(chunk), f"HTTP {e.code}: {body[:300]}"
             except Exception as e:
               return 0, len(chunk), str(e)
 
-          # Test connection
-          print(f"Testing Supabase connection...")
-          test_req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/races?select=id&limit=1",
-            headers={'apikey': SERVICE_KEY, 'Authorization': f'Bearer {SERVICE_KEY}'}
-          )
+          # Test Supabase
+          print("Testing Supabase connection...")
           try:
-            with urllib.request.urlopen(test_req, timeout=10) as resp:
-              print(f"Supabase OK (status {resp.status})")
+            req = urllib.request.Request(
+              f"{SUPABASE_URL}/rest/v1/races?select=id&limit=1",
+              headers={'apikey': SERVICE_KEY, 'Authorization': f'Bearer {SERVICE_KEY}'}
+            )
+            with urllib.request.urlopen(req, timeout=10) as resp:
+              print(f"Supabase OK")
           except Exception as e:
             print(f"Supabase FAILED: {e}")
             sys.exit(1)
@@ -176,7 +164,6 @@ jobs:
             state_added = 0
             state_errors = 0
             page = 1
-            first_race_printed = False
 
             while page <= 20:
               url = (
@@ -194,41 +181,20 @@ jobs:
 
               races = data.get('races', [])
               if not races: break
-              print(f"  Page {page}: {len(races)} races")
-
-              # Print first race structure once for debugging
-              if not first_race_printed and races:
-                first_race_printed = True
-                r = races[0].get('race', races[0])
-                print(f"  DEBUG first race keys: {list(r.keys())[:10]}")
-                print(f"  DEBUG name: {r.get('name','')}")
-                print(f"  DEBUG next_date type: {type(r.get('next_date')).__name__}")
-                print(f"  DEBUG next_date value: {str(r.get('next_date',''))[:100]}")
-                print(f"  DEBUG last_date: {r.get('last_date','')}")
-                print(f"  DEBUG start_time: {r.get('start_time','')}")
+              print(f"  Page {page}: {len(races)} races fetched")
 
               normalized = []
-              skipped_no_name = 0
-              skipped_no_date = 0
-
               for item in races:
                 try:
                   race = item.get('race', item)
                   name = race.get('name', '').strip()
-                  if not name:
-                    skipped_no_name += 1
-                    continue
+                  if not name: continue
 
-                  # Try all possible date fields
-                  date_val = (race.get('next_date') or 
-                             race.get('start_time') or 
-                             race.get('last_date') or
-                             race.get('next_date_utc') or '')
+                  date_val = (race.get('next_date') or
+                             race.get('start_time') or
+                             race.get('last_date') or '')
                   date_sort, date_display = parse_date(date_val)
-
-                  if not date_sort:
-                    skipped_no_date += 1
-                    continue
+                  if not date_sort: continue
 
                   events = []
                   nd = race.get('next_date')
@@ -270,7 +236,7 @@ jobs:
                 except Exception as e:
                   pass
 
-              print(f"  Normalized: {len(normalized)} (skipped: {skipped_no_name} no-name, {skipped_no_date} no-date)")
+              print(f"  Normalized: {len(normalized)} valid races")
 
               if normalized and not DRY_RUN:
                 for i in range(0, len(normalized), 50):
