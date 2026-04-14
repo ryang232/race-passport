@@ -103,7 +103,7 @@ jobs:
                          date_val.get('next_date') or '')
             if not date_val:
               return None, None
-            date_str = str(date_val).strip()
+            date_str = str(date_val).strip().strip("'").strip('"')
             # Try multiple formats
             formats = [
               '%m/%d/%Y',      # 06/06/2026
