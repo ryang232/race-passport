@@ -29,7 +29,7 @@ jobs:
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
 
           # Build the URL
-          BASE_URL="https://race-passport-3yy6sezil-ryans-projects-29f7f58e.vercel.app/"
+          BASE_URL="https://race-passport-3yy6sezil-ryans-projects-29f7f58e.vercel.app/api/runsignup"
           PARAMS="action=sync_races&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}"
           if [ -n "$STATES" ]; then
             PARAMS="${PARAMS}&states=${STATES}"
