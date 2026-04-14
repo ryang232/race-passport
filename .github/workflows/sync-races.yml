@@ -1,0 +1,52 @@
+name: Sync Races from RunSignup
+
+on:
+  # Run every day at 3:00 AM UTC (11pm ET / 10pm CT)
+  schedule:
+    - cron: '0 3 * * *'
+
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
+    inputs:
+      states:
+        description: 'Comma-separated states to sync (leave blank for all)'
+        required: false
+        default: ''
+      dry_run:
+        description: 'Dry run — fetch but do not write to database'
+        required: false
+        default: 'false'
+
+jobs:
+  sync-races:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Sync races from RunSignup
+        run: |
+          STATES="${{ github.event.inputs.states }}"
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
+
+          # Build the URL
+          BASE_URL="https://race-passport-3yy6sezil-ryans-projects-29f7f58e.vercel.app/api/runsignup"
+          PARAMS="action=sync_races&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}"
+          if [ -n "$STATES" ]; then
+            PARAMS="${PARAMS}&states=${STATES}"
+          fi
+
+          echo "Calling: ${BASE_URL}?${PARAMS}"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}?${PARAMS}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
+
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Sync failed with status $HTTP_CODE"
+            exit 1
+          fi
+
+          echo "Sync completed successfully"
