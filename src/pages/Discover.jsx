@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { fetchUnsplashPhoto } from '../lib/unsplash'
+import { getRacePhoto } from '../lib/photos'
 
 const STATE_NAME_TO_ABBR = {
   'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
@@ -70,10 +70,8 @@ function RaceCard({ race, isActive, onClick }) {
   }, [])
 
   useEffect(() => {
-    if (visible && race.unsplash_query && !photo) {
-      fetchUnsplashPhoto(race.unsplash_query, 'running').then(url => setPhoto(url))
-    }
-  }, [visible, race.unsplash_query])
+    setPhoto(getRacePhoto(race.distance))
+  }, [race.distance])
 
   return (
     <div ref={cardRef}
@@ -89,7 +87,7 @@ function RaceCard({ race, isActive, onClick }) {
         {photo
           ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered?'scale(1.05)':'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {visible && <div style={{ width:28, height:28, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />}
+              {true && <div style={{ width:28, height:28, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />}
             </div>
         }
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
