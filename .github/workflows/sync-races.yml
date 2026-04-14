@@ -17,14 +17,18 @@ on:
 jobs:
   sync-races:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
 
     steps:
-      - name: Sync races state by state
+      - name: Sync races directly to Supabase
+        env:
+          RUNSIGNUP_API_KEY: ${{ secrets.RUNSIGNUP_API_KEY }}
+          RUNSIGNUP_API_SECRET: ${{ secrets.RUNSIGNUP_API_SECRET }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
           INPUT_STATES="${{ github.event.inputs.states }}"
-          BASE_URL="https://race-passport-70v7kb0fp-ryans-projects-29f7f58e.vercel.app/api/runsignup"
 
           if [ -n "$INPUT_STATES" ]; then
             STATES="$INPUT_STATES"
@@ -32,33 +36,205 @@ jobs:
             STATES="MD,VA,DC,PA,NY,NJ,DE,WV,NC,SC,GA,FL,TX,CA,IL,OH,MA,CT,CO,WA"
           fi
 
+          TODAY=$(date +%Y-%m-%d)
+          ONE_YEAR=$(date -d '+365 days' +%Y-%m-%d 2>/dev/null || date -v+365d +%Y-%m-%d)
+
           TOTAL_ADDED=0
           TOTAL_ERRORS=0
 
+          # State center coordinates fallback
+          declare -A STATE_LAT=([MD]=39.0639 [VA]=37.7693 [DC]=38.8974 [PA]=40.5908 [NY]=42.1657 [NJ]=40.2989 [DE]=39.3185 [WV]=38.4913 [NC]=35.6301 [SC]=33.8569 [GA]=33.0406 [FL]=27.7663 [TX]=31.0545 [CA]=36.1162 [IL]=40.3495 [OH]=40.3888 [MA]=42.2302 [CT]=41.5978 [CO]=39.0598 [WA]=47.4009)
+          declare -A STATE_LNG=([MD]=-76.8021 [VA]=-78.1699 [DC]=-77.0268 [PA]=-77.2098 [NY]=-74.9481 [NJ]=-74.5210 [DE]=-75.5071 [WV]=-80.9545 [NC]=-79.8064 [SC]=-80.9450 [GA]=-83.6431 [FL]=-81.6868 [TX]=-97.5635 [CA]=-119.6815 [IL]=-88.9861 [OH]=-82.7649 [MA]=-71.5301 [CT]=-72.7554 [CO]=-105.3111 [WA]=-121.4905)
+
           IFS=',' read -ra STATE_LIST <<< "$STATES"
           for STATE in "${STATE_LIST[@]}"; do
-            echo "Syncing $STATE..."
+            echo "Fetching $STATE from RunSignup..."
+            
+            PAGE=1
+            STATE_ADDED=0
+            STATE_ERRORS=0
 
-            RESPONSE=$(curl -s -w "\n%{http_code}" \
-              "${BASE_URL}?action=sync_state&state=${STATE}&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}")
+            while true; do
+              # Fetch from RunSignup
+              RS_URL="https://api.runsignup.com/rest/races?api_key=${RUNSIGNUP_API_KEY}&api_secret=${RUNSIGNUP_API_SECRET}&format=json&state=${STATE}&results_per_page=100&page=${PAGE}&start_date=${TODAY}&end_date=${ONE_YEAR}&include_event_details=T"
+              
+              RESPONSE=$(curl -s "$RS_URL")
+              RACE_COUNT=$(echo "$RESPONSE" | python3 -c "import sys,json; d=json.load(sys.stdin); print(len(d.get('races', [])))" 2>/dev/null || echo "0")
+              
+              if [ "$RACE_COUNT" = "0" ]; then
+                break
+              fi
 
-            HTTP_CODE=$(echo "$RESPONSE" | tail -1)
-            BODY=$(echo "$RESPONSE" | head -n -1)
+              echo "  Page $PAGE: $RACE_COUNT races"
 
-            if [ "$HTTP_CODE" = "200" ]; then
-              ADDED=$(echo "$BODY" | grep -o '"added":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-              ERRORS=$(echo "$BODY" | grep -o '"errors":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-              TOTAL=$(echo "$BODY" | grep -o '"total":[0-9]*' | grep -o '[0-9]*' | head -1 || echo "0")
-              echo "  $STATE: fetched=$TOTAL added=$ADDED errors=$ERRORS"
-              TOTAL_ADDED=$((TOTAL_ADDED + ADDED))
-              TOTAL_ERRORS=$((TOTAL_ERRORS + ERRORS))
-            else
-              echo "  $STATE: FAILED with HTTP $HTTP_CODE"
-              echo "  Response: $BODY"
-              TOTAL_ERRORS=$((TOTAL_ERRORS + 1))
-            fi
+              if [ "$DRY_RUN" = "false" ]; then
+                # Transform and upsert to Supabase using Python
+                UPSERT_RESULT=$(echo "$RESPONSE" | python3 << 'PYEOF'
+import sys, json, urllib.request, os, re
+from datetime import datetime, date
 
-            sleep 2
+data = json.load(sys.stdin)
+races = data.get('races', [])
+state = os.environ.get('STATE', '')
+supabase_url = os.environ.get('SUPABASE_URL', '')
+service_key = os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+
+STATE_COORDS = {
+  'MD':[39.0639,-76.8021],'VA':[37.7693,-78.1699],'DC':[38.8974,-77.0268],
+  'PA':[40.5908,-77.2098],'NY':[42.1657,-74.9481],'NJ':[40.2989,-74.5210],
+  'DE':[39.3185,-75.5071],'WV':[38.4913,-80.9545],'NC':[35.6301,-79.8064],
+  'SC':[33.8569,-80.9450],'GA':[33.0406,-83.6431],'FL':[27.7663,-81.6868],
+  'TX':[31.0545,-97.5635],'CA':[36.1162,-119.6815],'IL':[40.3495,-88.9861],
+  'OH':[40.3888,-82.7649],'MA':[42.2302,-71.5301],'CT':[41.5978,-72.7554],
+  'CO':[39.0598,-105.3111],'WA':[47.4009,-121.4905]
+}
+
+CITY_COORDS = {
+  'Baltimore,MD':[39.2904,-76.6122],'Annapolis,MD':[38.9784,-76.4922],
+  'Bethesda,MD':[38.9807,-77.1003],'Rockville,MD':[39.0840,-77.1528],
+  'Gaithersburg,MD':[39.1434,-77.2011],'Silver Spring,MD':[38.9907,-77.0261],
+  'Columbia,MD':[39.2037,-76.8610],'Frederick,MD':[39.4143,-77.4105],
+  'Washington,DC':[38.9072,-77.0369],
+  'Arlington,VA':[38.8799,-77.1068],'Alexandria,VA':[38.8048,-77.0469],
+  'Richmond,VA':[37.5407,-77.4360],'Virginia Beach,VA':[36.8529,-75.9780],
+  'Philadelphia,PA':[39.9526,-75.1652],'Pittsburgh,PA':[40.4406,-79.9959],
+  'New York,NY':[40.7128,-74.0060],'Buffalo,NY':[42.8864,-78.8784],
+  'Newark,NJ':[40.7357,-74.1724],'Jersey City,NJ':[40.7178,-74.0431],
+  'Atlanta,GA':[33.7490,-84.3880],'Miami,FL':[25.7617,-80.1918],
+  'Tampa,FL':[27.9506,-82.4572],'Orlando,FL':[28.5383,-81.3792],
+  'Houston,TX':[29.7604,-95.3698],'Austin,TX':[30.2672,-97.7431],
+  'Dallas,TX':[32.7767,-96.7970],'San Antonio,TX':[29.4241,-98.4936],
+  'Los Angeles,CA':[34.0522,-118.2437],'San Diego,CA':[32.7157,-117.1611],
+  'San Francisco,CA':[37.7749,-122.4194],'Sacramento,CA':[38.5816,-121.4944],
+  'Chicago,IL':[41.8781,-87.6298],'Columbus,OH':[39.9612,-82.9988],
+  'Boston,MA':[42.3601,-71.0589],'Denver,CO':[39.7392,-104.9903],
+  'Seattle,WA':[47.6062,-122.3321],'Charlotte,NC':[35.2271,-80.8431],
+}
+
+def normalize_distance(raw):
+  if not raw: return None
+  r = raw.lower().strip()
+  if 'marathon' in r and 'half' not in r: return '26.2'
+  if 'half' in r or '13.1' in r: return '13.1'
+  if '10k' in r or r == '10 km': return '10K'
+  if '5k' in r or r == '5 km': return '5K'
+  if '70.3' in r or 'half iron' in r: return '70.3'
+  if '140.6' in r: return '140.6'
+  if '50k' in r: return '50K'
+  if '50m' in r or '50 mi' in r: return '50M'
+  if '100k' in r: return '100K'
+  if 'tri' in r: return 'Tri'
+  return raw.strip()
+
+def get_coords(city, st):
+  key = f"{city},{st}"
+  if key in CITY_COORDS: return CITY_COORDS[key]
+  if st in STATE_COORDS: return STATE_COORDS[st]
+  return [None, None]
+
+normalized = []
+for item in races:
+  try:
+    race = item.get('race', item)
+    events = race.get('next_date', {}).get('events', []) or race.get('events', [])
+    first_event = (events[0].get('event', events[0]) if events else {})
+    
+    race_id = f"rs_{race.get('race_id', '')}"
+    name = race.get('name', 'Unknown Race')
+    city = (race.get('address') or {}).get('city', '')
+    st = (race.get('address') or {}).get('state', state)
+    coords = get_coords(city, st)
+    
+    dist_raw = first_event.get('distance', '') or first_event.get('name', '')
+    distance = normalize_distance(dist_raw)
+    
+    date_str = (race.get('next_date') or {}).get('start_time') or race.get('start_time')
+    date_sort = None
+    date_display = None
+    if date_str:
+      try:
+        d = datetime.fromisoformat(date_str.replace('Z',''))
+        date_sort = d.strftime('%Y-%m-%d')
+        date_display = d.strftime('%b %-d, %Y')
+      except: pass
+    
+    if not name or not date_sort: continue
+    
+    combined = f"{dist_raw} {name}".lower()
+    if 'ironman' in combined or 'triathlon' in combined or '70.3' in combined: sport = 'Triathlon'
+    else: sport = 'Running'
+    
+    reg_url = race.get('url', f"https://runsignup.com/Race/{race.get('race_id','')}")
+    location = f"{city}, {st}" if city and st else (st or city or '')
+    
+    normalized.append({
+      'id': race_id,
+      'source': 'runsignup',
+      'name': name,
+      'location': location,
+      'city': city,
+      'state': st,
+      'lat': coords[0],
+      'lng': coords[1],
+      'distance': distance,
+      'distance_raw': dist_raw,
+      'date': date_display,
+      'date_sort': date_sort,
+      'terrain': 'Road',
+      'sport': sport,
+      'is_past': False,
+      'registration_url': reg_url,
+    })
+  except Exception as e:
+    pass
+
+if not normalized:
+  print(json.dumps({'added': 0, 'errors': 0}))
+  sys.exit(0)
+
+# Upsert to Supabase in chunks of 50
+added = 0
+errors = 0
+for i in range(0, len(normalized), 50):
+  chunk = normalized[i:i+50]
+  payload = json.dumps(chunk).encode()
+  req = urllib.request.Request(
+    f"{supabase_url}/rest/v1/races",
+    data=payload,
+    headers={
+      'apikey': service_key,
+      'Authorization': f'Bearer {service_key}',
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    method='POST'
+  )
+  try:
+    with urllib.request.urlopen(req) as resp:
+      added += len(chunk)
+  except Exception as e:
+    errors += len(chunk)
+
+print(json.dumps({'added': added, 'errors': errors}))
+PYEOF
+)
+                ADDED=$(echo "$UPSERT_RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('added',0))" 2>/dev/null || echo "0")
+                ERRORS=$(echo "$UPSERT_RESULT" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('errors',0))" 2>/dev/null || echo "0")
+                STATE_ADDED=$((STATE_ADDED + ADDED))
+                STATE_ERRORS=$((STATE_ERRORS + ERRORS))
+              fi
+
+              if [ "$RACE_COUNT" -lt "100" ]; then
+                break
+              fi
+              PAGE=$((PAGE + 1))
+              if [ "$PAGE" -gt "20" ]; then break; fi
+            done
+
+            echo "  $STATE: added=$STATE_ADDED errors=$STATE_ERRORS"
+            TOTAL_ADDED=$((TOTAL_ADDED + STATE_ADDED))
+            TOTAL_ERRORS=$((TOTAL_ERRORS + STATE_ERRORS))
+            sleep 1
           done
 
           echo "============================="
