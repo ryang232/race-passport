@@ -228,6 +228,44 @@ jobs:
                   reg_url = race.get('url') or f"https://runsignup.com/Race/{race.get('race_id', '')}"
                   location = f"{city}, {st}" if city and st else (st or city or '')
 
+                  # Description — strip HTML tags
+                  raw_desc = race.get('description') or ''
+                  import re as _re
+                  description = _re.sub(r'<[^>]+>', ' ', raw_desc).strip()
+                  description = _re.sub(r'\s+', ' ', description)[:1000] if description else None
+
+                  # Terrain from name/description
+                  nd_lower = f"{name} {description or ''}".lower()
+                  if any(w in nd_lower for w in ['trail','mountain','ridge','forest','creek','dirt']):
+                    terrain = 'Trail'
+                  elif any(w in nd_lower for w in ['triathlon','ironman','70.3','140.6']):
+                    terrain = 'Multi'
+                  elif 'bridge' in nd_lower:
+                    terrain = 'Bridge/Road'
+                  else:
+                    terrain = 'Road'
+
+                  # Difficulty
+                  dl = (dist_raw or '').lower()
+                  if '5k' in dl or dl == '5 km': difficulty = 'Beginner'
+                  elif '10k' in dl or dl == '10 km': difficulty = 'Easy'
+                  elif 'half' in dl or '13.1' in dl: difficulty = 'Moderate'
+                  elif 'marathon' in dl and 'half' not in dl: difficulty = 'Hard'
+                  elif any(w in dl for w in ['ultra','50k','50m','100k','100m','70.3','140.6']): difficulty = 'Expert'
+                  else: difficulty = 'Moderate'
+
+                  # Price from events
+                  price = None
+                  for ev in events:
+                    e = ev.get('event', ev)
+                    opens = (e.get('registration_opens') or [{}])[0] if e.get('registration_opens') else {}
+                    fee = opens.get('fee') or e.get('fee')
+                    if fee:
+                      try:
+                        p = round(float(fee))
+                        if price is None or p < price: price = p
+                      except: pass
+
                   normalized.append({
                     'id': race_id,
                     'source': 'runsignup',
@@ -241,8 +279,12 @@ jobs:
                     'distance_raw': dist_raw,
                     'date': date_display,
                     'date_sort': date_sort,
-                    'terrain': 'Road',
+                    'price': price,
+                    'terrain': terrain,
+                    'difficulty': difficulty,
                     'sport': sport,
+                    'description': description,
+                    'website_url': reg_url,
                     'is_past': False,
                     'registration_url': reg_url,
                   })
