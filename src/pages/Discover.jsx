@@ -85,7 +85,7 @@ function RaceCard({ race, isActive, onClick }) {
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => { setPhoto(getRacePhoto(race.distance)) }, [race.distance])
+  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.id])
 
   return (
     <div ref={cardRef}
