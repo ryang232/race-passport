@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { getFallbackPhoto, loadRacePhoto } from '../lib/photos'
+import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 
 const FEATURED_RACES = [
   { id:'f1',  name:'Boston Marathon',          location:'Boston, MA',       state:'MA', date:'Apr 21, 2025', distance:'26.2', price:null },
@@ -55,7 +55,7 @@ function RaceCard({race:initialRace,isActive,onClick,featured,t}){
     if(cardRef.current)observer.observe(cardRef.current)
     return()=>observer.disconnect()
   },[race.id,race.hero_image,featured])
-  const[photo,setPhoto]=useState(()=>getFallbackPhoto(race))
+  const[photo,setPhoto]=useState(PHOTO_PLACEHOLDER)
   useEffect(()=>{loadRacePhoto(race).then(url=>{if(url)setPhoto(url)})},[race.id])
   return(
     <div ref={cardRef} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} onClick={onClick}
