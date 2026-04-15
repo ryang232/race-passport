@@ -7,7 +7,7 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { getRacePhoto } from '../lib/photos'
 
-const STRAVA_CONNECTED = true
+const STRAVA_CONNECTED = false
 
 const STAT_ITEMS = [
   { label:'Total Races',    value:'10'      },
