@@ -80,19 +80,7 @@ export async function loadRacePhoto(race) {
       }
     }
 
-    // If still nothing, grab any image from same state
-    if (error || !data?.image_url) {
-      const stateResult = await supabase
-        .from('city_images')
-        .select('image_url')
-        .eq('state', state)
-        .eq('race_type', raceType === 'standard' ? 'standard' : raceType)
-        .limit(1)
-        .maybeSingle()
-      if (!stateResult.error && stateResult.data?.image_url) {
-        data = stateResult.data
-      }
-    }
+    // No state-level fallback — show placeholder rather than wrong city image
 
     if (data?.image_url) {
       photoCache.set(cacheKey, data.image_url)
