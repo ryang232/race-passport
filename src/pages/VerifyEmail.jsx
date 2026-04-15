@@ -139,7 +139,7 @@ export default function VerifyEmail() {
           </div>
           <div className="step-row">
             <div className="step-dot pending">3</div>
-            <span style={{ fontSize:'13px', color: verified ? '#C9A84C' : '#9aa5b4', fontFamily: verified ? "'Barlow Condensed',sans-serif" : undefined, letterSpacing: verified ? '1px' : undefined, textTransform: verified ? 'uppercase' : undefined, fontSize: verified ? '12px' : '13px' }}>
+            <span style={{ color: verified ? '#C9A84C' : '#9aa5b4', fontFamily: verified ? "'Barlow Condensed',sans-serif" : undefined, letterSpacing: verified ? '1px' : undefined, textTransform: verified ? 'uppercase' : undefined, fontSize: verified ? '12px' : '13px' }}>
               {verified ? 'Building your passport... →' : 'Build your passport'}
             </span>
           </div>
