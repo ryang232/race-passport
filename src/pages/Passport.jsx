@@ -6,26 +6,24 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 
 const RYAN_RACES = [
-  { id:1,  distance:'10K',  name:'Sole of the City 10K',         location:'Baltimore, MD',   month:'Oct', year:'2021', time:'47:49', pr:true,  photos:0, hasStrava:false, filled:false },
-  { id:2,  distance:'10K',  name:'Bay Bridge Run',                location:'Annapolis, MD',   month:'Nov', year:'2021', time:'50:57', pr:false, photos:0, hasStrava:false, filled:false },
-  { id:3,  distance:'10K',  name:'Baltimore Running Festival 10K',location:'Baltimore, MD',   month:'Oct', year:'2021', time:'58:03', pr:false, photos:0, hasStrava:false, filled:false },
-  { id:4,  distance:'13.1', name:'Holiday Half Marathon',         location:'Annandale, VA',   month:'Dec', year:'2021', time:'2:19:05', pr:false, photos:0, hasStrava:false, filled:false },
-  { id:5,  distance:'26.2', name:'Marine Corps Marathon',         location:'Washington, DC',  month:'Oct', year:'2023', time:'4:45:42', pr:false, photos:0, hasStrava:false, filled:false },
-  { id:6,  distance:'26.2', name:'LA Marathon',                   location:'Los Angeles, CA', month:'Mar', year:'2023', time:'4:44:47', pr:true,  photos:0, hasStrava:false, filled:false },
-  { id:7,  distance:'5K',   name:'Turkey Trot',                   location:'Columbia, MD',    month:'Nov', year:'2024', time:'28:16', pr:true,  photos:0, hasStrava:false, filled:false },
-  { id:8,  distance:'13.1', name:'Austin Half Marathon',          location:'Austin, TX',      month:'Feb', year:'2025', time:'1:57:40', pr:true, photos:0, hasStrava:false, filled:false },
-  { id:9,  distance:'70.3', name:'IRONMAN 70.3 Eagleman',         location:'Cambridge, MD',   month:'Jun', year:'2025', time:'6:32:08', pr:true, photos:0, hasStrava:false, filled:false },
-  { id:10, distance:'5K',   name:'Turkey Trot',                   location:'Columbia, MD',    month:'Nov', year:'2025', time:'35:09', pr:false, photos:0, hasStrava:false, filled:false },
+  { id:1,  distance:'10K',  name:'Sole of the City 10K',         location:'Baltimore, MD',   month:'Oct', year:'2021', time:'47:49', pr:true  },
+  { id:2,  distance:'10K',  name:'Bay Bridge Run',                location:'Annapolis, MD',   month:'Nov', year:'2021', time:'50:57', pr:false },
+  { id:3,  distance:'10K',  name:'Baltimore Running Festival 10K',location:'Baltimore, MD',   month:'Oct', year:'2021', time:'58:03', pr:false },
+  { id:4,  distance:'13.1', name:'Holiday Half Marathon',         location:'Annandale, VA',   month:'Dec', year:'2021', time:'2:19:05', pr:false },
+  { id:5,  distance:'26.2', name:'Marine Corps Marathon',         location:'Washington, DC',  month:'Oct', year:'2023', time:'4:45:42', pr:false },
+  { id:6,  distance:'26.2', name:'LA Marathon',                   location:'Los Angeles, CA', month:'Mar', year:'2023', time:'4:44:47', pr:true  },
+  { id:7,  distance:'5K',   name:'Turkey Trot',                   location:'Columbia, MD',    month:'Nov', year:'2024', time:'28:16', pr:true  },
+  { id:8,  distance:'13.1', name:'Austin Half Marathon',          location:'Austin, TX',      month:'Feb', year:'2025', time:'1:57:40', pr:true },
+  { id:9,  distance:'70.3', name:'IRONMAN 70.3 Eagleman',         location:'Cambridge, MD',   month:'Jun', year:'2025', time:'6:32:08', pr:true },
+  { id:10, distance:'5K',   name:'Turkey Trot',                   location:'Columbia, MD',    month:'Nov', year:'2025', time:'35:09', pr:false },
 ]
 
 const STATS = { races:10, miles:199, prs:4, states:5 }
 
-// Mock goal — in production this would come from profiles table
 const MOCK_GOAL = {
   type: 'distance',
   distance: 'Half Marathon',
   label: '13.1',
-  color: '#1E5FA8',
   targetDate: 'Sep 2026',
   suggestedRace: 'Parks Half Marathon',
   suggestedRaceId: 'd1',
@@ -38,13 +36,18 @@ function PassportCard({ race, index, onClick }) {
   const fs = cleaned.length > 4 ? 14 : cleaned.length > 2 ? 17 : 24
   return (
     <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer', border: hovered ? '2px solid #C9A84C' : '1.5px solid #e2e6ed', transition:'all 0.2s', transform: hovered ? 'translateY(-6px)' : 'none', boxShadow: hovered ? '0 16px 40px rgba(201,168,76,0.15)' : '0 2px 12px rgba(27,42,74,0.07)', background:'#fff', animation:'fadeUp 0.4s ease both', animationDelay:`${index * 60}ms` }}>
-      <div style={{ height:'4px', background:'#C9A84C' }} />
+      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer',
+        border: hovered ? '2px solid #C9A84C' : '1.5px solid #e2e6ed',
+        transition:'all 0.2s', transform: hovered ? 'translateY(-6px)' : 'none',
+        boxShadow: hovered ? '0 16px 40px rgba(201,168,76,0.15)' : '0 2px 12px rgba(27,42,74,0.07)',
+        background:'#fff', animation:'fadeUp 0.4s ease both', animationDelay:`${index * 60}ms` }}>
+      {/* NO top stripe */}
       <div style={{ background:'#1B2A4A', padding:'20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', position:'relative', minHeight:'100px' }}>
         <div style={{ position:'absolute', top:10, left:14, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.2)', textTransform:'uppercase' }}>PAGE {String(index + 1).padStart(2, '0')}</div>
-        <div style={{ marginTop:'16px', width:72, height:72, borderRadius:'50%', border:'2.5px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative' }}>
-          <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
+        {/* Stamp — white bg, navy or gold */}
+        <div style={{ marginTop:'16px', width:72, height:72, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative' }}>
+          <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
         </div>
         <div style={{ flex:1, marginLeft:'14px', marginTop:'18px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#fff', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'4px' }}>{race.name}</div>
@@ -73,35 +76,27 @@ function GoalSection({ goal, navigate }) {
   const colors = getDistanceColor(goal.label)
   return (
     <div style={{ marginTop:'48px' }}>
-      {/* Section header */}
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
         <div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>What You're Chasing</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px' }}>Goals</div>
         </div>
-        <button
-          onClick={() => navigate('/goal-races')}
+        <button onClick={() => navigate('/goal-races')}
           style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', background:'none', border:'1.5px solid #e2e6ed', borderRadius:'8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
-          Edit Goal
-        </button>
+          onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>Edit Goal</button>
       </div>
-
-      {/* Goal card */}
-      <div style={{ background:'#fff', border:`1.5px solid ${colors.primary}`, borderRadius:'14px', overflow:'hidden', marginBottom:'16px' }}>
-        <div style={{ height:'4px', background:'#C9A84C' }} />
+      <div style={{ background:'#fff', border:'1.5px solid #e2e6ed', borderRadius:'14px', overflow:'hidden', marginBottom:'16px' }}>
         <div style={{ padding:'20px 24px', display:'flex', alignItems:'center', gap:'20px' }}>
-          {/* Stamp */}
-          <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-            <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: goal.label.length > 3 ? 14 : goal.label.length > 2 ? 18 : 24, color:colors.primary, position:'relative', zIndex:1, letterSpacing:'0.04em' }}>{goal.label}</span>
+          {/* Goal stamp — uses new system */}
+          <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+            <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: goal.label.length > 3 ? 14 : goal.label.length > 2 ? 18 : 24, color:colors.stampText, position:'relative', zIndex:1, letterSpacing:'0.04em' }}>{goal.label}</span>
           </div>
-
           <div style={{ flex:1 }}>
             <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-              <div style={{ background:`${colors.primary}18`, border:`1px solid ${colors.primary}44`, borderRadius:'5px', padding:'3px 9px' }}>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'2px', color:colors.primary, textTransform:'uppercase' }}>Active Goal</span>
+              <div style={{ background:'rgba(27,42,74,0.08)', border:'1px solid rgba(27,42,74,0.18)', borderRadius:'5px', padding:'3px 9px' }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'2px', color:'#1B2A4A', textTransform:'uppercase' }}>Active Goal</span>
               </div>
             </div>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>{goal.distance}</div>
@@ -110,17 +105,12 @@ function GoalSection({ goal, navigate }) {
               {goal.suggestedRace && ` · ${goal.suggestedRace} suggested`}
             </div>
           </div>
-
           <div style={{ display:'flex', flexDirection:'column', gap:'8px', alignItems:'flex-end', flexShrink:0 }}>
-            <button
-              onClick={() => navigate('/discover')}
-              style={{ padding:'7px 14px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:colors.primary, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-              onMouseEnter={e => { e.currentTarget.style.background=colors.primary; e.currentTarget.style.color='#fff' }}
-              onMouseLeave={e => { e.currentTarget.style.background=colors.light; e.currentTarget.style.color=colors.primary }}>
-              View Races →
-            </button>
-            <button
-              style={{ padding:'7px 14px', border:'1.5px solid rgba(27,42,74,0.15)', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'6px' }}>
+            <button onClick={() => navigate('/discover')}
+              style={{ padding:'7px 14px', border:'1.5px solid #1B2A4A', borderRadius:'8px', background:'rgba(27,42,74,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(27,42,74,0.06)'; e.currentTarget.style.color='#1B2A4A' }}>View Races →</button>
+            <button style={{ padding:'7px 14px', border:'1.5px solid rgba(27,42,74,0.15)', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap', display:'flex', alignItems:'center', gap:'6px' }}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M13 3L5 14h7l-1 7 8-11h-7l1-7z" stroke="#C9A84C" strokeWidth="1.5" strokeLinejoin="round"/></svg>
               Train w/ Runna
               <span style={{ background:'rgba(201,168,76,0.2)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'4px', padding:'1px 6px', fontSize:'8px', letterSpacing:'1px', color:'#C9A84C' }}>SOON</span>
@@ -128,20 +118,15 @@ function GoalSection({ goal, navigate }) {
           </div>
         </div>
       </div>
-
-      {/* Empty state CTA */}
       <div style={{ border:'1.5px dashed #e2e6ed', borderRadius:'12px', padding:'20px 24px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px', background:'#fafbfc' }}>
         <div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'3px' }}>Add Another Goal</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>A new distance, a bucket-list race — keep adding to your list.</div>
         </div>
-        <button
-          onClick={() => navigate('/goal-races')}
+        <button onClick={() => navigate('/goal-races')}
           style={{ padding:'8px 18px', border:'1.5px solid #1B2A4A', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
           onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
-          onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
-          + Add Goal
-        </button>
+          onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>+ Add Goal</button>
       </div>
     </div>
   )
@@ -191,7 +176,6 @@ export default function Passport() {
   const FILTERS = ['ALL','5K','10K','13.1','26.2','TRI']
   const filteredRaces = filter === 'ALL' ? RYAN_RACES : RYAN_RACES.filter(r => {
     if (filter === 'TRI') return ['70.3','140.6'].includes(r.distance)
-    if (filter === 'ULTRA') return ['50K','50M','100K','100M'].includes(r.distance.toUpperCase())
     return r.distance === filter
   })
 
@@ -254,7 +238,6 @@ export default function Passport() {
               ))}
             </div>
           </div>
-
           <div style={{ height:'3px', background:'linear-gradient(to right, #C9A84C, transparent)', marginTop:'20px', borderRadius:'2px' }} />
         </div>
       </div>
@@ -273,8 +256,6 @@ export default function Passport() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px' }}>
           {filteredRaces.map((race, i) => <PassportCard key={race.id} race={race} index={i} onClick={() => navigate(`/race/${race.id}`)} />)}
         </div>
-
-        {/* GOALS SECTION */}
         <GoalSection goal={MOCK_GOAL} navigate={navigate} />
       </div>
     </div>
