@@ -45,18 +45,18 @@ function AddGearForm({ onAdd, onCancel, colors }) {
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'14px' }}>Add Gear</div>
       <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
         <div><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Category</label>
-          <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...inp, appearance:'none', cursor:'pointer' }} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'}><option value="">Select...</option>{GEAR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+          <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...inp, appearance:'none', cursor:'pointer' }} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}><option value="">Select...</option>{GEAR_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
         <div><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Brand</label>
-          <input value={brand} onChange={e => setBrand(e.target.value)} placeholder="Nike, Garmin..." style={inp} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
+          <input value={brand} onChange={e => setBrand(e.target.value)} placeholder="Nike, Garmin..." style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
         <div><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Model</label>
-          <input value={model} onChange={e => setModel(e.target.value)} placeholder="Clifton 9..." style={inp} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
+          <input value={model} onChange={e => setModel(e.target.value)} placeholder="Clifton 9..." style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
         <div><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Color</label>
-          <input value={color} onChange={e => setColor(e.target.value)} placeholder="Black/White..." style={inp} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
+          <input value={color} onChange={e => setColor(e.target.value)} placeholder="Black/White..." style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
       </div>
       <div style={{ marginBottom:'10px' }}><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Shop Link <span style={{ color:'#b0b8c4', fontWeight:400 }}>(optional)</span></label>
-        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." style={inp} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
+        <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
       <div style={{ marginBottom:'16px' }}><label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Note <span style={{ color:'#b0b8c4', fontWeight:400 }}>(optional)</span></label>
-        <input value={note} onChange={e => setNote(e.target.value)} placeholder="Race day go-to..." style={inp} onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
+        <input value={note} onChange={e => setNote(e.target.value)} placeholder="Race day go-to..." style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} /></div>
       <div style={{ display:'flex', gap:'10px' }}>
         <button onClick={() => { if (cat && brand && model) onAdd({ id:Date.now(), category:cat, brand, model, color, url, note }) }} disabled={!cat||!brand||!model}
           style={{ flex:1, padding:'10px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', opacity:(!cat||!brand||!model)?0.5:1 }}>Add to Page</button>
@@ -166,12 +166,12 @@ export default function RacePage() {
                 onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>Share</button>
               <button onClick={() => setEditMode(true)} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background=colors.primary} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Edit Page</button>
+                onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Edit Page</button>
             </>
           ) : (
             <>
               <button onClick={() => { setEditMode(false); setShowAddGear(false) }} style={{ padding:'6px 16px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:colors.primary, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>
+              <button onClick={handleSave} disabled={saving} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>
                 {saving ? 'Saving...' : 'Save Page'}
               </button>
             </>
@@ -181,7 +181,7 @@ export default function RacePage() {
 
       {/* HERO */}
       <div style={{ background:'#1B2A4A', position:'relative', overflow:'hidden' }}>
-        <div style={{ height:'4px', background:colors.primary }} />
+        <div style={{ height:'4px', background:'#C9A84C' }} />
         {stickers.length > 0 && (
           <div style={{ position:'absolute', inset:0, zIndex:5, pointerEvents:'none' }}>
             {stickers.map(s => <div key={s.id} style={{ position:'absolute', left:`${s.x}%`, top:`${s.y}%`, fontSize:'32px', lineHeight:1, userSelect:'none' }}>{s.emoji}</div>)}
@@ -190,22 +190,25 @@ export default function RacePage() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'40px 40px 0', position:'relative', zIndex:1 }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'40px', marginBottom:'32px' }}>
             <div style={{ flex:1 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:`${colors.primary}99`, textTransform:'uppercase', marginBottom:'10px' }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'10px' }}>
                 Race Passport · Page {currentIdx + 1} of {ALL_IDS.length}
               </div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(40px,6vw,72px)', color:'#fff', letterSpacing:'2px', lineHeight:0.95, marginBottom:'10px' }}>{race.name}</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'16px' }}>{race.date} · {race.location}</div>
               {race.pr && (
-                <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:`${colors.primary}22`, border:`1px solid ${colors.primary}55`, borderRadius:'8px', padding:'6px 16px' }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:colors.primary }} />
-                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'2px', color:colors.primary, textTransform:'uppercase' }}>Personal Best</span>
+                <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:'8px', padding:'6px 16px' }}>
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase' }}>Personal Best</span>
                 </div>
               )}
             </div>
-            <div style={{ width:140, height:140, borderRadius:'50%', border:`3px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-              <div style={{ position:'absolute', inset:10, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.primary, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:`${colors.primary}88`, textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1 }}>{colors.label}</div>
+            {/* HERO STAMP — FIXED: gold text, navy border */}
+            <div style={{ width:140, height:140, borderRadius:'50%', border:'3px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+              <div style={{ position:'absolute', inset:10, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
+              {/* distance text — GOLD */}
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
+              {/* label subtitle — gold faded */}
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(201,168,76,0.55)', textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1 }}>{colors.label}</div>
             </div>
           </div>
         </div>
@@ -240,7 +243,7 @@ export default function RacePage() {
         <div style={{ background:'#fff', borderRadius:'16px', padding:'28px', marginBottom:'24px', border:'1px solid #e8eaed', animation:'fadeIn 0.4s ease both' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px' }}>Race Photos</div>
-            {editMode && <button onClick={() => fileInputRef.current?.click()} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>+ Upload</button>}
+            {editMode && <button onClick={() => fileInputRef.current?.click()} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>+ Upload</button>}
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:'none' }} />
           {race.photos?.length > 0 ? (
@@ -252,16 +255,16 @@ export default function RacePage() {
               ))}
             </div>
           ) : (
-            <div style={{ border:`2px dashed ${colors.dashed}`, borderRadius:'12px', padding:'40px', textAlign:'center', background:'#fafbfc' }}>
+            <div style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'12px', padding:'40px', textAlign:'center', background:'#fafbfc' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:'#d0d7e0', letterSpacing:'1px', marginBottom:'8px' }}>NO PHOTOS YET</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginBottom:'16px' }}>Add photos to bring this race page to life.</div>
-              {!editMode && <button onClick={() => setEditMode(true)} style={{ padding:'8px 20px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>Add Photos</button>}
+              {!editMode && <button onClick={() => setEditMode(true)} style={{ padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>Add Photos</button>}
             </div>
           )}
           {editMode && (
-            <div onClick={() => fileInputRef.current?.click()} style={{ border:`2px dashed ${colors.dashed}`, borderRadius:'10px', aspectRatio:'4/3', maxWidth:'220px', marginTop:'14px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:'#fafbfc' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor=colors.primary} onMouseLeave={e => e.currentTarget.style.borderColor=colors.dashed}>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase' }}>+ Add Photo</span>
+            <div onClick={() => fileInputRef.current?.click()} style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'10px', aspectRatio:'4/3', maxWidth:'220px', marginTop:'14px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:'#fafbfc' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'} onMouseLeave={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'}>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase' }}>+ Add Photo</span>
             </div>
           )}
         </div>
@@ -272,14 +275,14 @@ export default function RacePage() {
           {editMode ? (
             <textarea value={story} onChange={e => setStory(e.target.value)} placeholder="What was race day like? What kept you going?"
               style={{ width:'100%', minHeight:'160px', padding:'14px', border:'1.5px solid #e2e6ed', borderRadius:'10px', fontFamily:"'Barlow',sans-serif", fontSize:'14px', fontWeight:300, color:'#1B2A4A', lineHeight:1.7, resize:'vertical', outline:'none', background:'#fafbfc' }}
-              onFocus={e => e.target.style.borderColor=colors.primary} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           ) : story ? (
-            <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', fontWeight:300, color:'#4a5568', lineHeight:1.9, fontStyle:'italic', borderLeft:`3px solid ${colors.primary}`, paddingLeft:'18px' }}>"{story}"</div>
+            <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', fontWeight:300, color:'#4a5568', lineHeight:1.9, fontStyle:'italic', borderLeft:'3px solid #C9A84C', paddingLeft:'18px' }}>"{story}"</div>
           ) : (
             <div style={{ textAlign:'center', padding:'32px' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:'#e2e6ed', letterSpacing:'1px', marginBottom:'8px' }}>NO STORY YET</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4', marginBottom:'14px' }}>Every race has a story worth telling.</div>
-              <button onClick={() => setEditMode(true)} style={{ padding:'8px 20px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>Write It</button>
+              <button onClick={() => setEditMode(true)} style={{ padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>Write It</button>
             </div>
           )}
         </div>
@@ -291,7 +294,7 @@ export default function RacePage() {
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>Race Day Gear</div>
               {!editMode && gear.length > 0 && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4', marginTop:'3px' }}>Click any item to shop it</div>}
             </div>
-            {editMode && <button onClick={() => setShowAddGear(!showAddGear)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>+ Add Gear</button>}
+            {editMode && <button onClick={() => setShowAddGear(!showAddGear)} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>+ Add Gear</button>}
           </div>
           {gear.length > 0 ? (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(240px, 1fr))', gap:'12px' }}>
@@ -301,7 +304,7 @@ export default function RacePage() {
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'3px' }}>{item.category}</div>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1.1, marginBottom:'2px' }}>{item.brand} {item.model}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{item.color}</div>
-                  {item.note && <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:'11px', color:colors.primary, marginTop:'4px', fontStyle:'italic' }}>{item.note}</div>}
+                  {item.note && <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:'11px', color:'#C9A84C', marginTop:'4px', fontStyle:'italic' }}>{item.note}</div>}
                 </div>
               ))}
             </div>
@@ -309,7 +312,7 @@ export default function RacePage() {
             <div style={{ textAlign:'center', padding:'32px', border:'2px dashed #e8eaed', borderRadius:'12px', background:'#fafbfc' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#d0d7e0', letterSpacing:'1px', marginBottom:'6px' }}>NO GEAR YET</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginBottom:'14px' }}>What did you race in? Add shoes, watch, outfit.</div>
-              {!editMode && <button onClick={() => setEditMode(true)} style={{ padding:'7px 18px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:colors.light, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>Add Gear</button>}
+              {!editMode && <button onClick={() => setEditMode(true)} style={{ padding:'7px 18px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>Add Gear</button>}
             </div>
           )}
           {showAddGear && <AddGearForm onAdd={addGear} onCancel={() => setShowAddGear(false)} colors={colors} />}
@@ -329,7 +332,7 @@ export default function RacePage() {
             {showSplits && (
               <div style={{ marginTop:'18px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))', gap:'12px' }}>
                 {race.splits.map((split, i) => (
-                  <div key={i} style={{ background:'#f4f5f7', borderRadius:'8px', padding:'14px', textAlign:'center', borderTop:`3px solid ${colors.primary}` }}>
+                  <div key={i} style={{ background:'#f4f5f7', borderRadius:'8px', padding:'14px', textAlign:'center', borderTop:'3px solid #C9A84C' }}>
                     <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>{split.time}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginTop:'4px' }}>{split.label}</div>
                   </div>
@@ -355,14 +358,14 @@ export default function RacePage() {
           <div style={{ background:'#fff', borderRadius:'16px', padding:'20px 24px', border:'1px solid #e8eaed', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
               style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor: prevRace ? 'pointer' : 'default', opacity: prevRace ? 1 : 0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
-              onMouseEnter={e => prevRace && (e.currentTarget.style.borderColor=colors.primary)}
+              onMouseEnter={e => prevRace && (e.currentTarget.style.borderColor='#C9A84C')}
               onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Prev
             </button>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#9aa5b4', letterSpacing:'1px' }}>{currentIdx + 1} / {ALL_IDS.length}</div>
             <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
               style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor: nextRace ? 'pointer' : 'default', opacity: nextRace ? 1 : 0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
-              onMouseEnter={e => nextRace && (e.currentTarget.style.borderColor=colors.primary)}
+              onMouseEnter={e => nextRace && (e.currentTarget.style.borderColor='#C9A84C')}
               onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
               Next<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </button>
