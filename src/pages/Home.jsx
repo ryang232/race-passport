@@ -53,10 +53,13 @@ const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 // ── Theme toggle button ───────────────────────────────────────────────────────
 function ThemeToggle({ t, isDark, toggleTheme }) {
   return (
-    <button onClick={toggleTheme}
-      style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background: isDark ? '#C9A84C' : '#d0d7e0', padding:0, flexShrink:0 }}>
-      <div style={{ position:'absolute', top:3, left: isDark ? 'calc(100% - 19px)' : '3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
-    </button>
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', cursor:'pointer' }} onClick={toggleTheme}>
+      <button
+        style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background: isDark ? '#C9A84C' : '#d0d7e0', padding:0, flexShrink:0 }}>
+        <div style={{ position:'absolute', top:3, left: isDark ? 'calc(100% - 19px)' : '3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+      </button>
+      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', whiteSpace:'nowrap' }}>Night Mode</span>
+    </div>
   )
 }
 
@@ -121,7 +124,7 @@ function Stamp({ distance, name, location, month, year, size=130, onClick, t }) 
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
-      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background: colors.isMarathonPlus ? 'rgba(201,168,76,0.08)' : (t.isDark ? t.surface : '#fff'), display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
+      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background: colors.isMarathonPlus ? 'rgba(201,168,76,0.06)' : '#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
         onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.2)' }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
         <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
