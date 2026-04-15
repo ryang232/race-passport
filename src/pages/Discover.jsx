@@ -79,11 +79,36 @@ function CardStamp({ distance, size=50 }) {
   )
 }
 
-function RaceCard({ race, isActive, onClick, featured }) {
+const API_BASE = '/api/runsignup'
+const enrichCache = new Set() // track which race IDs we've already enriched
+
+function RaceCard({ race: initialRace, isActive, onClick, featured }) {
   const [hovered, setHovered] = useState(false)
+  const [race, setRace] = useState(initialRace)
+  const cardRef = useRef(null)
+
+  // Lazy enrich: when card enters viewport and has no hero_image, fetch from RunSignup
+  useEffect(() => {
+    if (featured || race.hero_image || enrichCache.has(race.id)) return
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      enrichCache.add(race.id)
+      fetch(`${API_BASE}?action=enrich_race&race_id=${race.id}`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.hero_image) setRace(prev => ({ ...prev, hero_image: data.hero_image }))
+        })
+        .catch(() => {})
+    }, { rootMargin: '200px' })
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [race.id, race.hero_image, featured])
+
   const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      ref={cardRef}
       onClick={onClick}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', flexShrink: featured ? 0 : undefined,
         width: featured ? 'clamp(220px,20vw,300px)' : undefined,
@@ -176,6 +201,8 @@ export default function Discover() {
   const [userLng, setUserLng] = useState(null)
   const [locationStatus, setLocationStatus] = useState('idle')
   const [showLocationBanner, setShowLocationBanner] = useState(true)
+  const [resultsPage, setResultsPage] = useState(1)
+  const RESULTS_PER_PAGE = 24
   const mapRef = useRef(null)
   const mapInstanceRef = useRef(null)
   const markersRef = useRef({})
@@ -185,6 +212,9 @@ export default function Discover() {
   // User is actively searching when they've typed or changed filters
   const isSearching = search.trim() !== '' || distFilter !== 'ALL' || terrainFilter !== 'All' ||
     sportFilter !== 'All' || maxPrice < 400 || dateFrom !== '' || dateTo !== '' || userLat !== null
+
+  // Reset to page 1 when filters change
+  useEffect(() => { setResultsPage(1) }, [search, distFilter, terrainFilter, sportFilter, maxPrice, dateFrom, dateTo, userLat])
 
   const loadRaces = useCallback(async (currentOffset = 0, append = false) => {
     if (currentOffset === 0) setLoading(true); else setLoadingMore(true)
@@ -557,7 +587,7 @@ export default function Discover() {
             ) : (
               <>
                 <div className="cards-grid">
-                  {filtered.map(race => (
+                  {filtered.slice(0, resultsPage * RESULTS_PER_PAGE).map(race => (
                     <div key={race.id} id={`rc-${race.id}`}>
                       <RaceCard race={race} isActive={activeId===race.id}
                         onClick={() => {
@@ -568,13 +598,17 @@ export default function Discover() {
                     </div>
                   ))}
                 </div>
-                {hasMore && !search && distFilter==='ALL' && (
-                  <div style={{ textAlign:'center', marginTop:'40px' }}>
-                    <button onClick={() => loadRaces(offset, true)} disabled={loadingMore}
+                {/* Pagination */}
+                {filtered.length > resultsPage * RESULTS_PER_PAGE && (
+                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'16px', marginTop:'40px' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>
+                      Showing {Math.min(resultsPage * RESULTS_PER_PAGE, filtered.length)} of {filtered.length} races
+                    </div>
+                    <button onClick={() => setResultsPage(p => p + 1)}
                       style={{ padding:'12px 40px', border:'1.5px solid #1B2A4A', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
                       onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
                       onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
-                      {loadingMore ? 'Loading...' : 'Load More Races'}
+                      Show More Races
                     </button>
                   </div>
                 )}
