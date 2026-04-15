@@ -87,7 +87,16 @@ export default async function handler(req, res) {
       return `A realistic lake scene near ${cs}, calm water with reflections, tree-lined shoreline, early morning light, wide composition, ${suffix}`
     if (isMaj)
       return `A cinematic aerial view of ${cs}, showing the real skyline and surrounding area, golden hour light, realistic architecture, wide composition, ${suffix}`
-    return `A realistic street-level view of downtown ${cs}, ${getRegionModifier(state)}, wide road with strong perspective, early morning light, ${suffix}`
+    // Add variation so same-region cities look different
+    const variations = [
+      `A realistic street-level view of downtown ${cs}, ${getRegionModifier(state)}, wide road with strong perspective, early morning light, ${suffix}`,
+      `A realistic view of ${cs} main street, ${getRegionModifier(state)}, golden hour light streaming between buildings, low angle perspective, ${suffix}`,
+      `An atmospheric view of ${cs} downtown district, ${getRegionModifier(state)}, overcast soft light, looking down a tree-lined street, ${suffix}`,
+      `A cinematic ground-level view of ${cs}, ${getRegionModifier(state)}, dawn light, long straight road disappearing into distance, ${suffix}`,
+    ]
+    // Pick variation based on city name hash for consistency
+    let h = 0; for (let i = 0; i < city.length; i++) h = Math.imul(31, h) + city.charCodeAt(i) | 0
+    return variations[Math.abs(h) % variations.length]
   }
 
   // ── Sleep helper ──────────────────────────────────────────────────────────
@@ -234,6 +243,39 @@ export default async function handler(req, res) {
     if (!resp.ok) return new Set()
     const rows = await resp.json()
     return new Set(rows.map(r => `${r.city}|${r.state}|${r.race_type}`))
+  }
+
+  // ── ACTION: regenerate — force re-generate specific cities ──────────────────
+  // Visit: /api/generate-images?action=regenerate&cities=Baltimore:MD,Bethesda:MD,Annapolis:MD,Washington:DC
+  if (action === 'regenerate') {
+    const citiesParam = req.query.cities || ''
+    const cityList = citiesParam.split(',').map(c => {
+      const [city, state] = c.trim().split(':')
+      return { city: city?.trim(), state: state?.trim() }
+    }).filter(c => c.city && c.state)
+
+    if (cityList.length === 0) return res.status(400).json({ error: 'Pass cities=CityName:ST,CityName2:ST2' })
+
+    const results = { success: [], failed: [] }
+    for (const { city, state } of cityList) {
+      // Determine race type — default standard, but check if it's a known tri location
+      const raceType = req.query.type || 'standard'
+      const prompt = buildPrompt(city, state, raceType)
+      try {
+        // Delete existing entry first
+        await fetch(`${SUPABASE_URL}/rest/v1/city_images?city=eq.${encodeURIComponent(city)}&state=eq.${state}&race_type=eq.${raceType}`, {
+          method: 'DELETE',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+        })
+        const replicateUrl = await generateImage(prompt)
+        const storedUrl = await uploadToSupabase(replicateUrl, city, state, raceType)
+        await saveToDatabase(city, state, raceType, storedUrl, prompt)
+        results.success.push({ city, state, raceType, url: storedUrl, prompt })
+      } catch(e) {
+        results.failed.push({ city, state, error: e.message })
+      }
+    }
+    return res.status(200).json(results)
   }
 
   // ── ACTION: status ────────────────────────────────────────────────────────
