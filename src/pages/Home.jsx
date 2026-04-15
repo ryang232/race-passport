@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
-import { fetchUnsplashPhoto } from '../lib/unsplash'
+
 import { getDistanceColor } from '../lib/colors'
+import { getRacePhoto } from '../lib/photos'
 
 const STRAVA_CONNECTED = false
 
@@ -134,7 +135,7 @@ function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
-  useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
+  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
@@ -195,7 +196,7 @@ function UpcomingCard({ race }) {
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
-  useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
+  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
