@@ -198,10 +198,12 @@ export function getRacePhoto(raceOrDistance) {
     distance = raceOrDistance
     id = raceOrDistance
   } else {
-    name     = raceOrDistance?.name     || ''
-    distance = raceOrDistance?.distance || ''
-    state    = raceOrDistance?.state    || ''
+    name     = raceOrDistance?.name      || ''
+    distance = raceOrDistance?.distance  || ''
+    state    = raceOrDistance?.state     || ''
     id       = String(raceOrDistance?.id || name || distance)
+    // ── Hero image from RunSignup — highest priority ──────────────────────
+    if (raceOrDistance?.hero_image) return raceOrDistance.hero_image
   }
 
   const miles = distanceMiles(distance)
