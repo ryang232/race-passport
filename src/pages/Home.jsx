@@ -52,16 +52,12 @@ const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 // ── Scrolling stats ticker ────────────────────────────────────────────────────
 function StatsTicker() {
   const trackRef = useRef(null)
-  // Duplicate items enough to fill wide screens and loop seamlessly
   const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
 
   return (
     <div style={{ background:'#1B2A4A', borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)', position:'relative' }}>
-      {/* Fade edges */}
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:80, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
       <div style={{ position:'absolute', right:0, top:0, bottom:0, width:80, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-
-      {/* Scrolling track */}
       <div ref={trackRef} style={{
         display:'flex', alignItems:'center', gap:0,
         padding:'28px 0',
@@ -78,13 +74,10 @@ function StatsTicker() {
                 {item.label}
               </div>
             </div>
-            {/* Separator dot */}
             <div style={{ width:6, height:6, borderRadius:'50%', background:'rgba(201,168,76,0.3)', flexShrink:0 }} />
           </div>
         ))}
       </div>
-
-      {/* Strava note */}
       <div style={{ position:'absolute', bottom:10, right:90, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
         <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
@@ -95,7 +88,7 @@ function StatsTicker() {
   )
 }
 
-// ── Strava connect prompt (no Strava yet) ─────────────────────────────────────
+// ── Strava connect prompt ─────────────────────────────────────────────────────
 function StravaConnect() {
   return (
     <div style={{ background:'#1B2A4A', borderRadius:'16px', border:'1px solid rgba(201,168,76,0.15)', padding:'36px 48px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px' }}>
@@ -118,18 +111,22 @@ function StravaConnect() {
   )
 }
 
+// ── Stamp component — FIXED: distance text always gold ────────────────────────
 function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   const colors = getDistanceColor(distance)
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
-      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow=`0 8px 24px ${colors.light}` }}
+      <div style={{ width:size, height:size, borderRadius:'50%', border:'2.5px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.15)' }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
-        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.primary, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
-        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.65 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
+        {/* Dashed inner ring — gold */}
+        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
+        {/* Distance text — GOLD */}
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
+        {/* Race name subtitle — gold, faded */}
+        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
       </div>
       <div style={{ textAlign:'center' }}>
         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', lineHeight:1.4 }}>{location}</div>
@@ -150,13 +147,13 @@ function NearbyCard({ race }) {
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ height:'3px', background:colors.primary }} />
+      <div style={{ height:'3px', background:'#1B2A4A' }} />
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
+          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
+          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'#1B2A4A' }} />
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
             {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
               <div key={s.label} style={{ textAlign:'center' }}>
@@ -171,14 +168,15 @@ function NearbyCard({ race }) {
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
           </div>
         </div>
+        {/* Stamp — FIXED: gold text */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <div style={{ width:50, height:50, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 13, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+          <div style={{ width:50, height:50, borderRadius:'50%', border:'2px solid #1B2A4A', background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:'0.75px dashed rgba(201,168,76,0.35)' }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 13, color:'#C9A84C', letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
           </div>
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:`2px solid ${colors.primary}22` }}>
+      <div style={{ padding:'14px 16px', borderTop:'2px solid rgba(27,42,74,0.13)' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
@@ -224,15 +222,15 @@ function UpcomingCard({ race }) {
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ height:'3px', background:colors.primary }} />
+      <div style={{ height:'3px', background:'#1B2A4A' }} />
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
+          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
 
         {/* Countdown overlay on hover */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
+          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'#1B2A4A' }} />
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>
             {countdown.past ? 'Race Day!' : 'Countdown to Race Day'}
           </div>
@@ -255,15 +253,16 @@ function UpcomingCard({ race }) {
           )}
         </div>
 
-        <div style={{ position:'absolute', top:12, right:12, background:`${colors.primary}ee`, borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
+        <div style={{ position:'absolute', top:12, right:12, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
+        {/* Stamp — FIXED: gold text */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <div style={{ width:46, height:46, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 12, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+          <div style={{ width:46, height:46, borderRadius:'50%', border:'2px solid #1B2A4A', background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:'0.75px dashed rgba(201,168,76,0.35)' }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 12, color:'#C9A84C', letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
           </div>
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:`2px solid ${colors.primary}22` }}>
+      <div style={{ padding:'14px 16px', borderTop:'2px solid rgba(27,42,74,0.13)' }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
