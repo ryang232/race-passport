@@ -98,7 +98,7 @@ export default function RaceDetail() {
   const registrationUrl = race.registration_url || race.website_url || `https://runsignup.com/Race/${id.replace('rs_','')}`
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif", '--rc': colors.primary }}>
+    <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif", '--rc': '#C9A84C' }}>
 
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 40px', height:'56px' }}>
@@ -112,7 +112,7 @@ export default function RaceDetail() {
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', letterSpacing:'2.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
         </div>
         <button onClick={() => window.open(registrationUrl, '_blank')}
-          style={{ padding:'7px 20px', border:'none', borderRadius:'8px', background:colors.primary, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s' }}
+          style={{ padding:'7px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
           Register Now
         </button>
@@ -120,7 +120,7 @@ export default function RaceDetail() {
 
       {/* HERO */}
       <div style={{ height:'420px', position:'relative', background:'#1B2A4A', overflow:'hidden' }}>
-        <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:colors.primary, zIndex:2 }} />
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'#C9A84C', zIndex:2 }} />
         {photo ? (
           <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} />
         ) : (
@@ -149,10 +149,10 @@ export default function RaceDetail() {
                 </div>
               )}
             </div>
-            <div style={{ width:100, height:100, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, backdropFilter:'blur(4px)' }}>
-              <div style={{ position:'absolute', inset:7, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 18 : cleaned.length > 2 ? 22 : 30, color:colors.primary, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'1px', color:`${colors.primary}99`, textTransform:'uppercase', marginTop:'3px', position:'relative', zIndex:1 }}>{colors.label}</div>
+            <div style={{ width:100, height:100, borderRadius:'50%', border:'2.5px solid #C9A84C', background:'rgba(0,0,0,0.45)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, backdropFilter:'blur(4px)' }}>
+              <div style={{ position:'absolute', inset:7, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 18 : cleaned.length > 2 ? 22 : 30, color:'#C9A84C', letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'1px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginTop:'3px', position:'relative', zIndex:1 }}>{colors.label}</div>
             </div>
           </div>
         </div>
@@ -181,7 +181,7 @@ export default function RaceDetail() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'0 40px', display:'flex' }}>
           {['overview','events','training','results'].map(tab => (
             <button key={tab} className={`rd-tab ${activeTab===tab?'active':''}`}
-              style={{ borderBottomColor: activeTab===tab ? colors.primary : 'transparent', color: activeTab===tab ? '#1B2A4A' : '#9aa5b4' }}
+              style={{ borderBottomColor: activeTab===tab ? '#C9A84C' : 'transparent', color: activeTab===tab ? '#1B2A4A' : '#9aa5b4' }}
               onClick={() => setActiveTab(tab)}>
               {tab.charAt(0).toUpperCase()+tab.slice(1)}
             </button>
@@ -213,7 +213,7 @@ export default function RaceDetail() {
                   )}
                   {race.website_url && (
                     <a href={race.website_url} target="_blank" rel="noreferrer"
-                      style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:colors.primary, textDecoration:'none', textTransform:'uppercase' }}>
+                      style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>
                       Visit Race Website →
                     </a>
                   )}
@@ -233,7 +233,7 @@ export default function RaceDetail() {
                       { label:'Cutoff Time',  value: race.cutoff_time || '—' },
                       { label:'Charity',      value: race.charity || '—' },
                     ].map(item => (
-                      <div key={item.label} style={{ padding:'14px 16px', background:'#f8f9fb', borderRadius:'8px', border:'1px solid #e8eaed', borderLeft:`3px solid ${colors.primary}` }}>
+                      <div key={item.label} style={{ padding:'14px 16px', background:'#f8f9fb', borderRadius:'8px', border:'1px solid #e8eaed', borderLeft:'3px solid #C9A84C' }}>
                         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'5px' }}>{item.label}</div>
                         {detailLoading && ['Cutoff Time','Charity'].includes(item.label) ? (
                           <div className="detail-skeleton" style={{ width:'60%', height:'14px' }} />
@@ -250,11 +250,11 @@ export default function RaceDetail() {
               <div>
                 {/* Register CTA */}
                 <div style={{ background:'#1B2A4A', borderRadius:'16px', padding:'28px', marginBottom:'18px', textAlign:'center' }}>
-                  <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.primary}`, background:colors.light, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', position:'relative' }}>
-                    <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.dashed}` }} />
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?16:cleaned.length>2?20:28, color:colors.primary, position:'relative', zIndex:1 }}>{cleaned}</span>
+                  <div style={{ width:80, height:80, borderRadius:'50%', border:'2.5px solid #C9A84C', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', position:'relative' }}>
+                    <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?16:cleaned.length>2?20:28, color:'#C9A84C', position:'relative', zIndex:1 }}>{cleaned}</span>
                   </div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:colors.primary, letterSpacing:'1px', marginBottom:'4px' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#C9A84C', letterSpacing:'1px', marginBottom:'4px' }}>
                     {race.price ? `$${race.price}` : 'TBD'}
                   </div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'1px', marginBottom:'8px' }}>Registration fee</div>
@@ -264,14 +264,14 @@ export default function RaceDetail() {
                     </div>
                   )}
                   <button onClick={() => window.open(registrationUrl, '_blank')}
-                    style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:colors.primary, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s' }}
+                    style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s' }}
                     onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                     Register on RunSignup →
                   </button>
                 </div>
 
                 {/* Training estimate */}
-                <div style={{ background:'#fff', borderRadius:'12px', padding:'20px', border:'1px solid #e8eaed', borderTop:`3px solid ${colors.primary}`, marginBottom:'18px' }}>
+                <div style={{ background:'#fff', borderRadius:'12px', padding:'20px', border:'1px solid #e8eaed', borderTop:'3px solid #C9A84C', marginBottom:'18px' }}>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'8px' }}>Est. Training Time</div>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>
                     {race.distance === '5K' ? 4 : race.distance === '10K' ? 6 : race.distance === '13.1' ? 10 : race.distance === '26.2' ? 16 : race.distance === '70.3' ? 20 : race.distance?.includes('50') ? 24 : 8} Weeks
@@ -306,14 +306,14 @@ export default function RaceDetail() {
               ) : race.events_detail && race.events_detail.length > 0 ? (
                 <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
                   {race.events_detail.map((ev, i) => (
-                    <div key={i} style={{ padding:'16px 20px', background:'#f8f9fb', borderRadius:'10px', border:'1px solid #e8eaed', borderLeft:`3px solid ${colors.primary}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <div key={i} style={{ padding:'16px 20px', background:'#f8f9fb', borderRadius:'10px', border:'1px solid #e8eaed', borderLeft:'3px solid #C9A84C', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
                       <div>
                         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px' }}>{ev.name || ev.distance || 'Event'}</div>
                         {ev.distance && ev.name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'2px' }}>{ev.distance}</div>}
                         {ev.start_time && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4', marginTop:'2px' }}>Start: {ev.start_time}</div>}
                       </div>
                       {ev.fee && (
-                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:colors.primary, letterSpacing:'0.5px' }}>${ev.fee}</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#C9A84C', letterSpacing:'0.5px' }}>${ev.fee}</div>
                       )}
                     </div>
                   ))}
@@ -322,7 +322,7 @@ export default function RaceDetail() {
                 <div style={{ textAlign:'center', padding:'32px', color:'#9aa5b4' }}>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px' }}>Event details will appear here once loaded.</div>
                   <button onClick={() => window.open(registrationUrl, '_blank')}
-                    style={{ marginTop:'16px', padding:'8px 20px', border:`1.5px solid ${colors.primary}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:colors.primary, cursor:'pointer', textTransform:'uppercase' }}>
+                    style={{ marginTop:'16px', padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>
                     View on RunSignup →
                   </button>
                 </div>
@@ -335,15 +335,15 @@ export default function RaceDetail() {
         {activeTab === 'training' && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
             <div style={{ background:'#fff', borderRadius:'16px', padding:'48px', border:'1px solid #e8eaed', textAlign:'center' }}>
-              <div style={{ width:72, height:72, borderRadius:'16px', background:colors.light, border:`1.5px solid ${colors.dashed}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke={colors.primary} strokeWidth="1.5" strokeLinecap="round"/></svg>
+              <div style={{ width:72, height:72, borderRadius:'16px', background:'rgba(201,168,76,0.08)', border:'1.5px solid rgba(201,168,76,0.35)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke='#C9A84C' strokeWidth="1.5" strokeLinecap="round"/></svg>
               </div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'10px' }}>Personalized Training Plan</div>
               <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', color:'#9aa5b4', lineHeight:1.7, maxWidth:'440px', margin:'0 auto 24px' }}>
                 Training plans powered by Runna — personalized to your fitness level, current mileage, and race goal.
               </p>
               <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'8px 18px', background:'rgba(27,42,74,0.06)', border:'1px solid #e2e6ed', borderRadius:'8px' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:colors.primary }} />
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C' }} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase' }}>Coming Soon — Runna Integration</span>
               </div>
             </div>
@@ -359,7 +359,7 @@ export default function RaceDetail() {
                 Historical results will be pulled from RunSignup and Athlinks once your account is connected.
               </p>
               <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'8px 18px', background:'rgba(27,42,74,0.06)', border:'1px solid #e2e6ed', borderRadius:'8px' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:colors.primary }} />
+                <div style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C' }} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase' }}>Requires RunSignup Connection</span>
               </div>
             </div>
