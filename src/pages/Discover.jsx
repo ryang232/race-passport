@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
@@ -57,13 +57,24 @@ function matchesSearch(race, q) {
     (race.state||'').toLowerCase().includes(lower)
 }
 
+// ── Card stamp — white bg, navy or gold ──────────────────────────────────────
+function CardStamp({ distance, size=50 }) {
+  const colors = getDistanceColor(distance)
+  const cleaned = (distance||'').replace(' mi','')
+  const fs = cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14
+  return (
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+      <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
+      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+    </div>
+  )
+}
+
 function RaceCard({ race, isActive, onClick }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto]     = useState(null)
   const [visible, setVisible] = useState(false)
   const cardRef = useRef(null)
-  const colors  = getDistanceColor(race.distance)
-  const cleaned = (race.distance||'').replace(' mi','')
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -74,9 +85,7 @@ function RaceCard({ race, isActive, onClick }) {
     return () => observer.disconnect()
   }, [])
 
-  useEffect(() => {
-    setPhoto(getRacePhoto(race.distance))
-  }, [race.distance])
+  useEffect(() => { setPhoto(getRacePhoto(race.distance)) }, [race.distance])
 
   return (
     <div ref={cardRef}
@@ -86,18 +95,18 @@ function RaceCard({ race, isActive, onClick }) {
         boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)',
         cursor:'pointer', transition:'transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-5px)' : 'none',
-        outline: isActive ? `2.5px solid ${colors.primary}` : 'none', outlineOffset:'2px' }}>
-      <div style={{ height:'3px', background:colors.primary }} />
+        outline: isActive ? '2.5px solid #1B2A4A' : 'none', outlineOffset:'2px' }}>
+      {/* NO top border stripe */}
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         {photo
           ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered?'scale(1.05)':'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              {true && <div style={{ width:28, height:28, border:`3px solid ${colors.dashed}`, borderTopColor:colors.primary, borderRadius:'50%', animation:'spin 1s linear infinite' }} />}
+              <div style={{ width:28, height:28, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
             </div>
         }
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+        {/* Hover overlay */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity: hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:colors.primary }} />
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
             {[{ label:'Price', value: race.price?`$${race.price}`:'TBD' },{ label:'Terrain', value: race.terrain||'Road' },
               { label:'Elevation', value: race.elevation||'—' },{ label:'Finishers', value: race.est_finishers?race.est_finishers.toLocaleString():'—' }
@@ -112,22 +121,21 @@ function RaceCard({ race, isActive, onClick }) {
           {race.distance_miles !== undefined && (
             <div style={{ textAlign:'center' }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>From You</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:colors.primary, letterSpacing:'1px', lineHeight:1 }}>{race.distance_miles} mi</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.distance_miles} mi</div>
             </div>
           )}
         </div>
+        {/* Card stamp */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered?0:1, transition:'opacity 0.2s' }}>
-          <div style={{ width:50, height:50, borderRadius:'50%', border:`2px solid ${colors.primary}`, background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.dashed}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length>3?9:cleaned.length>2?11:14, color:colors.primary, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
-          </div>
+          <CardStamp distance={race.distance||''} size={50} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:`2px solid ${colors.primary}22` }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'14px 16px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
+          {/* LARGER date */}
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -311,15 +319,12 @@ export default function Discover() {
       const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
       const marker = L.marker([race.lat, race.lng], { icon }).addTo(map)
         .on('click', () => { setActiveId(race.id); document.getElementById(`race-card-${race.id}`)?.scrollIntoView({ behavior:'smooth', block:'center' }) })
-      marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="height:3px;background:${colors.primary};margin:-12px -14px 10px;"></div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:${colors.primary};">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
+      marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="height:3px;background:#1B2A4A;margin:-12px -14px 10px;"></div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
       markersRef.current[race.id] = marker
     })
 
-    // Fit bounds when search active
     if (mapRaces.length > 0 && (search || distFilter !== 'ALL')) {
-      try {
-        map.fitBounds(L.latLngBounds(mapRaces.map(r => [r.lat, r.lng])), { padding:[40,40], maxZoom:12, animate:true, duration:0.8 })
-      } catch(e) {}
+      try { map.fitBounds(L.latLngBounds(mapRaces.map(r => [r.lat, r.lng])), { padding:[40,40], maxZoom:12, animate:true, duration:0.8 }) } catch(e) {}
     }
   }, [filtered, activeId, userLat, userLng])
 
@@ -421,11 +426,7 @@ export default function Discover() {
             const isActive = distFilter===f.value
             return (
               <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
-                style={{
-                  color:       isActive ? '#fff' : '#9aa5b4',
-                  borderColor: isActive ? '#1B2A4A' : '#e2e6ed',
-                  background:  isActive ? '#1B2A4A' : '#fff',
-                }}>
+                style={{ color: isActive?'#fff':'#9aa5b4', borderColor: isActive?'#1B2A4A':'#e2e6ed', background: isActive?'#1B2A4A':'#fff' }}>
                 {f.label}
               </button>
             )
@@ -469,9 +470,7 @@ export default function Discover() {
             <button onClick={clearFilters}
               style={{ alignSelf:'flex-end', padding:'7px 16px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor='#c53030'; e.currentTarget.style.color='#c53030' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
-              Clear All
-            </button>
+              onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>Clear All</button>
           </div>
         )}
       </div>
@@ -510,7 +509,6 @@ export default function Discover() {
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'20px' }}>
             {[1,2,3,4,5,6].map(i => (
               <div key={i} style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', height:'270px', animation:'pulse 1.5s ease infinite' }}>
-                <div style={{ height:'3px', background:'#e8eaed' }} />
                 <div style={{ height:'200px', background:'#f4f5f7' }} />
                 <div style={{ padding:'14px 16px' }}>
                   <div style={{ height:'12px', background:'#e8eaed', borderRadius:'4px', marginBottom:'8px', width:'70%' }} />
@@ -524,9 +522,7 @@ export default function Discover() {
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'10px' }}>NO RACES FOUND</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Try a different search — use a state name like "Texas" or a city like "Boston".</div>
             <button onClick={clearFilters} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
-              onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
-              Clear All Filters
-            </button>
+              onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Clear All Filters</button>
           </div>
         ) : (
           <>
