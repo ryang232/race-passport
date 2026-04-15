@@ -6,6 +6,23 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { getRacePhoto } from '../lib/photos'
 
+// ── Featured well-known upcoming races (hardcoded, hand-curated) ──────────────
+// Abbott Majors + popular city races in the next ~8 months
+const FEATURED_RACES = [
+  { id:'f1',  name:'Boston Marathon',            location:'Boston, MA',       state:'MA', date:'Apr 21, 2025', date_sort:'2025-04-21', distance:'26.2', price:null,  registration_url:'https://www.baa.org/races/boston-marathon' },
+  { id:'f2',  name:'United NYC Half Marathon',   location:'New York, NY',     state:'NY', date:'Mar 16, 2025', date_sort:'2025-03-16', distance:'13.1', price:125,   registration_url:'https://www.nyrr.org/races/unitednychalf' },
+  { id:'f3',  name:'LA Marathon',                location:'Los Angeles, CA',  state:'CA', date:'Mar 16, 2025', date_sort:'2025-03-16', distance:'26.2', price:180,   registration_url:'https://www.lamarathon.com' },
+  { id:'f4',  name:'Colorado Marathon',          location:'Fort Collins, CO', state:'CO', date:'May 4, 2025',  date_sort:'2025-05-04', distance:'26.2', price:140,   registration_url:'https://coloradomarathon.com' },
+  { id:'f5',  name:'Broad Street Run',           location:'Philadelphia, PA', state:'PA', date:'May 4, 2025',  date_sort:'2025-05-04', distance:'10 mi',price:45,    registration_url:'https://www.broadstreetrun.com' },
+  { id:'f6',  name:'Bolder Boulder 10K',         location:'Boulder, CO',      state:'CO', date:'May 26, 2025', date_sort:'2025-05-26', distance:'10K',  price:65,    registration_url:'https://bolderboulder.com' },
+  { id:'f7',  name:'San Diego Rock n Roll Marathon', location:'San Diego, CA',state:'CA', date:'Jun 1, 2025',  date_sort:'2025-06-01', distance:'26.2', price:155,   registration_url:'https://www.runrocknroll.com/san-diego' },
+  { id:'f8',  name:'IRONMAN 70.3 Eagleman',      location:'Cambridge, MD',    state:'MD', date:'Jun 8, 2025',  date_sort:'2025-06-08', distance:'70.3', price:350,   registration_url:'https://www.ironman.com/im703-eagleman' },
+  { id:'f9',  name:'Chicago Marathon',           location:'Chicago, IL',      state:'IL', date:'Oct 12, 2025', date_sort:'2025-10-12', distance:'26.2', price:225,   registration_url:'https://www.chicagomarathon.com' },
+  { id:'f10', name:'Marine Corps Marathon',      location:'Arlington, VA',    state:'VA', date:'Oct 26, 2025', date_sort:'2025-10-26', distance:'26.2', price:140,   registration_url:'https://www.marinecorpsmarathon.com' },
+  { id:'f11', name:'New York City Marathon',     location:'New York, NY',     state:'NY', date:'Nov 2, 2025',  date_sort:'2025-11-02', distance:'26.2', price:295,   registration_url:'https://www.nyrr.org/races/tcsnycmarathon' },
+  { id:'f12', name:'Richmond Marathon',          location:'Richmond, VA',     state:'VA', date:'Nov 15, 2025', date_sort:'2025-11-15', distance:'26.2', price:120,   registration_url:'https://www.richmondmarathon.org' },
+]
+
 const STATE_NAME_TO_ABBR = {
   'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA',
   'colorado':'CO','connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA',
@@ -57,7 +74,7 @@ function matchesSearch(race, q) {
     (race.state||'').toLowerCase().includes(lower)
 }
 
-// ── Card stamp — white bg, navy or gold ──────────────────────────────────────
+// ── Card stamp ────────────────────────────────────────────────────────────────
 function CardStamp({ distance, size=50 }) {
   const colors = getDistanceColor(distance)
   const cleaned = (distance||'').replace(' mi','')
@@ -70,22 +87,47 @@ function CardStamp({ distance, size=50 }) {
   )
 }
 
+// ── Featured race card (horizontal scroll row) ────────────────────────────────
+function FeaturedCard({ race, onClick }) {
+  const [hovered, setHovered] = useState(false)
+  const photo = getRacePhoto(race)
+  const colors = getDistanceColor(race.distance)
+  const cleaned = (race.distance||'').replace(' mi','')
+  return (
+    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+      onClick={onClick}
+      style={{ flexShrink:0, width:'clamp(240px,22vw,320px)', borderRadius:'14px', overflow:'hidden', background:'#fff',
+        boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)',
+        cursor:'pointer', transition:'transform 0.2s, box-shadow 0.2s',
+        transform: hovered ? 'translateY(-5px)' : 'none' }}>
+      <div style={{ position:'relative', height:180, overflow:'hidden', background:'#1B2A4A' }}>
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+        <div style={{ position:'absolute', bottom:10, left:10 }}>
+          <CardStamp distance={race.distance} size={46} />
+        </div>
+        {race.price && (
+          <div style={{ position:'absolute', top:10, right:10, background:'rgba(27,42,74,0.85)', borderRadius:'6px', padding:'3px 9px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1px', color:'#fff' }}>
+            ${race.price}
+          </div>
+        )}
+      </div>
+      <div style={{ padding:'12px 14px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'5px' }}>{race.name}</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Full grid race card ───────────────────────────────────────────────────────
 function RaceCard({ race, isActive, onClick }) {
   const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto]     = useState(null)
-  const [visible, setVisible] = useState(false)
   const cardRef = useRef(null)
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect() } },
-      { rootMargin:'200px' }
-    )
-    if (cardRef.current) observer.observe(cardRef.current)
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.id])
+  const photo = getRacePhoto(race)
 
   return (
     <div ref={cardRef}
@@ -96,20 +138,17 @@ function RaceCard({ race, isActive, onClick }) {
         cursor:'pointer', transition:'transform 0.2s, box-shadow 0.2s',
         transform: hovered ? 'translateY(-5px)' : 'none',
         outline: isActive ? '2.5px solid #1B2A4A' : 'none', outlineOffset:'2px' }}>
-      {/* NO top border stripe */}
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        {photo
-          ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered?'scale(1.05)':'scale(1)' }} />
-          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <div style={{ width:28, height:28, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-            </div>
-        }
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered?'scale(1.05)':'scale(1)' }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         {/* Hover overlay */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity: hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
-            {[{ label:'Price', value: race.price?`$${race.price}`:'TBD' },{ label:'Terrain', value: race.terrain||'Road' },
-              { label:'Elevation', value: race.elevation||'—' },{ label:'Finishers', value: race.est_finishers?race.est_finishers.toLocaleString():'—' }
+            {[
+              { label:'Price', value: race.price ? `$${race.price}` : 'TBD' },
+              { label:'Terrain', value: race.terrain || 'Road' },
+              { label:'Elevation', value: race.elevation || '—' },
+              { label:'Finishers', value: race.est_finishers ? race.est_finishers.toLocaleString() : '—' },
             ].map(s => (
               <div key={s.label} style={{ textAlign:'center' }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
@@ -117,15 +156,16 @@ function RaceCard({ race, isActive, onClick }) {
               </div>
             ))}
           </div>
-          <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
           {race.distance_miles !== undefined && (
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>From You</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.distance_miles} mi</div>
-            </div>
+            <>
+              <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
+              <div style={{ textAlign:'center' }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>From You</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.distance_miles} mi</div>
+              </div>
+            </>
           )}
         </div>
-        {/* Card stamp */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered?0:1, transition:'opacity 0.2s' }}>
           <CardStamp distance={race.distance||''} size={50} />
         </div>
@@ -134,9 +174,28 @@ function RaceCard({ race, isActive, onClick }) {
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
-          {/* LARGER date */}
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+function ScrollRow({ children }) {
+  const ref = useRef(null)
+  const [showLeft, setShowLeft] = useState(false)
+  const [showRight, setShowRight] = useState(true)
+  const [hovering, setHovering] = useState(false)
+  const checkScroll = () => { const el = ref.current; if (!el) return; setShowLeft(el.scrollLeft > 10); setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10) }
+  useEffect(() => { const el = ref.current; if (el) { el.addEventListener('scroll', checkScroll); checkScroll() }; return () => el?.removeEventListener('scroll', checkScroll) }, [])
+  const scroll = dir => ref.current?.scrollBy({ left: dir * 360, behavior:'smooth' })
+  const btnStyle = { position:'absolute', top:'45%', transform:'translateY(-50%)', zIndex:10, width:40, height:40, borderRadius:'50%', background:'#1B2A4A', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(27,42,74,0.25)', transition:'background 0.15s' }
+  return (
+    <div style={{ position:'relative' }} onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
+      {showLeft && hovering && <button onClick={() => scroll(-1)} style={{ ...btnStyle, left:-20 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>}
+      {showRight && hovering && <button onClick={() => scroll(1)}  style={{ ...btnStyle, right:-20 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>}
+      <div ref={ref} style={{ display:'flex', gap:'20px', overflowX:'auto', paddingBottom:'8px', paddingTop:'4px', scrollbarWidth:'none' }}>
+        {children}
       </div>
     </div>
   )
@@ -149,7 +208,7 @@ export default function Discover() {
   const [profile, setProfile] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const [allRaces, setAllRaces] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(true)
   const [offset, setOffset] = useState(0)
@@ -173,12 +232,16 @@ export default function Discover() {
   const [activeId, setActiveId] = useState(null)
   const dropdownRef = useRef(null)
 
+  // isSearching = user has typed something or changed a filter
+  const isSearching = search.trim() !== '' || distFilter !== 'ALL' || terrainFilter !== 'All' ||
+    sportFilter !== 'All' || maxPrice < 400 || dateFrom !== '' || dateTo !== '' || userLat !== null
+
   const loadRaces = useCallback(async (currentOffset = 0, append = false) => {
     if (currentOffset === 0) setLoading(true); else setLoadingMore(true)
     try {
       const { data, error } = await supabase
         .from('races')
-        .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,sport,est_finishers,unsplash_query,is_past')
+        .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,sport,est_finishers,is_past')
         .eq('is_past', false)
         .order('date_sort', { ascending: true })
         .range(currentOffset, currentOffset + PAGE_SIZE - 1)
@@ -192,7 +255,12 @@ export default function Discover() {
     setLoading(false); setLoadingMore(false)
   }, [])
 
-  useEffect(() => { loadRaces(0, false) }, [])
+  // Only load races when user starts searching
+  useEffect(() => {
+    if (isSearching && allRaces.length === 0) {
+      loadRaces(0, false)
+    }
+  }, [isSearching])
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -227,6 +295,7 @@ export default function Discover() {
       .leaflet-popup-tip-container{display:none!important;}
       .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;animation:fadeIn 0.4s ease both;}
       .date-input{padding:8px 12px;border:1.5px solid #e2e6ed;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:12px;color:#1B2A4A;background:#fff;outline:none;}
+      div::-webkit-scrollbar{display:none;}
     `
     if (!document.getElementById('rp-discover-styles')) document.head.appendChild(style)
     const handleClick = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
@@ -248,7 +317,7 @@ export default function Discover() {
   }
 
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return
+    if (!mapRef.current || mapInstanceRef.current || !isSearching) return
     const loadLeaflet = async () => {
       if (!window.L) {
         const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
@@ -261,9 +330,10 @@ export default function Discover() {
       mapInstanceRef.current = map
     }
     loadLeaflet()
-  }, [])
+  }, [isSearching])
 
   const filtered = (() => {
+    if (!isSearching) return []
     let races = allRaces.filter(r => {
       const d = (r.distance||'').toLowerCase()
       const knownDistances = ['5k','10k','13.1','26.2','70.3','140.6','tri','50k','50m','100k','100m']
@@ -288,9 +358,9 @@ export default function Discover() {
       }).sort((a,b) => (a.distance_miles||999)-(b.distance_miles||999))
     } else {
       races.sort((a,b) => {
-        if (sort==='date-asc')  return (a.date_sort||'').localeCompare(b.date_sort||'')
-        if (sort==='date-desc') return (b.date_sort||'').localeCompare(a.date_sort||'')
-        if (sort==='price-asc') return (a.price||0)-(b.price||0)
+        if (sort==='date-asc')   return (a.date_sort||'').localeCompare(b.date_sort||'')
+        if (sort==='date-desc')  return (b.date_sort||'').localeCompare(a.date_sort||'')
+        if (sort==='price-asc')  return (a.price||0)-(b.price||0)
         if (sort==='price-desc') return (b.price||0)-(a.price||0)
         return 0
       })
@@ -300,16 +370,13 @@ export default function Discover() {
 
   useEffect(() => {
     const L = window.L
-    if (!L || !mapInstanceRef.current) return
+    if (!L || !mapInstanceRef.current || !isSearching) return
     const map = mapInstanceRef.current
     Object.values(markersRef.current).forEach(m => m.remove())
     markersRef.current = {}
-
     if (userLat && userLng) {
-      L.marker([userLat, userLng], { icon: L.divIcon({ className:'', html:`<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`, iconSize:[14,14], iconAnchor:[7,7] }) })
-        .addTo(map).bindTooltip('You are here', { direction:'top', offset:[0,-10] })
+      L.marker([userLat, userLng], { icon: L.divIcon({ className:'', html:`<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`, iconSize:[14,14], iconAnchor:[7,7] }) }).addTo(map).bindTooltip('You are here', { direction:'top', offset:[0,-10] })
     }
-
     const mapRaces = filtered.filter(r => r.lat && r.lng).slice(0, 200)
     mapRaces.forEach(race => {
       const colors = getDistanceColor(race.distance)
@@ -319,14 +386,13 @@ export default function Discover() {
       const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin ${isActive?'active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
       const marker = L.marker([race.lat, race.lng], { icon }).addTo(map)
         .on('click', () => { setActiveId(race.id); document.getElementById(`race-card-${race.id}`)?.scrollIntoView({ behavior:'smooth', block:'center' }) })
-      marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="height:3px;background:#1B2A4A;margin:-12px -14px 10px;"></div><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
+      marker.bindPopup(`<div style="padding:12px 14px;min-width:190px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:8px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span></div>`, { maxWidth:220 })
       markersRef.current[race.id] = marker
     })
-
     if (mapRaces.length > 0 && (search || distFilter !== 'ALL')) {
       try { map.fitBounds(L.latLngBounds(mapRaces.map(r => [r.lat, r.lng])), { padding:[40,40], maxZoom:12, animate:true, duration:0.8 }) } catch(e) {}
     }
-  }, [filtered, activeId, userLat, userLng])
+  }, [filtered, activeId, userLat, userLng, isSearching])
 
   const initials = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
@@ -334,14 +400,15 @@ export default function Discover() {
   const clearFilters = () => { setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDistFilter('ALL'); setSearch(''); setDateFrom(''); setDateTo('') }
 
   const NAV_TABS = [
-    { label:'Home', path:'/home', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
+    { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
     { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
     { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
-    { label:'Profile', path:'/profile', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
 
   return (
     <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif" }}>
+
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)', display:'flex', alignItems:'stretch', justifyContent:'space-between', padding:'0 40px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
@@ -387,7 +454,7 @@ export default function Discover() {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
             <button onClick={requestLocation} disabled={locationStatus==='requesting'}
-              style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity: locationStatus==='requesting'?0.7:1 }}>
+              style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:locationStatus==='requesting'?0.7:1 }}>
               {locationStatus==='requesting' ? 'Requesting...' : 'Allow Location'}
             </button>
             <button onClick={() => setShowLocationBanner(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.35)', cursor:'pointer', fontSize:'20px', lineHeight:1, padding:0 }}>✕</button>
@@ -395,7 +462,7 @@ export default function Discover() {
         </div>
       )}
 
-      {/* FILTER BAR */}
+      {/* SEARCH BAR — always visible */}
       <div style={{ background:'#fff', borderBottom:'1px solid #e8eaed', padding:'16px 40px', position:'sticky', top:'64px', zIndex:40 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', background:'#f4f5f7', border:'1.5px solid #e2e6ed', borderRadius:'10px', padding:'10px 14px' }}>
@@ -424,16 +491,13 @@ export default function Discover() {
         <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
           {DIST_FILTERS.map(f => {
             const isActive = distFilter===f.value
-            return (
-              <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
-                style={{ color: isActive?'#fff':'#9aa5b4', borderColor: isActive?'#1B2A4A':'#e2e6ed', background: isActive?'#1B2A4A':'#fff' }}>
-                {f.label}
-              </button>
-            )
+            return <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)} style={{ color:isActive?'#fff':'#9aa5b4', borderColor:isActive?'#1B2A4A':'#e2e6ed', background:isActive?'#1B2A4A':'#fff' }}>{f.label}</button>
           })}
-          <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>
-            {loading ? 'Loading...' : `${filtered.length} of ${allRaces.length} loaded`}
-          </div>
+          {isSearching && (
+            <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>
+              {loading ? 'Loading...' : `${filtered.length} of ${allRaces.length} loaded`}
+            </div>
+          )}
         </div>
         {showFilters && (
           <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:'1px solid #f0f2f5', display:'flex', gap:'24px', alignItems:'flex-start', flexWrap:'wrap', animation:'slideDown 0.2s ease' }}>
@@ -475,78 +539,112 @@ export default function Discover() {
         )}
       </div>
 
-      {/* MAP */}
-      <div style={{ position:'relative', height:'55vh', background:'#e8eaed' }}>
-        <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
-        <div style={{ position:'absolute', bottom:16, left:16, background:'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:'1px solid #e2e6ed', zIndex:400 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'8px' }}>Distance</div>
-          {[{label:'5K · 10K · 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
-            <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
-              <div style={{ width:10, height:10, borderRadius:'50%', background:l.color, flexShrink:0 }} />
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#4a5568' }}>{l.label}</span>
-            </div>
-          ))}
-        </div>
-        <div style={{ position:'absolute', top:16, left:16, background:'rgba(27,42,74,0.88)', borderRadius:'8px', padding:'6px 14px', zIndex:400 }}>
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff' }}>
-            {filtered.length} race{filtered.length!==1?'s':''} on map
-          </span>
-        </div>
-      </div>
+      <div style={{ padding:'36px 40px 80px', background:'#f4f5f7' }}>
 
-      {/* CARDS */}
-      <div style={{ padding:'32px 40px 80px', background:'#f4f5f7' }}>
-        <div style={{ marginBottom:'24px' }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>
-            {locationStatus==='granted' ? 'Races Near You' : search ? `Results for "${search}"` : 'Upcoming Races'}
-          </div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'4px' }}>
-            {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
-          </div>
-        </div>
-
-        {loading ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'20px' }}>
-            {[1,2,3,4,5,6].map(i => (
-              <div key={i} style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', height:'270px', animation:'pulse 1.5s ease infinite' }}>
-                <div style={{ height:'200px', background:'#f4f5f7' }} />
-                <div style={{ padding:'14px 16px' }}>
-                  <div style={{ height:'12px', background:'#e8eaed', borderRadius:'4px', marginBottom:'8px', width:'70%' }} />
-                  <div style={{ height:'10px', background:'#f0f2f5', borderRadius:'4px', width:'50%' }} />
-                </div>
+        {/* FEATURED RACES — shown when NOT searching */}
+        {!isSearching && (
+          <div style={{ animation:'fadeIn 0.4s ease both' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Bucket List Races</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px' }}>Featured Races</div>
               </div>
-            ))}
-          </div>
-        ) : filtered.length === 0 ? (
-          <div style={{ textAlign:'center', padding:'64px 24px', background:'#fff', borderRadius:'16px', border:'1.5px solid #e8eaed' }}>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'10px' }}>NO RACES FOUND</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Try a different search — use a state name like "Texas" or a city like "Boston".</div>
-            <button onClick={clearFilters} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
-              onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Clear All Filters</button>
-          </div>
-        ) : (
-          <>
-            <div className="cards-grid">
-              {filtered.map(race => (
-                <div key={race.id} id={`race-card-${race.id}`}>
-                  <RaceCard race={race} isActive={activeId===race.id}
-                    onClick={() => {
-                      setActiveId(race.id)
-                      if (mapInstanceRef.current && race.lat && race.lng) mapInstanceRef.current.flyTo([race.lat, race.lng], 11, { animate:true, duration:0.8 })
-                      navigate(`/race-detail/${race.id}`)
-                    }} />
-                </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', letterSpacing:'0.5px' }}>Abbott Majors · Most Popular City Races · Upcoming</div>
+            </div>
+            <ScrollRow>
+              {FEATURED_RACES.map(race => (
+                <FeaturedCard key={race.id} race={race} onClick={() => navigate(`/race-detail/${race.id}`)} />
               ))}
-            </div>
-            {hasMore && !search && distFilter==='ALL' && (
-              <div style={{ textAlign:'center', marginTop:'40px' }}>
-                <button onClick={() => loadRaces(offset, true)} disabled={loadingMore}
-                  style={{ padding:'12px 40px', border:'1.5px solid #1B2A4A', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
-                  {loadingMore ? 'Loading...' : 'Load More Races'}
-                </button>
+            </ScrollRow>
+            {/* Prompt to search */}
+            <div style={{ marginTop:'48px', textAlign:'center', padding:'48px 24px', border:'2px dashed #e2e6ed', borderRadius:'16px', background:'rgba(255,255,255,0.6)' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'8px' }}>Find Your Next Race</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Search by city, state, distance, or race name above — or allow your location to see races near you.</div>
+              <div style={{ display:'flex', gap:'12px', justifyContent:'center', flexWrap:'wrap' }}>
+                {['5K','10K','13.1','26.2','70.3'].map(d => (
+                  <button key={d} onClick={() => setDistFilter(d === '70.3' ? 'TRI' : d)} style={{ padding:'10px 24px', border:'1.5px solid #1B2A4A', borderRadius:'10px', background:'#fff', fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', letterSpacing:'1px', color:'#1B2A4A', cursor:'pointer', transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+                    onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>{d}</button>
+                ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* SEARCH RESULTS — shown when searching */}
+        {isSearching && (
+          <>
+            {/* MAP */}
+            <div style={{ position:'relative', height:'50vh', background:'#e8eaed', borderRadius:'16px', overflow:'hidden', marginBottom:'32px' }}>
+              <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+              <div style={{ position:'absolute', bottom:16, left:16, background:'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:'1px solid #e2e6ed', zIndex:400 }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'8px' }}>Distance</div>
+                {[{label:'5K · 10K · 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
+                  <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
+                    <div style={{ width:10, height:10, borderRadius:'50%', background:l.color, flexShrink:0 }} />
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#4a5568' }}>{l.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ position:'absolute', top:16, left:16, background:'rgba(27,42,74,0.88)', borderRadius:'8px', padding:'6px 14px', zIndex:400 }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff' }}>{filtered.length} race{filtered.length!==1?'s':''} on map</span>
+              </div>
+            </div>
+
+            {/* RESULTS HEADER */}
+            <div style={{ marginBottom:'24px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1 }}>
+                {locationStatus==='granted' ? 'Races Near You' : search ? `Results for "${search}"` : 'Upcoming Races'}
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginTop:'4px' }}>
+                {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
+              </div>
+            </div>
+
+            {loading ? (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))', gap:'20px' }}>
+                {[1,2,3,4,5,6].map(i => (
+                  <div key={i} style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', height:'270px', animation:'pulse 1.5s ease infinite' }}>
+                    <div style={{ height:'200px', background:'#f4f5f7' }} />
+                    <div style={{ padding:'14px 16px' }}>
+                      <div style={{ height:'12px', background:'#e8eaed', borderRadius:'4px', marginBottom:'8px', width:'70%' }} />
+                      <div style={{ height:'10px', background:'#f0f2f5', borderRadius:'4px', width:'50%' }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filtered.length === 0 ? (
+              <div style={{ textAlign:'center', padding:'64px 24px', background:'#fff', borderRadius:'16px', border:'1.5px solid #e8eaed' }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'10px' }}>NO RACES FOUND</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:'#9aa5b4', marginBottom:'20px' }}>Try a different search — use a state name like "Texas" or a city like "Boston".</div>
+                <button onClick={clearFilters} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+                  onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Clear All Filters</button>
+              </div>
+            ) : (
+              <>
+                <div className="cards-grid">
+                  {filtered.map(race => (
+                    <div key={race.id} id={`race-card-${race.id}`}>
+                      <RaceCard race={race} isActive={activeId===race.id}
+                        onClick={() => {
+                          setActiveId(race.id)
+                          if (mapInstanceRef.current && race.lat && race.lng) mapInstanceRef.current.flyTo([race.lat, race.lng], 11, { animate:true, duration:0.8 })
+                          navigate(`/race-detail/${race.id}`)
+                        }} />
+                    </div>
+                  ))}
+                </div>
+                {hasMore && !search && distFilter==='ALL' && (
+                  <div style={{ textAlign:'center', marginTop:'40px' }}>
+                    <button onClick={() => loadRaces(offset, true)} disabled={loadingMore}
+                      style={{ padding:'12px 40px', border:'1.5px solid #1B2A4A', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+                      onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#1B2A4A' }}>
+                      {loadingMore ? 'Loading...' : 'Load More Races'}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
