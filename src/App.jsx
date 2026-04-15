@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
+import { ThemeProvider } from './context/ThemeContext'
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import CreateAccount from './pages/CreateAccount'
@@ -19,32 +20,30 @@ import PublicProfile from './pages/PublicProfile'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<SignUp />} />
-          <Route path="/create-account" element={<CreateAccount />} />
-          <Route path="/verify-email" element={<VerifyEmail />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/build-passport" element={<BuildPassport />} />
-          <Route path="/race-import" element={<RaceImport />} />
-          <Route path="/goal-races" element={<GoalRaces />} />
-          <Route path="/home" element={<Home />} />
-          <Route path="/discover" element={<Discover />} />
-          {/* User's personal passport race pages (scrapbook) */}
-          <Route path="/race/:id" element={<RacePage />} />
-          {/* Public race discovery pages */}
-          <Route path="/race-detail/:id" element={<RaceDetail />} />
-          <Route path="/passport" element={<Passport />} />
-          {/* Logged-in user's own settings/profile page */}
-          <Route path="/profile" element={<Profile />} />
-          {/* Public athlete profile pages */}
-          <Route path="/:username" element={<PublicProfile />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/"                element={<Login />} />
+            <Route path="/login"           element={<Login />} />
+            <Route path="/signup"          element={<SignUp />} />
+            <Route path="/create-account"  element={<CreateAccount />} />
+            <Route path="/verify-email"    element={<VerifyEmail />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password"  element={<ResetPassword />} />
+            <Route path="/build-passport"  element={<BuildPassport />} />
+            <Route path="/race-import"     element={<RaceImport />} />
+            <Route path="/goal-races"      element={<GoalRaces />} />
+            <Route path="/home"            element={<Home />} />
+            <Route path="/discover"        element={<Discover />} />
+            <Route path="/race/:id"        element={<RacePage />} />
+            <Route path="/race-detail/:id" element={<RaceDetail />} />
+            <Route path="/passport"        element={<Passport />} />
+            <Route path="/profile"         element={<Profile />} />
+            <Route path="/:username"       element={<PublicProfile />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </ThemeProvider>
   )
 }
