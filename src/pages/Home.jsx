@@ -1,26 +1,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { getRacePhoto } from '../lib/photos'
 
-const STRAVA_CONNECTED = false
+const STRAVA_CONNECTED = true
 
 const STAT_ITEMS = [
-  { label:'Total Races',    value:'10' },
-  { label:'Race Miles',     value:'199' },
-  { label:'5K PR',          value:'28:16' },
-  { label:'10K PR',         value:'47:49' },
+  { label:'Total Races',    value:'10'      },
+  { label:'Race Miles',     value:'199'     },
+  { label:'5K PR',          value:'28:16'   },
+  { label:'10K PR',         value:'47:49'   },
   { label:'Half PR',        value:'1:57:40' },
   { label:'Marathon PR',    value:'4:44:47' },
   { label:'70.3 PR',        value:'6:32:08' },
-  { label:'Marathons',      value:'2' },
-  { label:'Half Marathons', value:'3' },
-  { label:'Triathlons',     value:'1' },
-  { label:'10K Races',      value:'3' },
-  { label:'5K Races',       value:'2' },
+  { label:'Marathons',      value:'2'       },
+  { label:'Half Marathons', value:'3'       },
+  { label:'Triathlons',     value:'1'       },
+  { label:'10K Races',      value:'3'       },
+  { label:'5K Races',       value:'2'       },
 ]
 
 const RYAN_STAMPS = [
@@ -49,20 +50,42 @@ const MOCK_UPCOMING = [
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
-function StatsTicker() {
+// ── Theme toggle button ───────────────────────────────────────────────────────
+function ThemeToggle({ t, isDark, toggleTheme }) {
+  return (
+    <button onClick={toggleTheme}
+      style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background: isDark ? '#C9A84C' : '#d0d7e0', padding:0, flexShrink:0 }}>
+      <div style={{ position:'absolute', top:3, left: isDark ? 'calc(100% - 19px)' : '3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+    </button>
+  )
+}
+
+// ── Full-width stats conveyor belt ────────────────────────────────────────────
+function StatsTicker({ t }) {
+  // Triple the items so the loop is seamless
   const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
   return (
-    <div style={{ background:'#1B2A4A', borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)', position:'relative' }}>
-      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:80, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:80, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div style={{ display:'flex', alignItems:'center', padding:'28px 0', animation:'statsTicker 40s linear infinite', width:'max-content' }}>
+    <div style={{ background:'#1B2A4A', overflow:'hidden', position:'relative', borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
+      {/* Fade edges */}
+      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:120, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:120, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+      {/* Strava badge bottom-right */}
+      <div style={{ position:'absolute', bottom:10, right:32, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
+        <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        </div>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'1px' }}>Synced via Strava</span>
+      </div>
+      {/* Scrolling track */}
+      <div style={{ display:'flex', alignItems:'center', padding:'26px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
         {items.map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
-            <div style={{ textAlign:'center', padding:'0 40px' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(52px,6vw,80px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'8px', whiteSpace:'nowrap' }}>{item.label}</div>
+            <div style={{ textAlign:'center', padding:'0 48px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(44px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', whiteSpace:'nowrap' }}>{item.label}</div>
             </div>
-            <div style={{ width:6, height:6, borderRadius:'50%', background:'rgba(201,168,76,0.3)', flexShrink:0 }} />
+            {/* Dot separator */}
+            <div style={{ width:5, height:5, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
           </div>
         ))}
       </div>
@@ -70,39 +93,44 @@ function StatsTicker() {
   )
 }
 
-function StravaConnect() {
+// ── Strava connect — full width ───────────────────────────────────────────────
+function StravaConnect({ t }) {
   return (
-    <div style={{ background:'#1B2A4A', borderRadius:'16px', border:'1px solid rgba(201,168,76,0.15)', padding:'36px 48px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:'20px' }}>
-        <div style={{ width:56, height:56, borderRadius:'12px', background:'rgba(252,76,2,0.12)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+    <div style={{ background:'#1B2A4A', borderTop:'1px solid rgba(201,168,76,0.12)', borderBottom:'1px solid rgba(201,168,76,0.12)', padding:'24px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'24px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
+        <div style={{ width:44, height:44, borderRadius:'10px', background:'rgba(252,76,2,0.12)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
         <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#fff', letterSpacing:'1px', lineHeight:1, marginBottom:'6px' }}>Connect Strava to unlock your stats</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>See total race miles, PRs by distance, activity history, and more.</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#fff', letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>Connect Strava to unlock your stats</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>Race miles, PRs by distance, activity history — all pulled automatically.</div>
         </div>
       </div>
-      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'10px', padding:'14px 32px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', whiteSpace:'nowrap' }}>Connect Strava</button>
+      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'8px', padding:'12px 28px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', whiteSpace:'nowrap', transition:'opacity 0.15s' }}
+        onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
+        Connect Strava
+      </button>
     </div>
   )
 }
 
-function Stamp({ distance, name, location, month, year, size=130, onClick }) {
+// ── Stamp ─────────────────────────────────────────────────────────────────────
+function Stamp({ distance, name, location, month, year, size=130, onClick, t }) {
   const colors = getDistanceColor(distance)
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
-      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
-        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.15)' }}
+      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background: colors.isMarathonPlus ? 'rgba(201,168,76,0.08)' : (t.isDark ? t.surface : '#fff'), display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
+        onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.2)' }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
         <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
         {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:colors.stampText, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
       </div>
       <div style={{ textAlign:'center' }}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', lineHeight:1.4 }}>{location}</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', letterSpacing:'0.5px', marginTop:'2px' }}>{month} {year}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text, lineHeight:1.4 }}>{location}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, letterSpacing:'0.5px', marginTop:'2px' }}>{month} {year}</div>
       </div>
     </div>
   )
@@ -120,22 +148,24 @@ function CardStamp({ distance, size=48 }) {
   )
 }
 
-function NearbyCard({ race }) {
+function handleCardClick(race, navigate) {
+  if (String(race.id).match(/^[du]/)) {
+    if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
+  } else {
+    navigate(`/race-detail/${race.id}`)
+  }
+}
+
+function NearbyCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
   const navigate = useNavigate()
   const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => {
-        if (String(race.id).startsWith('d') || String(race.id).startsWith('u')) {
-          if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
-        } else {
-          navigate(`/race-detail/${race.id}`)
-        }
-      }}
-      style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
+      onClick={() => handleCardClick(race, navigate)}
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
@@ -156,11 +186,11 @@ function NearbyCard({ race }) {
           <CardStamp distance={race.distance} size={48} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:t.text, letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>{race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -177,30 +207,22 @@ function useCountdown(dateStr) {
       if (diff <= 0) { setCountdown(c => ({ ...c, past:true })); return }
       setCountdown({ days:Math.floor(diff/86400000), hours:Math.floor((diff%86400000)/3600000), mins:Math.floor((diff%3600000)/60000), secs:Math.floor((diff%60000)/1000), past:false })
     }
-    parse()
-    const t = setInterval(parse, 1000)
-    return () => clearInterval(t)
+    parse(); const t = setInterval(parse, 1000); return () => clearInterval(t)
   }, [dateStr])
   return countdown
 }
 
-function UpcomingCard({ race }) {
+function UpcomingCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
   const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => {
-        if (String(race.id).startsWith('d') || String(race.id).startsWith('u')) {
-          if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
-        } else {
-          navigate(`/race-detail/${race.id}`)
-        }
-      }}
-      style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
+      onClick={() => handleCardClick(race, navigate)}
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
@@ -222,11 +244,11 @@ function UpcomingCard({ race }) {
           <CardStamp distance={race.distance} size={46} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>{race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -253,7 +275,7 @@ function ScrollRow({ children }) {
   )
 }
 
-function ParallaxBackground() {
+function ParallaxBackground({ t }) {
   const [offsetX, setOffsetX] = useState(0)
   useEffect(() => {
     const onScroll = () => setOffsetX(window.scrollY * 0.4)
@@ -264,7 +286,7 @@ function ParallaxBackground() {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, pointerEvents:'none', zIndex:0, overflow:'hidden' }}>
       <div style={{ position:'absolute', top:'50%', transform:`translateY(-50%) translateX(-${offsetX % 600}px)`, whiteSpace:'nowrap', willChange:'transform' }}>
-        {items.map((d, i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.04)', lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>)}
+        {items.map((d, i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:`1px ${t.isDark ? 'rgba(201,168,76,0.04)' : 'rgba(27,42,74,0.04)'}`, lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>)}
       </div>
     </div>
   )
@@ -274,6 +296,7 @@ export default function Home() {
   const navigate = useNavigate()
   const location = useLocation()
   const { user, signOut } = useAuth()
+  const { t, isDark, toggleTheme } = useTheme()
   const [profile, setProfile] = useState(null)
   const [showDropdown, setShowDropdown] = useState(false)
   const [greeting, setGreeting] = useState('GOOD MORNING')
@@ -298,13 +321,8 @@ export default function Home() {
       * { box-sizing: border-box; }
       @keyframes spin { to { transform: rotate(360deg); } }
       @keyframes statsTicker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
-      .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
-      .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
-      .nav-tab:hover { color:#1B2A4A; }
-      .dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; color:#1B2A4A; cursor:pointer; transition:background 0.1s; }
-      .dropdown-item:hover { background:#f4f5f7; }
-      .section-title { font-family:'Bebas Neue',sans-serif; font-size:26px; color:#1B2A4A; letter-spacing:1px; }
-      .view-all-btn { font-family:'Barlow Condensed',sans-serif; font-size:12px; font-weight:600; letter-spacing:1.5px; color:#C9A84C; text-transform:uppercase; cursor:pointer; border:none; background:none; padding:0; }
+      .rp-nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
+      .rp-dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:background 0.1s; }
       div::-webkit-scrollbar { display:none; }
     `
     if (!document.getElementById('rp-home-styles')) document.head.appendChild(style)
@@ -313,7 +331,7 @@ export default function Home() {
     return () => { document.getElementById('rp-home-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
 
-  const firstName = profile?.full_name?.split(' ')[0] || user?.user_metadata?.first_name || 'Ryan'
+  const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
   const initials = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
 
@@ -325,40 +343,51 @@ export default function Home() {
   ]
 
   return (
-    <div style={{ minHeight:'100vh', background:'#f4f5f7', fontFamily:"'Barlow',sans-serif", position:'relative' }}>
-      <ParallaxBackground />
+    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s' }}>
+      <ParallaxBackground t={t} />
 
       {/* NAV */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)' }}>
+      <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, transition:'background 0.25s, border-color 0.25s' }}>
         <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
+          {/* Logo */}
           <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
           </div>
+          {/* Nav tabs */}
           <div style={{ display:'flex', alignItems:'stretch' }}>
             {NAV_TABS.map(tab => (
-              <button key={tab.path} className={`nav-tab ${location.pathname === tab.path ? 'active' : ''}`} onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
+              <button key={tab.path} className="rp-nav-tab"
+                style={{ color: location.pathname === tab.path ? t.text : t.textMuted, borderBottomColor: location.pathname === tab.path ? '#C9A84C' : 'transparent' }}
+                onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
             ))}
           </div>
-          <div ref={dropdownRef} style={{ position:'relative', display:'flex', alignItems:'center' }}>
-            <div onClick={() => setShowDropdown(!showDropdown)}
-              style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:'2px solid #e2e6ed', transition:'border-color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
-              onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
-            </div>
-            {showDropdown && (
-              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:'#fff', border:'1px solid #e2e6ed', borderRadius:'10px', boxShadow:'0 8px 32px rgba(27,42,74,0.14)', minWidth:'190px', overflow:'hidden', zIndex:100 }}>
-                <div style={{ padding:'14px 18px 10px', borderBottom:'1px solid #f0f2f5' }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A' }}>{profile?.full_name || 'Ryan Groene'}</div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>racepassportapp.com/ryan-groene</div>
-                </div>
-                <button className="dropdown-item" onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
-                <button className="dropdown-item" onClick={() => { navigate('/profile'); setShowDropdown(false) }}>Settings</button>
-                <div style={{ height:'1px', background:'#f0f2f5' }} />
-                <button className="dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}>Log Out</button>
+          {/* Right: theme toggle + avatar */}
+          <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+            <ThemeToggle t={t} isDark={isDark} toggleTheme={toggleTheme} />
+            <div ref={dropdownRef} style={{ position:'relative' }}>
+              <div onClick={() => setShowDropdown(!showDropdown)}
+                style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
+                onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
               </div>
-            )}
+              {showDropdown && (
+                <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'190px', overflow:'hidden', zIndex:100, transition:'background 0.25s' }}>
+                  <div style={{ padding:'14px 18px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text }}>{profile?.full_name || 'Ryan Groene'}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>racepassportapp.com/ryan-groene</div>
+                  </div>
+                  <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/passport'); setShowDropdown(false) }}
+                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>My Passport</button>
+                  <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/profile'); setShowDropdown(false) }}
+                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Settings</button>
+                  <div style={{ height:'1px', background:t.borderLight }} />
+                  <button className="rp-dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}
+                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Log Out</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -377,38 +406,42 @@ export default function Home() {
       )}
 
       {/* GREETING */}
-      <div style={{ position:'relative', zIndex:10, background:'rgba(255,255,255,0.88)', backdropFilter:'blur(2px)', borderBottom:'1px solid #e8eaed', padding:'40px 40px 34px' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#1B2A4A', letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>{greeting}, {firstName.toUpperCase()}.</div>
+      <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
       </div>
 
+      {/* STATS BAR — full width, edge to edge, no card container */}
+      <div style={{ position:'relative', zIndex:10 }}>
+        {STRAVA_CONNECTED ? <StatsTicker t={t} /> : <StravaConnect t={t} />}
+      </div>
+
+      {/* PAGE CONTENT */}
       <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
 
-        <div style={{ marginBottom:'48px' }}>
-          {STRAVA_CONNECTED ? <StatsTicker /> : <StravaConnect />}
-        </div>
-
+        {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
-            <span className="section-title">Races Near You</span>
-            <button className="view-all-btn" onClick={() => navigate('/discover')}>Browse All →</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Races Near You</span>
+            <button onClick={() => navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
           </div>
-          <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} />)}</ScrollRow>
+          <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
         </div>
 
+        {/* YOUR STAMPS */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
-            <span className="section-title">Your Stamps</span>
-            <button className="view-all-btn" onClick={() => navigate('/passport')}>View Passport →</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
+            <button onClick={() => navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
           </div>
           <ScrollRow>
             {RYAN_STAMPS.map(stamp => (
-              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} onClick={() => navigate(`/race/${stamp.id}`)} />
+              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} t={t} onClick={() => navigate(`/race/${stamp.id}`)} />
             ))}
             <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
-              <div style={{ width:130, height:130, borderRadius:'50%', border:'2px dashed #d0d7e0', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.8)', transition:'border-color 0.15s, transform 0.15s' }}
+              <div style={{ width:130, height:130, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', background:t.isDark ? 'rgba(201,168,76,0.05)' : 'rgba(255,255,255,0.8)', transition:'border-color 0.15s, transform 0.15s' }}
                 onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.transform='scale(1.05)' }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor='#d0d7e0'; e.currentTarget.style.transform='scale(1)' }}>
+                onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.transform='scale(1)' }}>
                 <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textAlign:'center' }}>Get More Stamps</div>
@@ -416,12 +449,13 @@ export default function Home() {
           </ScrollRow>
         </div>
 
+        {/* UPCOMING RACES */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
-            <span className="section-title">Upcoming Races</span>
-            <button className="view-all-btn" onClick={() => navigate('/discover')}>View All →</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Upcoming Races</span>
+            <button onClick={() => navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View All →</button>
           </div>
-          <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} />)}</ScrollRow>
+          <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} t={t} />)}</ScrollRow>
         </div>
 
       </div>
