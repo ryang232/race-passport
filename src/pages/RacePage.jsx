@@ -3,42 +3,26 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getDistanceColor } from '../lib/colors'
 
 const RYAN_RACE_DATA = {
-  1: { id:1, distance:'10K', name:'Sole of the City 10K', location:'Baltimore, MD', date:'October 16, 2021', time:'47:49', pace:'7:42/mi', place:null, elevation:'190ft', weather:'64°F, Cloudy', pr:true, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  2: { id:2, distance:'10K', name:'Bay Bridge Run', location:'Annapolis, MD', date:'November 7, 2021', time:'50:57', pace:'8:12/mi', place:null, elevation:'140ft', weather:'52°F, Sunny', pr:false, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  3: { id:3, distance:'10K', name:'Baltimore Running Festival 10K', location:'Baltimore, MD', date:'October 9, 2021', time:'58:03', pace:'9:21/mi', place:null, elevation:'185ft', weather:'58°F, Partly Cloudy', pr:false, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  4: { id:4, distance:'13.1', name:'Holiday Half Marathon', location:'Annandale, VA', date:'December 4, 2021', time:'2:19:05', pace:'10:37/mi', place:null, elevation:'350ft', weather:'41°F, Clear', pr:false, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  5: { id:5, distance:'26.2', name:'Marine Corps Marathon', location:'Washington, DC', date:'October 22, 2023', time:'4:45:42', pace:'10:55/mi', place:null, elevation:'900ft', weather:null, pr:false, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  6: { id:6, distance:'26.2', name:'LA Marathon', location:'Los Angeles, CA', date:'March 19, 2023', time:'4:44:47', pace:'10:53/mi', place:null, elevation:'700ft', weather:null, pr:true, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  7: { id:7, distance:'5K', name:'Downtown Columbia Turkey Trot', location:'Columbia, MD', date:'November 28, 2024', time:'28:16', pace:'9:06/mi', place:null, elevation:'95ft', weather:'38°F, Clear', pr:true, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  8: { id:8, distance:'13.1', name:'Austin Half Marathon', location:'Austin, TX', date:'February 16, 2025', time:'1:57:40', pace:'8:59/mi', place:null, elevation:'290ft', weather:'55°F, Sunny', pr:true, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
-  9: {
-    id:9, distance:'70.3', name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD', date:'June 8, 2025',
-    time:'6:32:08', pace:null, place:null, elevation:'Flat', weather:'78°F, Humid', pr:true,
-    hasStrava:false, stravaActivity:'', story:'',
-    photos:[], gear:[],
-    splits:[
-      { label:'Swim', time:'0:50:09' },
-      { label:'T1', time:'0:06:17' },
-      { label:'Bike', time:'3:15:09' },
-      { label:'T2', time:'0:07:09' },
-      { label:'Run', time:'2:13:24' },
-      { label:'Total', time:'6:32:08' },
-    ],
-  },
-  10: { id:10, distance:'5K', name:'Downtown Columbia Turkey Trot', location:'Columbia, MD', date:'November 27, 2025', time:'35:09', pace:'11:19/mi', place:null, elevation:'95ft', weather:'44°F, Clear', pr:false, hasStrava:false, stravaActivity:'', story:'', photos:[], gear:[], splits:[] },
+  1: { id:1, distance:'10K', name:'Sole of the City 10K', location:'Baltimore, MD', date:'October 16, 2021', time:'47:49', pace:'7:42/mi', place:null, elevation:'190ft', weather:'64°F, Cloudy', pr:true, story:'', photos:[], gear:[], splits:[] },
+  2: { id:2, distance:'10K', name:'Bay Bridge Run', location:'Annapolis, MD', date:'November 7, 2021', time:'50:57', pace:'8:12/mi', place:null, elevation:'140ft', weather:'52°F, Sunny', pr:false, story:'', photos:[], gear:[], splits:[] },
+  3: { id:3, distance:'10K', name:'Baltimore Running Festival 10K', location:'Baltimore, MD', date:'October 9, 2021', time:'58:03', pace:'9:21/mi', place:null, elevation:'185ft', weather:'58°F, Partly Cloudy', pr:false, story:'', photos:[], gear:[], splits:[] },
+  4: { id:4, distance:'13.1', name:'Holiday Half Marathon', location:'Annandale, VA', date:'December 4, 2021', time:'2:19:05', pace:'10:37/mi', place:null, elevation:'350ft', weather:'41°F, Clear', pr:false, story:'', photos:[], gear:[], splits:[] },
+  5: { id:5, distance:'26.2', name:'Marine Corps Marathon', location:'Washington, DC', date:'October 22, 2023', time:'4:45:42', pace:'10:55/mi', place:null, elevation:'900ft', weather:null, pr:false, story:'', photos:[], gear:[], splits:[] },
+  6: { id:6, distance:'26.2', name:'LA Marathon', location:'Los Angeles, CA', date:'March 19, 2023', time:'4:44:47', pace:'10:53/mi', place:null, elevation:'700ft', weather:null, pr:true, story:'', photos:[], gear:[], splits:[] },
+  7: { id:7, distance:'5K', name:'Downtown Columbia Turkey Trot', location:'Columbia, MD', date:'November 28, 2024', time:'28:16', pace:'9:06/mi', place:null, elevation:'95ft', weather:'38°F, Clear', pr:true, story:'', photos:[], gear:[], splits:[] },
+  8: { id:8, distance:'13.1', name:'Austin Half Marathon', location:'Austin, TX', date:'February 16, 2025', time:'1:57:40', pace:'8:59/mi', place:null, elevation:'290ft', weather:'55°F, Sunny', pr:true, story:'', photos:[], gear:[], splits:[] },
+  9: { id:9, distance:'70.3', name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD', date:'June 8, 2025', time:'6:32:08', pace:null, place:null, elevation:'Flat', weather:'78°F, Humid', pr:true, story:'', photos:[], gear:[],
+    splits:[{ label:'Swim', time:'0:50:09' },{ label:'T1', time:'0:06:17' },{ label:'Bike', time:'3:15:09' },{ label:'T2', time:'0:07:09' },{ label:'Run', time:'2:13:24' },{ label:'Total', time:'6:32:08' }] },
+  10: { id:10, distance:'5K', name:'Downtown Columbia Turkey Trot', location:'Columbia, MD', date:'November 27, 2025', time:'35:09', pace:'11:19/mi', place:null, elevation:'95ft', weather:'44°F, Clear', pr:false, story:'', photos:[], gear:[], splits:[] },
 }
 
 const ALL_IDS = [1,2,3,4,5,6,7,8,9,10]
 const STICKER_OPTIONS = ['🏅','🔥','💪','🎉','⚡','🏆','👟','💦','🌟','🎯','💯','🏃','🚴','🏊']
 const GEAR_CATEGORIES = ['Shoes','Watch','Outfit','Socks','Sunglasses','Hat','Headphones','Other']
 
-function AddGearForm({ onAdd, onCancel, colors }) {
-  const [cat, setCat] = useState('')
-  const [brand, setBrand] = useState('')
-  const [model, setModel] = useState('')
-  const [color, setColor] = useState('')
-  const [url, setUrl] = useState('')
-  const [note, setNote] = useState('')
+function AddGearForm({ onAdd, onCancel }) {
+  const [cat, setCat] = useState(''), [brand, setBrand] = useState(''), [model, setModel] = useState('')
+  const [color, setColor] = useState(''), [url, setUrl] = useState(''), [note, setNote] = useState('')
   const inp = { width:'100%', padding:'9px 12px', borderRadius:'6px', border:'1.5px solid #e2e6ed', background:'#fafbfc', color:'#1B2A4A', fontSize:'13px', fontFamily:"'Barlow',sans-serif", outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }
   return (
     <div style={{ background:'#f8f9fb', border:'1.5px solid #e2e6ed', borderRadius:'12px', padding:'20px', marginTop:'12px' }}>
@@ -87,11 +71,7 @@ export default function RacePage() {
     const data = RYAN_RACE_DATA[numId] || RYAN_RACE_DATA[1]
     const idx = ALL_IDS.indexOf(data.id)
     setCurrentIdx(idx >= 0 ? idx : 0)
-    setRace(data)
-    setStory(data.story || '')
-    setGear(data.gear || [])
-    setStickers(data.stickers || [])
-
+    setRace(data); setStory(data.story||''); setGear(data.gear||[]); setStickers(data.stickers||[])
     const style = document.createElement('style')
     style.id = 'rp-racepage-styles'
     style.textContent = `
@@ -134,31 +114,25 @@ export default function RacePage() {
       <div style={{ position:'sticky', top:0, zIndex:50, background:'rgba(255,255,255,0.96)', backdropFilter:'blur(8px)', borderBottom:'1px solid #e8eaed', boxShadow:'0 1px 8px rgba(27,42,74,0.06)', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 40px', height:'56px' }}>
         <button onClick={() => navigate('/passport')} style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', color:'#9aa5b4', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0, transition:'color 0.15s' }}
           onMouseEnter={e => e.currentTarget.style.color='#1B2A4A'} onMouseLeave={e => e.currentTarget.style.color='#9aa5b4'}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-          Passport
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Passport
         </button>
-
-        {/* Prev / Page / Next */}
         <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
           <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor: prevRace ? 'pointer' : 'default', color: prevRace ? '#9aa5b4' : '#d0d7e0', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'all 0.15s' }}
+            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor: prevRace?'pointer':'default', color: prevRace?'#9aa5b4':'#d0d7e0', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'all 0.15s' }}
             onMouseEnter={e => prevRace && (e.currentTarget.style.color='#1B2A4A')}
-            onMouseLeave={e => e.currentTarget.style.color = prevRace ? '#9aa5b4' : '#d0d7e0'}>
+            onMouseLeave={e => e.currentTarget.style.color = prevRace?'#9aa5b4':'#d0d7e0'}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             {prevRace ? prevRace.name.split(' ').slice(0,2).join(' ') : 'First'}
           </button>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase' }}>
-            Page {currentIdx + 1} / {ALL_IDS.length}
-          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase' }}>Page {currentIdx + 1} / {ALL_IDS.length}</div>
           <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor: nextRace ? 'pointer' : 'default', color: nextRace ? '#9aa5b4' : '#d0d7e0', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'all 0.15s' }}
+            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor: nextRace?'pointer':'default', color: nextRace?'#9aa5b4':'#d0d7e0', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'all 0.15s' }}
             onMouseEnter={e => nextRace && (e.currentTarget.style.color='#1B2A4A')}
-            onMouseLeave={e => e.currentTarget.style.color = nextRace ? '#9aa5b4' : '#d0d7e0'}>
+            onMouseLeave={e => e.currentTarget.style.color = nextRace?'#9aa5b4':'#d0d7e0'}>
             {nextRace ? nextRace.name.split(' ').slice(0,2).join(' ') : 'Last'}
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
-
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           {!editMode ? (
             <>
@@ -171,9 +145,7 @@ export default function RacePage() {
           ) : (
             <>
               <button onClick={() => { setEditMode(false); setShowAddGear(false) }} style={{ padding:'6px 16px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>
-                {saving ? 'Saving...' : 'Save Page'}
-              </button>
+              <button onClick={handleSave} disabled={saving} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>{saving?'Saving...':'Save Page'}</button>
             </>
           )}
         </div>
@@ -190,9 +162,7 @@ export default function RacePage() {
         <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'40px 40px 0', position:'relative', zIndex:1 }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'40px', marginBottom:'32px' }}>
             <div style={{ flex:1 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'10px' }}>
-                Race Passport · Page {currentIdx + 1} of {ALL_IDS.length}
-              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'10px' }}>Race Passport · Page {currentIdx + 1} of {ALL_IDS.length}</div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(40px,6vw,72px)', color:'#fff', letterSpacing:'2px', lineHeight:0.95, marginBottom:'10px' }}>{race.name}</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'16px' }}>{race.date} · {race.location}</div>
               {race.pr && (
@@ -202,13 +172,11 @@ export default function RacePage() {
                 </div>
               )}
             </div>
-            {/* HERO STAMP — FIXED: gold text, navy border */}
-            <div style={{ width:140, height:140, borderRadius:'50%', border:'3px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-              <div style={{ position:'absolute', inset:10, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
-              {/* distance text — GOLD */}
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
-              {/* label subtitle — gold faded */}
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(201,168,76,0.55)', textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1 }}>{colors.label}</div>
+            {/* HERO STAMP — new system: white bg, navy or gold */}
+            <div style={{ width:140, height:140, borderRadius:'50%', border:`3px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+              <div style={{ position:'absolute', inset:10, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:colors.stampText, textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{colors.label}</div>
             </div>
           </div>
         </div>
@@ -238,7 +206,6 @@ export default function RacePage() {
       </div>
 
       <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'32px 40px 80px' }}>
-
         {/* PHOTOS */}
         <div style={{ background:'#fff', borderRadius:'16px', padding:'28px', marginBottom:'24px', border:'1px solid #e8eaed', animation:'fadeIn 0.4s ease both' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
@@ -315,19 +282,15 @@ export default function RacePage() {
               {!editMode && <button onClick={() => setEditMode(true)} style={{ padding:'7px 18px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>Add Gear</button>}
             </div>
           )}
-          {showAddGear && <AddGearForm onAdd={addGear} onCancel={() => setShowAddGear(false)} colors={colors} />}
+          {showAddGear && <AddGearForm onAdd={addGear} onCancel={() => setShowAddGear(false)} />}
         </div>
 
         {/* SPLITS */}
         {race.splits && race.splits.length > 0 && (
           <div style={{ background:'#fff', borderRadius:'16px', padding:'28px', border:'1px solid #e8eaed', marginBottom:'24px', animation:'fadeIn 0.4s ease 0.2s both' }}>
             <button onClick={() => setShowSplits(!showSplits)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', background:'none', border:'none', cursor:'pointer', padding:0 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px' }}>
-                {race.distance === '70.3' ? 'Triathlon Splits' : 'Splits'}
-              </div>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showSplits?'rotate(180deg)':'rotate(0)' }}>
-                <path d="M4 6l4 4 4-4" stroke="#9aa5b4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              </svg>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px' }}>{race.distance==='70.3'?'Triathlon Splits':'Splits'}</div>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showSplits?'rotate(180deg)':'rotate(0)' }}><path d="M4 6l4 4 4-4" stroke="#9aa5b4" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {showSplits && (
               <div style={{ marginTop:'18px', display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(130px, 1fr))', gap:'12px' }}>
@@ -348,30 +311,26 @@ export default function RacePage() {
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'10px' }}>Privacy</div>
             <div style={{ display:'flex', gap:'8px' }}>
               {['Public','Hide Time','Private'].map(opt => (
-                <button key={opt} style={{ padding:'7px 14px', border:'1.5px solid', borderRadius:'8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s',
-                  background: opt==='Public' ? '#1B2A4A' : '#fff',
-                  borderColor: opt==='Public' ? '#1B2A4A' : '#e2e6ed',
-                  color: opt==='Public' ? '#fff' : '#9aa5b4' }}>{opt}</button>
+                <button key={opt} style={{ padding:'7px 14px', border:'1.5px solid', borderRadius:'8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', cursor:'pointer', transition:'all 0.15s', background:opt==='Public'?'#1B2A4A':'#fff', borderColor:opt==='Public'?'#1B2A4A':'#e2e6ed', color:opt==='Public'?'#fff':'#9aa5b4' }}>{opt}</button>
               ))}
             </div>
           </div>
           <div style={{ background:'#fff', borderRadius:'16px', padding:'20px 24px', border:'1px solid #e8eaed', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
-              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor: prevRace ? 'pointer' : 'default', opacity: prevRace ? 1 : 0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor:prevRace?'pointer':'default', opacity:prevRace?1:0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
               onMouseEnter={e => prevRace && (e.currentTarget.style.borderColor='#C9A84C')}
               onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Prev
             </button>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#9aa5b4', letterSpacing:'1px' }}>{currentIdx + 1} / {ALL_IDS.length}</div>
             <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
-              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor: nextRace ? 'pointer' : 'default', opacity: nextRace ? 1 : 0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', cursor:nextRace?'pointer':'default', opacity:nextRace?1:0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', textTransform:'uppercase' }}
               onMouseEnter={e => nextRace && (e.currentTarget.style.borderColor='#C9A84C')}
               onMouseLeave={e => e.currentTarget.style.borderColor='#e2e6ed'}>
               Next<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </button>
           </div>
         </div>
-
       </div>
 
       {activePhoto && (
