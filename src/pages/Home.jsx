@@ -5,9 +5,9 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { getRacePhoto } from '../lib/photos'
+import { getFallbackPhoto, loadRacePhoto } from '../lib/photos'
 
-const STRAVA_CONNECTED = true
+const STRAVA_CONNECTED = false
 
 const STAT_ITEMS = [
   { label:'Total Races',    value:'10'      },
@@ -35,17 +35,17 @@ const RYAN_STAMPS = [
 ]
 
 const MOCK_NEARBY = [
-  { id:'d1', name:'Parks Half Marathon',      date:'Sept 21, 2026', location:'Bethesda, MD',   state:'MD', distance:'13.1',  terrain:'Road',        elevation:'180ft', price:'$95',  weeks:10, registration_url:'https://runsignup.com' },
-  { id:'d2', name:'Suds & Soles 5K',          date:'Jun 13, 2026',  location:'Rockville, MD',  state:'MD', distance:'5K',    terrain:'Road',        elevation:'85ft',  price:'$35',  weeks:4,  registration_url:'https://runsignup.com' },
-  { id:'d3', name:'Baltimore 10 Miler',       date:'Jun 6, 2026',   location:'Baltimore, MD',  state:'MD', distance:'10 mi', terrain:'Road',        elevation:'210ft', price:'$65',  weeks:8,  registration_url:'https://runsignup.com' },
-  { id:'d4', name:'Annapolis Bay Bridge Run', date:'Oct 12, 2026',  location:'Annapolis, MD',  state:'MD', distance:'10K',   terrain:'Bridge/Road', elevation:'140ft', price:'$55',  weeks:6,  registration_url:'https://runsignup.com' },
-  { id:'d5', name:'DC Half Marathon',         date:'Mar 15, 2027',  location:'Washington, DC', state:'DC', distance:'13.1',  terrain:'Road',        elevation:'190ft', price:'$110', weeks:10, registration_url:'https://runsignup.com' },
-  { id:'d6', name:'Marine Corps Marathon',    date:'Oct 26, 2026',  location:'Arlington, VA',  state:'VA', distance:'26.2',  terrain:'Road',        elevation:'912ft', price:'$140', weeks:16, registration_url:'https://www.marinecorpsmarathon.com' },
+  { id:'d1', name:'Parks Half Marathon',      date:'Sept 21, 2026', location:'Bethesda, MD',   city:'Bethesda',    state:'MD', distance:'13.1',  terrain:'Road',        elevation:'180ft', price:'$95',  weeks:10, registration_url:'https://runsignup.com' },
+  { id:'d2', name:'Suds & Soles 5K',          date:'Jun 13, 2026',  location:'Rockville, MD',  city:'Rockville',   state:'MD', distance:'5K',    terrain:'Road',        elevation:'85ft',  price:'$35',  weeks:4,  registration_url:'https://runsignup.com' },
+  { id:'d3', name:'Baltimore 10 Miler',       date:'Jun 6, 2026',   location:'Baltimore, MD',  city:'Baltimore',   state:'MD', distance:'10 mi', terrain:'Road',        elevation:'210ft', price:'$65',  weeks:8,  registration_url:'https://runsignup.com' },
+  { id:'d4', name:'Annapolis Bay Bridge Run', date:'Oct 12, 2026',  location:'Annapolis, MD',  city:'Annapolis',   state:'MD', distance:'10K',   terrain:'Bridge/Road', elevation:'140ft', price:'$55',  weeks:6,  registration_url:'https://runsignup.com' },
+  { id:'d5', name:'DC Half Marathon',         date:'Mar 15, 2027',  location:'Washington, DC', city:'Washington',  state:'DC', distance:'13.1',  terrain:'Road',        elevation:'190ft', price:'$110', weeks:10, registration_url:'https://runsignup.com' },
+  { id:'d6', name:'Marine Corps Marathon',    date:'Oct 26, 2026',  location:'Arlington, VA',  city:'Arlington',   state:'VA', distance:'26.2',  terrain:'Road',        elevation:'912ft', price:'$140', weeks:16, registration_url:'https://www.marinecorpsmarathon.com' },
 ]
 
 const MOCK_UPCOMING = [
-  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC', state:'DC', distance:'10 mi', registration_url:'https://www.cherryblossom.org' },
-  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  state:'MD', distance:'26.2',  registration_url:'https://www.thebaltimoremarathon.com' },
+  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC', city:'Washington', state:'DC', distance:'10 mi', registration_url:'https://www.cherryblossom.org' },
+  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  city:'Baltimore',  state:'MD', distance:'26.2',  registration_url:'https://www.thebaltimoremarathon.com' },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -161,8 +161,9 @@ function handleCardClick(race, navigate) {
 
 function NearbyCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
+  const [photo, setPhoto] = useState(() => getFallbackPhoto(race))
   const navigate = useNavigate()
-  const photo = getRacePhoto(race)
+  useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
@@ -217,9 +218,10 @@ function useCountdown(dateStr) {
 
 function UpcomingCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
+  const [photo, setPhoto] = useState(() => getFallbackPhoto(race))
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
-  const photo = getRacePhoto(race)
+  useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
