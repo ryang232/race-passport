@@ -1,264 +1,236 @@
 // src/lib/photos.js
-// AI-powered race photo selection
+// Curated photo pools — no API calls, instant loads, no rate limits
 //
 // STRATEGY:
-//   1. Call Claude Sonnet with race metadata → get structured query JSON
-//   2. Call Vercel proxy /api/runsignup?action=unsplash_search with best query
-//   3. Return photo URL, cache result by race key
-//   4. Fall back through backup_queries on 0 results
-//   5. If all queries fail, return static distance fallback (instant, no API)
+//   Short races (5K, 10K, 10mi, other) → rotate through Ryan's hand-picked
+//     local road race pool (community, crowds, finish lines, city streets)
 //
-// DISTANCE LOGIC (enforced by AI prompt):
-//   < 13.1 miles  → local_road_race  (community runners, city streets)
-//   >= 13.1 known → race_specific    (real event photos)
-//   >= 13.1 other → city_skyline     (location imagery)
-//   Triathlon     → tri_specific or city_skyline
+//   Half marathon (13.1):
+//     Well-known race → race-specific photo
+//     Unknown         → city skyline pool (by state) or generic skyline
+//
+//   Marathon (26.2) + Triathlon (70.3 / 140.6):
+//     Well-known race → race-specific photo
+//     Unknown         → city skyline pool (by state) or generic skyline
+//
+//   Ultra (50K+) → trail/nature pool
+//
+// Photos are seeded by race ID for consistency (same race = same photo every time)
 
-// ── Static fallbacks — used when ALL API calls fail ───────────────────────────
-const STATIC_FALLBACKS = {
-  local_road_race: [
-    'https://images.unsplash.com/photo-1571008887538-b36bb32f4571?w=800&q=80&fit=crop', // community 5K
-    'https://images.unsplash.com/photo-1552674605-db6ffd4facb5?w=800&q=80&fit=crop', // city race
-    'https://images.unsplash.com/photo-1502904550040-7534597429ae?w=800&q=80&fit=crop', // road runners
-  ],
-  race_specific: [
-    'https://images.unsplash.com/photo-1530143584546-02191bc84eb5?w=800&q=80&fit=crop', // marathon crowd
-    'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80&fit=crop', // marathon finish
-  ],
-  city_skyline: [
-    'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80&fit=crop', // city skyline
-    'https://images.unsplash.com/photo-1449824913935-59a10b8d2000?w=800&q=80&fit=crop', // downtown
-  ],
-  triathlon: [
-    'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=800&q=80&fit=crop', // tri
-  ],
-  ultra: [
-    'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=80&fit=crop', // trail
-  ],
+// ── Ryan's curated local road race pool (20 hand-picked) ─────────────────────
+const LOCAL_RACE_POOL = [
+  'TqOFeBqnqrI', // people walking/running on street daytime
+  'NPFu4GfFZ7E', // runners on road daytime
+  '8pNsZRjxtnw', // marathon city street
+  'jLeznOrK3UQ', // group running marathon
+  'BVvc_KfmzHg', // women in pink shirts running
+  'CFkrwz1M_0s', // women in pink shirts and hats
+  'SE9bKjzr1Eg', // group of people standing around race
+  'PkcaVJbTkCY', // marathon beginning city square
+  'jcipiaFDLzE', // red shirts running street daytime
+  'B-TiUVkPp90', // runners race blue banner
+  'CDPiVNZZm44', // crowd city street
+  'jYfeVbmgX3M', // group holding sign race
+  'r6IBx_tUhLA', // pain is just bread sign (funny race sign)
+  'Ob90gtOzwtU', // runners city street decorations
+  'NoPGAeHyymE', // runners celebrate medals
+  'O4oXvIw8LUA', // group running marathon with dog
+  '8Eg9-cPCt00', // spectator holds sign at race
+  'CtDBiRBioNY', // group running down street
+  'v0ElfxxyAuY', // group running down street (2)
+].map(id => `https://images.unsplash.com/photo-${id}?w=800&q=80&fit=crop`)
+
+// Note: V-cFACH1EJY (bikes) excluded from road race pool — cycling, not running
+
+// ── City skyline pool — fallback for unknown half/full/tri ────────────────────
+// Keyed by US state abbreviation
+const CITY_SKYLINES = {
+  // Major metro skylines
+  MD: 'https://images.unsplash.com/photo-1601409870524-edc80a88f64a?w=800&q=80&fit=crop', // Baltimore
+  DC: 'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=800&q=80&fit=crop', // Washington DC
+  VA: 'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=800&q=80&fit=crop', // DC/Northern VA
+  NY: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80&fit=crop', // NYC
+  CA: 'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=800&q=80&fit=crop', // LA
+  IL: 'https://images.unsplash.com/photo-1494522855154-9297ac14b55f?w=800&q=80&fit=crop', // Chicago
+  MA: 'https://images.unsplash.com/photo-1501979376754-c4a4e429cf7c?w=800&q=80&fit=crop', // Boston
+  TX: 'https://images.unsplash.com/photo-1531218150217-54595bc2b934?w=800&q=80&fit=crop', // Austin
+  FL: 'https://images.unsplash.com/photo-1533106418989-88406c7cc8ca?w=800&q=80&fit=crop', // Miami
+  WA: 'https://images.unsplash.com/photo-1502175353174-a7a70e73b362?w=800&q=80&fit=crop', // Seattle
+  OR: 'https://images.unsplash.com/photo-1548285595-2b69de2e7dc5?w=800&q=80&fit=crop', // Portland
+  CO: 'https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=800&q=80&fit=crop', // Denver
+  AZ: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80&fit=crop', // Phoenix
+  GA: 'https://images.unsplash.com/photo-1575917649705-5b59aaa12e6b?w=800&q=80&fit=crop', // Atlanta
+  TN: 'https://images.unsplash.com/photo-1545419913-775e3e69e645?w=800&q=80&fit=crop', // Nashville
+  OH: 'https://images.unsplash.com/photo-1505945485253-c2f7ca6a29c8?w=800&q=80&fit=crop', // Cleveland
+  PA: 'https://images.unsplash.com/photo-1569761316261-9a8696fa2ca3?w=800&q=80&fit=crop', // Philadelphia
+  MN: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?w=800&q=80&fit=crop', // Minneapolis
+  MI: 'https://images.unsplash.com/photo-1589135716736-c8c6d42fb7a8?w=800&q=80&fit=crop', // Detroit
+  NC: 'https://images.unsplash.com/photo-1518684079-3c830dcef090?w=800&q=80&fit=crop', // Charlotte
+  NV: 'https://images.unsplash.com/photo-1581351721010-8cf859cb14a4?w=800&q=80&fit=crop', // Las Vegas
+  HI: 'https://images.unsplash.com/photo-1507876466758-e54b27ba70e4?w=800&q=80&fit=crop', // Honolulu
+  // Generic fallback
+  default: 'https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=800&q=80&fit=crop',
 }
 
-// ── Well-known races list — triggers race_specific strategy ──────────────────
-const WELL_KNOWN_RACES = new Set([
-  'boston marathon','new york city marathon','nyc marathon','chicago marathon',
-  'marine corps marathon','la marathon','los angeles marathon','berlin marathon',
-  'london marathon','tokyo marathon','boston','new york marathon',
-  'cherry blossom','cherry blossom ten mile','cherry blossom 10 miler',
-  'broad street run','peachtree road race','bay to breakers','bolder boulder',
-  'cooper river bridge run','gate river run','shamrock marathon','shamrock half',
-  'ironman world championship','ironman kona','ironman lake placid',
-  'ironman 70.3 eagleman','eagleman','ironman 70.3 chattanooga',
-  'ironman 70.3 atlantic city','ironman 70.3 world championship',
-  'western states','western states 100','boston marathon 5k',
-  'turkey trot','pikes peak marathon','leadville trail 100',
-  'rock n roll marathon','rock n roll','rock and roll marathon',
-  'baltimore running festival','disney marathon','disney world marathon',
-  'runDisney','new york half marathon','united nyc half',
-  'austin marathon','austin half marathon',
-  'houston marathon','cowtown marathon','dallas marathon',
-  'richmond marathon','richmond half marathon',
-  'fredericksburg half marathon','annapolis ten mile run','bay bridge run',
-])
+// ── Well-known races → specific curated photos ────────────────────────────────
+// Format: lowercase race name fragment → Unsplash photo ID
+const KNOWN_RACE_PHOTOS = {
+  // Abbott World Marathon Majors
+  'boston marathon':          'https://images.unsplash.com/photo-1502224562085-639556652f33?w=800&q=80&fit=crop',
+  'new york city marathon':   'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'nyc marathon':             'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'new york marathon':        'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'chicago marathon':         'https://images.unsplash.com/photo-1531979089509-3cfc60cb0f5b?w=800&q=80&fit=crop',
+  'berlin marathon':          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80&fit=crop',
+  'london marathon':          'https://images.unsplash.com/photo-1530143584546-02191bc84eb5?w=800&q=80&fit=crop',
+  'tokyo marathon':           'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&q=80&fit=crop',
 
-function isWellKnown(raceName) {
-  if (!raceName) return false
-  const lower = raceName.toLowerCase().trim()
-  for (const known of WELL_KNOWN_RACES) {
-    if (lower.includes(known) || known.includes(lower)) return true
+  // Popular US marathons
+  'marine corps marathon':    'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=800&q=80&fit=crop',
+  'la marathon':              'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=800&q=80&fit=crop',
+  'los angeles marathon':     'https://images.unsplash.com/photo-1449034446853-66c86144b0ad?w=800&q=80&fit=crop',
+  'austin marathon':          'https://images.unsplash.com/photo-1531218150217-54595bc2b934?w=800&q=80&fit=crop',
+  'houston marathon':         'https://images.unsplash.com/photo-1531218150217-54595bc2b934?w=800&q=80&fit=crop',
+  'denver marathon':          'https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=800&q=80&fit=crop',
+  'colorado marathon':        'https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=800&q=80&fit=crop',
+  'richmond marathon':        'https://images.unsplash.com/photo-1501466044931-62695aada8e9?w=800&q=80&fit=crop',
+  'baltimore running festival':'https://images.unsplash.com/photo-1601409870524-edc80a88f64a?w=800&q=80&fit=crop',
+  'disney marathon':          'https://images.unsplash.com/photo-1544717305-2782549b5136?w=800&q=80&fit=crop',
+
+  // Popular halfs
+  'cherry blossom':           'https://images.unsplash.com/photo-1522163182402-834f871fd851?w=800&q=80&fit=crop',
+  'broad street run':         'https://images.unsplash.com/photo-1569761316261-9a8696fa2ca3?w=800&q=80&fit=crop',
+  'united nyc half':          'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'nyc half':                 'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'new york half':            'https://images.unsplash.com/photo-1534531173927-aeb928d54385?w=800&q=80&fit=crop',
+  'austin half':              'https://images.unsplash.com/photo-1531218150217-54595bc2b934?w=800&q=80&fit=crop',
+  'bay bridge run':           'https://images.unsplash.com/photo-1601409870524-edc80a88f64a?w=800&q=80&fit=crop',
+  'peachtree road race':      'https://images.unsplash.com/photo-1575917649705-5b59aaa12e6b?w=800&q=80&fit=crop',
+  'bolder boulder':           'https://images.unsplash.com/photo-1546156929-a4c0ac411f47?w=800&q=80&fit=crop',
+
+  // Triathlons
+  'ironman world championship':'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=800&q=80&fit=crop',
+  'ironman kona':             'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=800&q=80&fit=crop',
+  'eagleman':                 'https://images.unsplash.com/photo-1601409870524-edc80a88f64a?w=800&q=80&fit=crop',
+  'ironman 70.3 eagleman':    'https://images.unsplash.com/photo-1601409870524-edc80a88f64a?w=800&q=80&fit=crop',
+
+  // Ultras
+  'western states':           'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=80&fit=crop',
+  'leadville':                'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=80&fit=crop',
+}
+
+// ── Ultra / trail pool ────────────────────────────────────────────────────────
+const ULTRA_POOL = [
+  'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=800&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1483721310020-03333e577078?w=800&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1508739773434-c26b3d09e071?w=800&q=80&fit=crop',
+]
+
+// ── Triathlon fallback pool ───────────────────────────────────────────────────
+const TRI_POOL = [
+  'https://images.unsplash.com/photo-1587280501635-68a0e82cd5ff?w=800&q=80&fit=crop',
+  'https://images.unsplash.com/photo-1530549387789-4c1017266635?w=800&q=80&fit=crop',
+]
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+// Stable index from a string — same race always gets same photo from a pool
+function stableIndex(str, poolLength) {
+  let hash = 0
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i)
+    hash |= 0
   }
-  return false
+  return Math.abs(hash) % poolLength
 }
 
-// ── Distance in miles from distance label ─────────────────────────────────────
-function distanceToMiles(distanceLabel) {
-  if (!distanceLabel) return null
-  const d = distanceLabel.toLowerCase().replace(/\s/g,'')
+function distanceToMiles(dist) {
+  if (!dist) return null
+  const d = dist.toLowerCase().replace(/\s/g, '')
   if (d === '5k')  return 3.1
   if (d === '8k')  return 4.9
   if (d === '10k') return 6.2
   if (d === '15k') return 9.3
-  if (d === '10mi' || d === '10 mi' || d === '10mile') return 10
+  if (d.includes('10mi') || d === '10 mi') return 10
   if (d === '13.1' || d.includes('half')) return 13.1
-  if (d === '26.2' || d.includes('marathon')) return 26.2
+  if (d === '26.2' || (d.includes('marathon') && !d.includes('half'))) return 26.2
   if (d === '70.3') return 70.3
   if (d === '140.6') return 140.6
-  if (d === '50k') return 31
-  if (d === '50m' || d === '50mi') return 50
-  if (d === '100k') return 62
-  if (d === '100m' || d === '100mi') return 100
+  if (d.includes('50k')) return 31
+  if (d.includes('50m') || d.includes('50mi')) return 50
+  if (d.includes('100k')) return 62
+  if (d.includes('100m') || d.includes('100mi')) return 100
   return null
 }
 
-// ── In-memory cache ───────────────────────────────────────────────────────────
-const photoCache = new Map()
-
-function cacheKey(race) {
-  return `${race.id || race.name}_${race.distance || ''}`
+function lookupKnownRace(name) {
+  if (!name) return null
+  const lower = name.toLowerCase().trim()
+  for (const [key, url] of Object.entries(KNOWN_RACE_PHOTOS)) {
+    if (lower.includes(key) || key.includes(lower)) return url
+  }
+  return null
 }
 
-// ── Vercel API base URL ───────────────────────────────────────────────────────
-// Works in both dev (proxied by Vite) and production (same domain)
-const API_BASE = '/api/runsignup'
-
-// ── Search Unsplash via proxy ─────────────────────────────────────────────────
-async function searchUnsplash(query) {
-  const url = `${API_BASE}?action=unsplash_search&query=${encodeURIComponent(query)}`
-  const resp = await fetch(url)
-  if (!resp.ok) throw new Error(`Proxy error ${resp.status}`)
-  const data = await resp.json()
-  const results = data.results || []
-  if (results.length === 0) return null
-  // Pick from top 3 for variety
-  const pick = results[Math.floor(Math.random() * Math.min(results.length, 3))]
-  return pick.url
+function getSkylinePhoto(state) {
+  return CITY_SKYLINES[state?.toUpperCase()] || CITY_SKYLINES.default
 }
 
-// ── AI query generation via Claude API ───────────────────────────────────────
-async function getAIQuery(race) {
-  const distanceMiles = distanceToMiles(race.distance)
-  const wellKnown = isWellKnown(race.name)
+// ── Main export ───────────────────────────────────────────────────────────────
+// Accepts either a string (distance) for legacy use, or a full race object
+// { name, distance, city, state, id }
+// Always synchronous — no API calls, instant return
 
-  const prompt = `You are responsible for selecting the correct image search strategy and queries for race cards. You must follow the rules strictly and NEVER guess loosely.
-
-GOAL: Return highly relevant, visually consistent image search queries so that results are accurate and not random.
-
-INPUT:
-- race_name: ${race.name || ''}
-- distance_label: ${race.distance || ''}
-- distance_miles: ${distanceMiles ?? 'unknown'}
-- city: ${race.city || ''}
-- state: ${race.state || ''}
-- is_well_known_race: ${wellKnown}
-
-RULES:
-
-1. DISTANCE RULES
-IF distance_miles < 13.1 (or unknown for short races):
-- Use ONLY "local_road_race" imagery: groups of runners, community race atmosphere, start/finish line, runners on city streets
-- DO NOT use: elite marathon photos, trail running, mountains, track meets, gym scenes, single runner portraits, cycling, swimming
-
-IF distance_miles >= 13.1:
-- IF is_well_known_race = true: Use "race_specific" (real images from that exact race)
-- IF is_well_known_race = false: Use "city_skyline" (visuals of the race location city)
-
-TRIATHLON SPECIAL RULE:
-- IF distance_label contains "70.3" or "140.6" or "Tri":
-  - IF is_well_known_race = true: Use "race_specific"
-  - IF is_well_known_race = false: Use "city_skyline" of the race city
-
-2. STRATEGY TYPES — choose exactly one:
-- "local_road_race"
-- "race_specific"
-- "city_skyline"
-
-3. SEARCH QUERY RULES
-- Queries must be VISUAL and SPECIFIC
-- DO NOT use vague terms like "5K race", "running", "marathon"
-- GOOD for local races: "local road race runners city street", "community 5k finish line crowd", "charity run start line group of runners"
-- GOOD for race-specific: "${race.name || 'race'} runners", "${race.name || 'race'} finish line"
-- GOOD for skyline: "${race.city || 'city'} skyline", "${race.city || 'city'} downtown cityscape"
-
-4. FORBIDDEN content — always include in avoid list:
-tennis, skiing, trail running, mountain running, track and field, gym fitness studio, cycling, swimming, single athlete portrait, abstract fitness
-
-5. OUTPUT FORMAT — JSON ONLY, no text outside JSON:
-{
-  "image_strategy": "local_road_race" | "race_specific" | "city_skyline",
-  "primary_query": "string",
-  "backup_queries": ["string", "string", "string"],
-  "must_include": ["string", "string"],
-  "avoid": ["string", "string"]
-}
-
-Return ONLY the JSON object. No explanation, no markdown, no backticks.`
-
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-5',
-      max_tokens: 400,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  })
-
-  if (!response.ok) throw new Error(`Claude API error ${response.status}`)
-  const data = await response.json()
-  const text = data.content?.[0]?.text || ''
-
-  // Strip any accidental markdown fences
-  const clean = text.replace(/```json|```/g, '').trim()
-  return JSON.parse(clean)
-}
-
-// ── Main export: async getRacePhoto ───────────────────────────────────────────
-export async function getRacePhoto(race) {
-  // race can be a string (legacy distance-only) or a full race object
-  // Normalize to object
-  if (typeof race === 'string') {
-    race = { distance: race, name: '', city: '', state: '' }
+export function getRacePhoto(raceOrDistance) {
+  // Normalize input
+  let name = '', distance = '', state = '', id = ''
+  if (typeof raceOrDistance === 'string') {
+    distance = raceOrDistance
+    id = raceOrDistance
+  } else {
+    name     = raceOrDistance?.name     || ''
+    distance = raceOrDistance?.distance || ''
+    state    = raceOrDistance?.state    || ''
+    id       = String(raceOrDistance?.id || name || distance)
   }
 
-  const key = cacheKey(race)
-  if (photoCache.has(key)) return photoCache.get(key)
+  const miles = distanceToMiles(distance)
+  const d = distance.toLowerCase()
 
-  const distanceMiles = distanceToMiles(race.distance)
-  const wellKnown = isWellKnown(race.name)
-
-  try {
-    // Step 1: Get AI-generated query
-    const queryData = await getAIQuery(race)
-    const { primary_query, backup_queries = [], image_strategy } = queryData
-
-    // Step 2: Try primary query
-    let url = await searchUnsplash(primary_query)
-
-    // Step 3: Try backup queries in order
-    if (!url) {
-      for (const q of backup_queries) {
-        url = await searchUnsplash(q)
-        if (url) break
-      }
-    }
-
-    if (url) {
-      photoCache.set(key, url)
-      return url
-    }
-
-    // Step 4: AI queries returned nothing — use static fallback by strategy
-    throw new Error('All AI queries returned 0 results')
-
-  } catch (e) {
-    console.warn(`getRacePhoto AI path failed for "${race.name}": ${e.message}`)
-
-    // Step 5: Static fallback based on distance
-    let fallbackSet
-    const d = (race.distance || '').toLowerCase()
-    if (d.includes('70.3') || d.includes('140.6') || d.includes('tri')) {
-      fallbackSet = STATIC_FALLBACKS.triathlon
-    } else if (d.includes('50') || d.includes('100') || d.includes('ultra')) {
-      fallbackSet = STATIC_FALLBACKS.ultra
-    } else if (distanceMiles && distanceMiles >= 13.1) {
-      fallbackSet = wellKnown ? STATIC_FALLBACKS.race_specific : STATIC_FALLBACKS.city_skyline
-    } else {
-      fallbackSet = STATIC_FALLBACKS.local_road_race
-    }
-
-    const fallback = fallbackSet[Math.floor(Math.random() * fallbackSet.length)]
-    photoCache.set(key, fallback)
-    return fallback
+  // ── Triathlon ──────────────────────────────────────────────────────────────
+  if (d.includes('70.3') || d.includes('140.6') || d.includes('tri') || d.includes('iron')) {
+    const known = lookupKnownRace(name)
+    if (known) return known
+    const skyline = getSkylinePhoto(state)
+    return skyline
   }
+
+  // ── Ultra / trail ──────────────────────────────────────────────────────────
+  if (miles && miles > 26.2) {
+    const known = lookupKnownRace(name)
+    if (known) return known
+    return ULTRA_POOL[stableIndex(id, ULTRA_POOL.length)]
+  }
+
+  // ── Marathon (26.2) ────────────────────────────────────────────────────────
+  if (miles === 26.2 || d === '26.2' || (d.includes('marathon') && !d.includes('half'))) {
+    const known = lookupKnownRace(name)
+    if (known) return known
+    return getSkylinePhoto(state)
+  }
+
+  // ── Half marathon (13.1) ───────────────────────────────────────────────────
+  if (miles === 13.1 || d === '13.1' || d.includes('half')) {
+    const known = lookupKnownRace(name)
+    if (known) return known
+    return getSkylinePhoto(state)
+  }
+
+  // ── Short races (5K, 10K, 10mi, other) → curated local race pool ──────────
+  return LOCAL_RACE_POOL[stableIndex(id, LOCAL_RACE_POOL.length)]
 }
 
-// ── Legacy sync function kept for any remaining static uses ──────────────────
-// (Home.jsx NearbyCard / UpcomingCard mock data can pass full objects now)
-export function getRacePhotoSync(distance) {
-  const STATIC = {
-    '5K':   STATIC_FALLBACKS.local_road_race[0],
-    '10K':  STATIC_FALLBACKS.local_road_race[1],
-    '13.1': STATIC_FALLBACKS.race_specific[0],
-    '26.2': STATIC_FALLBACKS.race_specific[1],
-    '70.3': STATIC_FALLBACKS.triathlon[0],
-  }
-  return STATIC[distance] || STATIC_FALLBACKS.local_road_race[0]
+// Async wrapper — kept so any code using .then() still works without changes
+export async function getRacePhotoAsync(race) {
+  return getRacePhoto(race)
 }
