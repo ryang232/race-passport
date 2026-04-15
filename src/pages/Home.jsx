@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
-
 import { getDistanceColor } from '../lib/colors'
 import { getRacePhoto } from '../lib/photos'
 
@@ -25,27 +24,27 @@ const STAT_ITEMS = [
 ]
 
 const RYAN_STAMPS = [
-  { id:9,  distance:'70.3',  name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD',    month:'Jun', year:'2025' },
-  { id:8,  distance:'13.1',  name:'Austin Half Marathon',   location:'Austin, TX',       month:'Feb', year:'2025' },
-  { id:7,  distance:'5K',    name:'Turkey Trot',            location:'Columbia, MD',     month:'Nov', year:'2024' },
-  { id:6,  distance:'26.2',  name:'Marine Corps Marathon',  location:'Washington, DC',   month:'Oct', year:'2023' },
-  { id:5,  distance:'26.2',  name:'LA Marathon',            location:'Los Angeles, CA',  month:'Mar', year:'2023' },
-  { id:4,  distance:'13.1',  name:'Holiday Half',           location:'Annandale, VA',    month:'Dec', year:'2021' },
-  { id:1,  distance:'10K',   name:'Sole of the City',       location:'Baltimore, MD',    month:'Oct', year:'2021' },
+  { id:9,  distance:'70.3',  name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD',   month:'Jun', year:'2025' },
+  { id:8,  distance:'13.1',  name:'Austin Half Marathon',  location:'Austin, TX',      month:'Feb', year:'2025' },
+  { id:7,  distance:'5K',    name:'Turkey Trot',           location:'Columbia, MD',    month:'Nov', year:'2024' },
+  { id:6,  distance:'26.2',  name:'Marine Corps Marathon', location:'Washington, DC',  month:'Oct', year:'2023' },
+  { id:5,  distance:'26.2',  name:'LA Marathon',           location:'Los Angeles, CA', month:'Mar', year:'2023' },
+  { id:4,  distance:'13.1',  name:'Holiday Half',          location:'Annandale, VA',   month:'Dec', year:'2021' },
+  { id:1,  distance:'10K',   name:'Sole of the City',      location:'Baltimore, MD',   month:'Oct', year:'2021' },
 ]
 
 const MOCK_NEARBY = [
-  { id:'d1', name:'Parks Half Marathon',       date:'Sept 21, 2026', location:'Bethesda, MD',   distance:'13.1',  query:'half marathon road crowd runners',   terrain:'Road',       elevation:'180ft', price:'$95',  weeks:10 },
-  { id:'d2', name:'Suds & Soles 5K',           date:'Jun 13, 2026',  location:'Rockville, MD',  distance:'5K',    query:'5K community street finish line',    terrain:'Road',       elevation:'85ft',  price:'$35',  weeks:4  },
-  { id:'d3', name:'Baltimore 10 Miler',        date:'Jun 6, 2026',   location:'Baltimore, MD',  distance:'10 mi', query:'Baltimore Inner Harbor waterfront',  terrain:'Road',       elevation:'210ft', price:'$65',  weeks:8  },
-  { id:'d4', name:'Annapolis Bay Bridge Run',  date:'Oct 12, 2026',  location:'Annapolis, MD',  distance:'10K',   query:'Chesapeake Bay Bridge Maryland',     terrain:'Bridge/Road',elevation:'140ft', price:'$55',  weeks:6  },
-  { id:'d5', name:'DC Half Marathon',          date:'Mar 15, 2027',  location:'Washington, DC', distance:'13.1',  query:'Washington DC Capitol monument',     terrain:'Road',       elevation:'190ft', price:'$110', weeks:10 },
-  { id:'d6', name:'Marine Corps Marathon',     date:'Oct 26, 2026',  location:'Arlington, VA',  distance:'26.2',  query:'Washington DC marathon National Mall',terrain:'Road',       elevation:'912ft', price:'$140', weeks:16 },
+  { id:'d1', name:'Parks Half Marathon',      date:'Sept 21, 2026', location:'Bethesda, MD',   state:'MD', distance:'13.1',  terrain:'Road',        elevation:'180ft', price:'$95',  weeks:10 },
+  { id:'d2', name:'Suds & Soles 5K',          date:'Jun 13, 2026',  location:'Rockville, MD',  state:'MD', distance:'5K',    terrain:'Road',        elevation:'85ft',  price:'$35',  weeks:4  },
+  { id:'d3', name:'Baltimore 10 Miler',       date:'Jun 6, 2026',   location:'Baltimore, MD',  state:'MD', distance:'10 mi', terrain:'Road',        elevation:'210ft', price:'$65',  weeks:8  },
+  { id:'d4', name:'Annapolis Bay Bridge Run', date:'Oct 12, 2026',  location:'Annapolis, MD',  state:'MD', distance:'10K',   terrain:'Bridge/Road', elevation:'140ft', price:'$55',  weeks:6  },
+  { id:'d5', name:'DC Half Marathon',         date:'Mar 15, 2027',  location:'Washington, DC', state:'DC', distance:'13.1',  terrain:'Road',        elevation:'190ft', price:'$110', weeks:10 },
+  { id:'d6', name:'Marine Corps Marathon',    date:'Oct 26, 2026',  location:'Arlington, VA',  state:'VA', distance:'26.2',  terrain:'Road',        elevation:'912ft', price:'$140', weeks:16 },
 ]
 
 const MOCK_UPCOMING = [
-  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC',  distance:'10 mi', query:'cherry blossom DC Tidal Basin spring' },
-  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',   distance:'26.2',  query:'Baltimore marathon waterfront running' },
+  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC', state:'DC', distance:'10 mi' },
+  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  state:'MD', distance:'26.2'  },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -67,12 +66,6 @@ function StatsTicker() {
           </div>
         ))}
       </div>
-      <div style={{ position:'absolute', bottom:10, right:90, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
-        <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        </div>
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.3)', letterSpacing:'1px' }}>Synced via Strava</span>
-      </div>
     </div>
   )
 }
@@ -86,24 +79,21 @@ function StravaConnect() {
         </div>
         <div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#fff', letterSpacing:'1px', lineHeight:1, marginBottom:'6px' }}>Connect Strava to unlock your stats</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>See total race miles, PRs by distance, activity history, and more — all pulled automatically from your Strava account.</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>See total race miles, PRs by distance, activity history, and more.</div>
         </div>
       </div>
-      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'10px', padding:'14px 32px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
-        onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>Connect Strava</button>
+      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'10px', padding:'14px 32px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', whiteSpace:'nowrap' }}>Connect Strava</button>
     </div>
   )
 }
 
-// ── Stamp — white bg, navy (short) or gold (marathon+) ───────────────────────
 function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   const colors = getDistanceColor(distance)
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
-      <div
-        style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
+      <div style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
         onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.15)' }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
         <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
@@ -118,10 +108,9 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   )
 }
 
-// ── Small inline stamp used on card photos ────────────────────────────────────
 function CardStamp({ distance, size=48 }) {
   const colors = getDistanceColor(distance)
-  const cleaned = distance.replace(' mi','')
+  const cleaned = (distance||'').replace(' mi','')
   const fs = cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14
   return (
     <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
@@ -133,16 +122,14 @@ function CardStamp({ distance, size=48 }) {
 
 function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
-  useEffect(() => { setPhoto(getRacePhoto(race)) }, [race.id])
+  const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
-        {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
@@ -193,17 +180,15 @@ function useCountdown(dateStr) {
 
 function UpcomingCard({ race }) {
   const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
-  useEffect(() => { setPhoto(getRacePhoto(race)) }, [race.id])
+  const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
-          : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
@@ -386,9 +371,11 @@ export default function Home() {
       </div>
 
       <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
+
         <div style={{ marginBottom:'48px' }}>
           {STRAVA_CONNECTED ? <StatsTicker /> : <StravaConnect />}
         </div>
+
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Races Near You</span>
@@ -396,6 +383,7 @@ export default function Home() {
           </div>
           <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} />)}</ScrollRow>
         </div>
+
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
             <span className="section-title">Your Stamps</span>
@@ -415,6 +403,7 @@ export default function Home() {
             </div>
           </ScrollRow>
         </div>
+
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Upcoming Races</span>
@@ -422,6 +411,7 @@ export default function Home() {
           </div>
           <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} />)}</ScrollRow>
         </div>
+
       </div>
     </div>
   )
