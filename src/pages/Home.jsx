@@ -34,17 +34,17 @@ const RYAN_STAMPS = [
 ]
 
 const MOCK_NEARBY = [
-  { id:'d1', name:'Parks Half Marathon',      date:'Sept 21, 2026', location:'Bethesda, MD',   state:'MD', distance:'13.1',  terrain:'Road',        elevation:'180ft', price:'$95',  weeks:10 },
-  { id:'d2', name:'Suds & Soles 5K',          date:'Jun 13, 2026',  location:'Rockville, MD',  state:'MD', distance:'5K',    terrain:'Road',        elevation:'85ft',  price:'$35',  weeks:4  },
-  { id:'d3', name:'Baltimore 10 Miler',       date:'Jun 6, 2026',   location:'Baltimore, MD',  state:'MD', distance:'10 mi', terrain:'Road',        elevation:'210ft', price:'$65',  weeks:8  },
-  { id:'d4', name:'Annapolis Bay Bridge Run', date:'Oct 12, 2026',  location:'Annapolis, MD',  state:'MD', distance:'10K',   terrain:'Bridge/Road', elevation:'140ft', price:'$55',  weeks:6  },
-  { id:'d5', name:'DC Half Marathon',         date:'Mar 15, 2027',  location:'Washington, DC', state:'DC', distance:'13.1',  terrain:'Road',        elevation:'190ft', price:'$110', weeks:10 },
-  { id:'d6', name:'Marine Corps Marathon',    date:'Oct 26, 2026',  location:'Arlington, VA',  state:'VA', distance:'26.2',  terrain:'Road',        elevation:'912ft', price:'$140', weeks:16 },
+  { id:'d1', name:'Parks Half Marathon',      date:'Sept 21, 2026', location:'Bethesda, MD',   state:'MD', distance:'13.1',  terrain:'Road',        elevation:'180ft', price:'$95',  weeks:10, registration_url:'https://runsignup.com' },
+  { id:'d2', name:'Suds & Soles 5K',          date:'Jun 13, 2026',  location:'Rockville, MD',  state:'MD', distance:'5K',    terrain:'Road',        elevation:'85ft',  price:'$35',  weeks:4,  registration_url:'https://runsignup.com' },
+  { id:'d3', name:'Baltimore 10 Miler',       date:'Jun 6, 2026',   location:'Baltimore, MD',  state:'MD', distance:'10 mi', terrain:'Road',        elevation:'210ft', price:'$65',  weeks:8,  registration_url:'https://runsignup.com' },
+  { id:'d4', name:'Annapolis Bay Bridge Run', date:'Oct 12, 2026',  location:'Annapolis, MD',  state:'MD', distance:'10K',   terrain:'Bridge/Road', elevation:'140ft', price:'$55',  weeks:6,  registration_url:'https://runsignup.com' },
+  { id:'d5', name:'DC Half Marathon',         date:'Mar 15, 2027',  location:'Washington, DC', state:'DC', distance:'13.1',  terrain:'Road',        elevation:'190ft', price:'$110', weeks:10, registration_url:'https://runsignup.com' },
+  { id:'d6', name:'Marine Corps Marathon',    date:'Oct 26, 2026',  location:'Arlington, VA',  state:'VA', distance:'26.2',  terrain:'Road',        elevation:'912ft', price:'$140', weeks:16, registration_url:'https://www.marinecorpsmarathon.com' },
 ]
 
 const MOCK_UPCOMING = [
-  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC', state:'DC', distance:'10 mi' },
-  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  state:'MD', distance:'26.2'  },
+  { id:'u1', name:'Cherry Blossom 10 Miler',   date:'Apr 6, 2026',  location:'Washington, DC', state:'DC', distance:'10 mi', registration_url:'https://www.cherryblossom.org' },
+  { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  state:'MD', distance:'26.2',  registration_url:'https://www.thebaltimoremarathon.com' },
 ]
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -126,7 +126,13 @@ function NearbyCard({ race }) {
   const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(`/race-detail/${race.id}`)}
+      onClick={() => {
+        if (String(race.id).startsWith('d') || String(race.id).startsWith('u')) {
+          if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
+        } else {
+          navigate(`/race-detail/${race.id}`)
+        }
+      }}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
@@ -185,7 +191,13 @@ function UpcomingCard({ race }) {
   const photo = getRacePhoto(race)
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={() => navigate(`/race-detail/${race.id}`)}
+      onClick={() => {
+        if (String(race.id).startsWith('d') || String(race.id).startsWith('u')) {
+          if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
+        } else {
+          navigate(`/race-detail/${race.id}`)
+        }
+      }}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
