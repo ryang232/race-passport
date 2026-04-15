@@ -135,7 +135,7 @@ function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
-  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.query])
+  useEffect(() => { setPhoto(getRacePhoto(race)) }, [race.id])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
@@ -196,7 +196,7 @@ function UpcomingCard({ race }) {
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
-  useEffect(() => { getRacePhoto(race).then(url => setPhoto(url)) }, [race.query])
+  useEffect(() => { setPhoto(getRacePhoto(race)) }, [race.id])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
