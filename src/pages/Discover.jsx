@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { getRacePhoto } from '../lib/photos'
+import { getFallbackPhoto, loadRacePhoto } from '../lib/photos'
 
 const FEATURED_RACES = [
   { id:'f1',  name:'Boston Marathon',          location:'Boston, MA',       state:'MA', date:'Apr 21, 2025', distance:'26.2', price:null },
@@ -55,7 +55,8 @@ function RaceCard({race:initialRace,isActive,onClick,featured,t}){
     if(cardRef.current)observer.observe(cardRef.current)
     return()=>observer.disconnect()
   },[race.id,race.hero_image,featured])
-  const photo=getRacePhoto(race)
+  const[photo,setPhoto]=useState(()=>getFallbackPhoto(race))
+  useEffect(()=>{loadRacePhoto(race).then(url=>{if(url)setPhoto(url)})},[race.id])
   return(
     <div ref={cardRef} onMouseEnter={()=>setHovered(true)} onMouseLeave={()=>setHovered(false)} onClick={onClick}
       style={{borderRadius:'14px',overflow:'hidden',background:t.surface,flexShrink:featured?0:undefined,width:featured?'clamp(220px,20vw,300px)':undefined,boxShadow:hovered?t.cardShadowHover:t.cardShadow,cursor:'pointer',transition:'transform 0.2s,box-shadow 0.2s',transform:hovered?'translateY(-5px)':'none',outline:isActive?`2.5px solid ${t.gold||'#C9A84C'}`:'none',outlineOffset:'2px'}}>
