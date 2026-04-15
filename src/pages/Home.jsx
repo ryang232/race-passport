@@ -6,7 +6,7 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { fetchUnsplashPhoto } from '../lib/unsplash'
 import { getDistanceColor } from '../lib/colors'
 
-const STRAVA_CONNECTED = false // flip to true once Strava OAuth is wired
+const STRAVA_CONNECTED = false
 
 const STAT_ITEMS = [
   { label:'Total Races',    value:'10' },
@@ -49,30 +49,18 @@ const MOCK_UPCOMING = [
 
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
-// ── Scrolling stats ticker ────────────────────────────────────────────────────
 function StatsTicker() {
-  const trackRef = useRef(null)
   const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
-
   return (
     <div style={{ background:'#1B2A4A', borderRadius:'16px', overflow:'hidden', border:'1px solid rgba(201,168,76,0.15)', position:'relative' }}>
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:80, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
       <div style={{ position:'absolute', right:0, top:0, bottom:0, width:80, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div ref={trackRef} style={{
-        display:'flex', alignItems:'center', gap:0,
-        padding:'28px 0',
-        animation:'statsTicker 40s linear infinite',
-        width:'max-content',
-      }}>
+      <div style={{ display:'flex', alignItems:'center', padding:'28px 0', animation:'statsTicker 40s linear infinite', width:'max-content' }}>
         {items.map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
             <div style={{ textAlign:'center', padding:'0 40px' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(52px,6vw,80px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>
-                {item.value}
-              </div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'8px', whiteSpace:'nowrap' }}>
-                {item.label}
-              </div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(52px,6vw,80px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'8px', whiteSpace:'nowrap' }}>{item.label}</div>
             </div>
             <div style={{ width:6, height:6, borderRadius:'50%', background:'rgba(201,168,76,0.3)', flexShrink:0 }} />
           </div>
@@ -88,7 +76,6 @@ function StatsTicker() {
   )
 }
 
-// ── Strava connect prompt ─────────────────────────────────────────────────────
 function StravaConnect() {
   return (
     <div style={{ background:'#1B2A4A', borderRadius:'16px', border:'1px solid rgba(201,168,76,0.15)', padding:'36px 48px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'32px' }}>
@@ -98,35 +85,29 @@ function StravaConnect() {
         </div>
         <div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#fff', letterSpacing:'1px', lineHeight:1, marginBottom:'6px' }}>Connect Strava to unlock your stats</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>
-            See total race miles, PRs by distance, activity history, and more — all pulled automatically from your Strava account.
-          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'0.5px', lineHeight:1.6 }}>See total race miles, PRs by distance, activity history, and more — all pulled automatically from your Strava account.</div>
         </div>
       </div>
       <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'10px', padding:'14px 32px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', transition:'opacity 0.15s', whiteSpace:'nowrap' }}
-        onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
-        Connect Strava
-      </button>
+        onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>Connect Strava</button>
     </div>
   )
 }
 
-// ── Stamp component — FIXED: distance text always gold ────────────────────────
+// ── Stamp — white bg, navy (short) or gold (marathon+) ───────────────────────
 function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   const colors = getDistanceColor(distance)
   const cleaned = distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length > 4 ? 18 : cleaned.length > 2 ? 22 : 32
   return (
     <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }} onClick={onClick}>
-      <div style={{ width:size, height:size, borderRadius:'50%', border:'2.5px solid #1B2A4A', background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
+      <div
+        style={{ width:size, height:size, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:colors.stampBg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s, box-shadow 0.15s' }}
         onMouseEnter={e => { e.currentTarget.style.transform='scale(1.05)'; e.currentTarget.style.boxShadow='0 8px 24px rgba(27,42,74,0.15)' }}
         onMouseLeave={e => { e.currentTarget.style.transform='scale(1)'; e.currentTarget.style.boxShadow='none' }}>
-        {/* Dashed inner ring — gold */}
-        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:'1px dashed rgba(201,168,76,0.35)' }} />
-        {/* Distance text — GOLD */}
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:'#C9A84C', lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
-        {/* Race name subtitle — gold, faded */}
-        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
+        <div style={{ position:'absolute', inset:8, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, lineHeight:1, letterSpacing:'0.04em', position:'relative', zIndex:1, textAlign:'center', padding:'0 10px' }}>{cleaned}</div>
+        {name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8.5px', fontWeight:600, letterSpacing:'1px', color:colors.stampText, textTransform:'uppercase', textAlign:'center', padding:'0 14px', lineHeight:1.3, marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{name.split(' ').slice(0,3).join(' ')}</div>}
       </div>
       <div style={{ textAlign:'center' }}>
         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', lineHeight:1.4 }}>{location}</div>
@@ -136,24 +117,33 @@ function Stamp({ distance, name, location, month, year, size=130, onClick }) {
   )
 }
 
+// ── Small inline stamp used on card photos ────────────────────────────────────
+function CardStamp({ distance, size=48 }) {
+  const colors = getDistanceColor(distance)
+  const cleaned = distance.replace(' mi','')
+  const fs = cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14
+  return (
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+      <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
+      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+    </div>
+  )
+}
+
 function NearbyCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
-  const colors = getDistanceColor(race.distance)
-  const cleaned = race.distance.replace(' mi','')
   useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ height:'3px', background:'#1B2A4A' }} />
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'#1B2A4A' }} />
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
             {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
               <div key={s.label} style={{ textAlign:'center' }}>
@@ -168,19 +158,15 @@ function NearbyCard({ race }) {
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
           </div>
         </div>
-        {/* Stamp — FIXED: gold text */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <div style={{ width:50, height:50, borderRadius:'50%', border:'2px solid #1B2A4A', background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:'0.75px dashed rgba(201,168,76,0.35)' }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 13, color:'#C9A84C', letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
-          </div>
+          <CardStamp distance={race.distance} size={48} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:'2px solid rgba(27,42,74,0.13)' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'14px 16px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -195,13 +181,7 @@ function useCountdown(dateStr) {
       if (isNaN(target)) return
       const diff = target - new Date()
       if (diff <= 0) { setCountdown(c => ({ ...c, past:true })); return }
-      setCountdown({
-        days:  Math.floor(diff / 86400000),
-        hours: Math.floor((diff % 86400000) / 3600000),
-        mins:  Math.floor((diff % 3600000) / 60000),
-        secs:  Math.floor((diff % 60000) / 1000),
-        past:  false,
-      })
+      setCountdown({ days:Math.floor(diff/86400000), hours:Math.floor((diff%86400000)/3600000), mins:Math.floor((diff%3600000)/60000), secs:Math.floor((diff%60000)/1000), past:false })
     }
     parse()
     const t = setInterval(parse, 1000)
@@ -214,36 +194,23 @@ function UpcomingCard({ race }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(null)
   const navigate = useNavigate()
-  const colors = getDistanceColor(race.distance)
-  const cleaned = race.distance.replace(' mi','')
   const countdown = useCountdown(race.date)
   useEffect(() => { fetchUnsplashPhoto(race.query, 'running').then(url => setPhoto(url)) }, [race.query])
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => navigate(`/race-detail/${race.id}`)}
       style={{ borderRadius:'14px', overflow:'hidden', background:'#fff', boxShadow: hovered ? '0 12px 32px rgba(27,42,74,0.18)' : '0 2px 12px rgba(27,42,74,0.08)', cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ height:'3px', background:'#1B2A4A' }} />
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
         {photo ? <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} />
           : <div style={{ width:'100%', height:'100%', background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', display:'flex', alignItems:'center', justifyContent:'center' }}><div style={{ width:32, height:32, border:'3px solid rgba(201,168,76,0.35)', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 1s linear infinite' }} /></div>}
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-
-        {/* Countdown overlay on hover */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ position:'absolute', top:0, left:0, right:0, height:'3px', background:'#1B2A4A' }} />
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>
-            {countdown.past ? 'Race Day!' : 'Countdown to Race Day'}
-          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
           {countdown.past ? (
             <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px' }}>GO TIME!</div>
           ) : (
             <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', width:'100%' }}>
-              {[
-                { val: String(countdown.days).padStart(2,'0'),  label:'Days' },
-                { val: String(countdown.hours).padStart(2,'0'), label:'Hrs' },
-                { val: String(countdown.mins).padStart(2,'0'),  label:'Min' },
-                { val: String(countdown.secs).padStart(2,'0'),  label:'Sec' },
-              ].map(u => (
+              {[{ val:String(countdown.days).padStart(2,'0'), label:'Days' },{ val:String(countdown.hours).padStart(2,'0'), label:'Hrs' },{ val:String(countdown.mins).padStart(2,'0'), label:'Min' },{ val:String(countdown.secs).padStart(2,'0'), label:'Sec' }].map(u => (
                 <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:'1px solid rgba(201,168,76,0.2)' }}>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginTop:'4px' }}>{u.label}</div>
@@ -252,21 +219,16 @@ function UpcomingCard({ race }) {
             </div>
           )}
         </div>
-
         <div style={{ position:'absolute', top:12, right:12, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
-        {/* Stamp — FIXED: gold text */}
         <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <div style={{ width:46, height:46, borderRadius:'50%', border:'2px solid #1B2A4A', background:'rgba(0,0,0,0.45)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:'0.75px dashed rgba(201,168,76,0.35)' }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: cleaned.length > 3 ? 9 : 12, color:'#C9A84C', letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
-          </div>
+          <CardStamp distance={race.distance} size={46} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:'2px solid rgba(27,42,74,0.13)' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2 }}>{race.name}</div>
+      <div style={{ padding:'14px 16px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4' }}>{race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#1B2A4A' }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -278,11 +240,7 @@ function ScrollRow({ children }) {
   const [showLeft, setShowLeft] = useState(false)
   const [showRight, setShowRight] = useState(true)
   const [hovering, setHovering] = useState(false)
-  const checkScroll = () => {
-    const el = ref.current; if (!el) return
-    setShowLeft(el.scrollLeft > 10)
-    setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
-  }
+  const checkScroll = () => { const el = ref.current; if (!el) return; setShowLeft(el.scrollLeft > 10); setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10) }
   useEffect(() => { const el = ref.current; if (el) { el.addEventListener('scroll', checkScroll); checkScroll() }; return () => el?.removeEventListener('scroll', checkScroll) }, [])
   const scroll = (dir) => ref.current?.scrollBy({ left: dir * 420, behavior:'smooth' })
   const btnStyle = { position:'absolute', top:'40%', transform:'translateY(-50%)', zIndex:10, width:44, height:44, borderRadius:'50%', background:'#1B2A4A', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(27,42,74,0.25)', transition:'background 0.15s' }
@@ -341,10 +299,7 @@ export default function Home() {
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
       @keyframes spin { to { transform: rotate(360deg); } }
-      @keyframes statsTicker {
-        0%   { transform: translateX(0); }
-        100% { transform: translateX(-33.333%); }
-      }
+      @keyframes statsTicker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
       .nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; color:#9aa5b4; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
       .nav-tab.active { color:#1B2A4A; border-bottom-color:#C9A84C; }
       .nav-tab:hover { color:#1B2A4A; }
@@ -384,9 +339,7 @@ export default function Home() {
           </div>
           <div style={{ display:'flex', alignItems:'stretch' }}>
             {NAV_TABS.map(tab => (
-              <button key={tab.path} className={`nav-tab ${location.pathname === tab.path ? 'active' : ''}`} onClick={() => navigate(tab.path)}>
-                {tab.icon}{tab.label}
-              </button>
+              <button key={tab.path} className={`nav-tab ${location.pathname === tab.path ? 'active' : ''}`} onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
             ))}
           </div>
           <div ref={dropdownRef} style={{ position:'relative', display:'flex', alignItems:'center' }}>
@@ -432,13 +385,9 @@ export default function Home() {
       </div>
 
       <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
-
-        {/* STATS BAR */}
         <div style={{ marginBottom:'48px' }}>
           {STRAVA_CONNECTED ? <StatsTicker /> : <StravaConnect />}
         </div>
-
-        {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Races Near You</span>
@@ -446,8 +395,6 @@ export default function Home() {
           </div>
           <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} />)}</ScrollRow>
         </div>
-
-        {/* YOUR STAMPS */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
             <span className="section-title">Your Stamps</span>
@@ -455,8 +402,7 @@ export default function Home() {
           </div>
           <ScrollRow>
             {RYAN_STAMPS.map(stamp => (
-              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130}
-                onClick={() => navigate(`/race/${stamp.id}`)} />
+              <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} onClick={() => navigate(`/race/${stamp.id}`)} />
             ))}
             <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
               <div style={{ width:130, height:130, borderRadius:'50%', border:'2px dashed #d0d7e0', display:'flex', alignItems:'center', justifyContent:'center', background:'rgba(255,255,255,0.8)', transition:'border-color 0.15s, transform 0.15s' }}
@@ -468,8 +414,6 @@ export default function Home() {
             </div>
           </ScrollRow>
         </div>
-
-        {/* UPCOMING */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span className="section-title">Upcoming Races</span>
@@ -477,7 +421,6 @@ export default function Home() {
           </div>
           <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} />)}</ScrollRow>
         </div>
-
       </div>
     </div>
   )
