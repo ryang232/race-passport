@@ -5,7 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { getFallbackPhoto, loadRacePhoto } from '../lib/photos'
+import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 
 const STRAVA_CONNECTED = false
 
@@ -161,7 +161,7 @@ function handleCardClick(race, navigate) {
 
 function NearbyCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto] = useState(() => getFallbackPhoto(race))
+  const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const navigate = useNavigate()
   useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
   return (
@@ -218,7 +218,7 @@ function useCountdown(dateStr) {
 
 function UpcomingCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
-  const [photo, setPhoto] = useState(() => getFallbackPhoto(race))
+  const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
   useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
