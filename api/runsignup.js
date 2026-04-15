@@ -1,6 +1,6 @@
 // api/runsignup.js
-// Vercel serverless proxy for RunSignup API + Unsplash image search
-// Actions: sync_races | get_races | get_race_detail | unsplash_search | debug
+// Vercel serverless proxy
+// Actions: sync_races | get_races | get_race_detail | enrich_race | unsplash_search | debug
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -11,60 +11,127 @@ export default async function handler(req, res) {
   const params = req.method === 'POST' ? req.body : req.query
   const action = params.action || 'debug'
 
+  const API_KEY    = process.env.RUNSIGNUP_API_KEY
+  const API_SECRET = process.env.RUNSIGNUP_API_SECRET
+  const SUPABASE_URL = process.env.SUPABASE_URL
+  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
+
+  // ── Debug ──────────────────────────────────────────────────────────────────
+  if (action === 'debug') {
+    return res.status(200).json({
+      message: 'Race Passport API proxy running',
+      env: {
+        hasRunSignupKey:    !!API_KEY,
+        hasRunSignupSecret: !!API_SECRET,
+        hasSupabaseUrl:     !!SUPABASE_URL,
+        hasSupabaseKey:     !!SUPABASE_KEY,
+        hasUnsplashKey:     !!process.env.UNSPLASH_ACCESS_KEY,
+        hasSyncKey:         !!process.env.SYNC_SECRET_KEY,
+      }
+    })
+  }
+
   // ── Unsplash image search ──────────────────────────────────────────────────
   if (action === 'unsplash_search') {
     const query = params.query
     if (!query) return res.status(400).json({ error: 'query param required' })
-
     const accessKey = process.env.UNSPLASH_ACCESS_KEY
     if (!accessKey) return res.status(500).json({ error: 'UNSPLASH_ACCESS_KEY not configured' })
-
     try {
       const url = `https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=5&orientation=landscape&content_filter=high`
-      const response = await fetch(url, {
-        headers: { Authorization: `Client-ID ${accessKey}` }
-      })
+      const response = await fetch(url, { headers: { Authorization: `Client-ID ${accessKey}` } })
       if (!response.ok) throw new Error(`Unsplash API error: ${response.status}`)
       const data = await response.json()
-      const results = (data.results || []).map(p => ({
-        url: p.urls.regular,
-        thumb: p.urls.small,
-        alt: p.alt_description || query,
-        credit: p.user?.name || '',
-      }))
+      const results = (data.results || []).map(p => ({ url: p.urls.regular, thumb: p.urls.small }))
       return res.status(200).json({ results })
     } catch (e) {
       return res.status(500).json({ error: e.message, results: [] })
     }
   }
 
-  // ── Debug ──────────────────────────────────────────────────────────────────
-  if (action === 'debug') {
-    return res.status(200).json({
-      message: 'Race Passport API proxy is running',
-      env: {
-        hasRunSignupKey: !!process.env.RUNSIGNUP_API_KEY,
-        hasRunSignupSecret: !!process.env.RUNSIGNUP_API_SECRET,
-        hasSupabaseUrl: !!process.env.SUPABASE_URL,
-        hasSupabaseKey: !!process.env.SUPABASE_SERVICE_KEY,
-        hasUnsplashKey: !!process.env.UNSPLASH_ACCESS_KEY,
-        hasSyncKey: !!process.env.SYNC_SECRET_KEY,
-      }
-    })
-  }
+  // ── enrich_race — fetch RunSignup detail, extract hero image, save to Supabase ──
+  if (action === 'enrich_race') {
+    const raceId = params.race_id
+    if (!raceId) return res.status(400).json({ error: 'race_id required' })
 
-  // ── Auth check for write actions ───────────────────────────────────────────
-  const SYNC_KEY = process.env.SYNC_SECRET_KEY
-  if (['sync_races'].includes(action)) {
-    if (params.sync_key !== SYNC_KEY) {
-      return res.status(401).json({ error: 'Unauthorized' })
+    try {
+      // Fetch full detail from RunSignup
+      const url = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
+      const resp = await fetch(url)
+      if (!resp.ok) throw new Error(`RunSignup API error: ${resp.status}`)
+      const data = await resp.json()
+      const race = data?.race
+
+      if (!race) return res.status(404).json({ error: 'Race not found', hero_image: null })
+
+      // Extract image — RunSignup returns logo_url and sometimes a race_image or photo
+      // Priority: race_logo → logo_url → race.profile_image_url
+      const heroImage =
+        race.race_logo ||
+        race.logo_url ||
+        race.profile_image_url ||
+        race.race_hero_image ||
+        null
+
+      // Extract additional enrichment fields
+      const description   = race.description || null
+      const websiteUrl    = race.url || null
+      const courseMapUrl  = race.course_map || null
+      const charityName   = race.beneficiary_name || null
+      const cutoffTime    = race.time_limit || null
+
+      // Save back to Supabase
+      if (SUPABASE_URL && SUPABASE_KEY) {
+        const update = {
+          hero_image:    heroImage,
+          description:   description,
+          website_url:   websiteUrl,
+          course_map_url:courseMapUrl,
+          charity:       charityName,
+          cutoff_time:   cutoffTime,
+          detail_fetched:true,
+          last_updated:  new Date().toISOString(),
+        }
+        // Remove null fields to avoid overwriting existing data
+        Object.keys(update).forEach(k => update[k] === null && delete update[k])
+        update.detail_fetched = true // always mark as fetched even if no image
+
+        await fetch(`${SUPABASE_URL}/rest/v1/races?id=eq.${raceId}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_KEY,
+            'Authorization': `Bearer ${SUPABASE_KEY}`,
+            'Prefer': 'return=minimal',
+          },
+          body: JSON.stringify(update),
+        })
+      }
+
+      return res.status(200).json({
+        race_id:    raceId,
+        hero_image: heroImage,
+        website_url:websiteUrl,
+        detail_fetched: true,
+      })
+    } catch (e) {
+      return res.status(500).json({ error: e.message, hero_image: null })
     }
   }
 
-  const API_KEY    = process.env.RUNSIGNUP_API_KEY
-  const API_SECRET = process.env.RUNSIGNUP_API_SECRET
-  const SUPABASE_URL = process.env.SUPABASE_URL
-  const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
+  // ── get_race_detail — raw detail pass-through for RaceDetail.jsx ───────────
+  if (action === 'get_race_detail') {
+    const raceId = params.race_id
+    if (!raceId) return res.status(400).json({ error: 'race_id required' })
+    try {
+      const url  = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
+      const resp = await fetch(url)
+      const data = await resp.json()
+      return res.status(200).json(data)
+    } catch (e) {
+      return res.status(500).json({ error: e.message })
+    }
+  }
 
   // ── get_races ──────────────────────────────────────────────────────────────
   if (action === 'get_races') {
@@ -80,22 +147,11 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── get_race_detail ────────────────────────────────────────────────────────
-  if (action === 'get_race_detail') {
-    const raceId = params.race_id
-    if (!raceId) return res.status(400).json({ error: 'race_id required' })
-    try {
-      const url  = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
-      const resp = await fetch(url)
-      const data = await resp.json()
-      return res.status(200).json(data)
-    } catch (e) {
-      return res.status(500).json({ error: e.message })
-    }
-  }
-
   // ── sync_races ─────────────────────────────────────────────────────────────
   if (action === 'sync_races') {
+    const SYNC_KEY = process.env.SYNC_SECRET_KEY
+    if (params.sync_key !== SYNC_KEY) return res.status(401).json({ error: 'Unauthorized' })
+
     const dryRun = params.dry_run === 'true'
     const statesParam = params.states || ''
     const STATES = statesParam
@@ -125,7 +181,7 @@ export default async function handler(req, res) {
       return m ? `${m[2]}/${m[3]}/${m[1]}` : null
     }
 
-    let totalSynced = 0, totalSkipped = 0, errors = []
+    let totalSynced = 0, errors = []
 
     for (const state of STATES) {
       let page = 1, hasMore = true
@@ -141,15 +197,15 @@ export default async function handler(req, res) {
           for (const r of races) {
             const info = r.race
             if (!info) continue
-            const event = info.events?.[0]
-            const dist  = normalize(event?.distance || info.distance || '')
-            const dateStr = info.next_date || info.start_date || event?.start_time || null
+            const event    = info.events?.[0]
+            const dist     = normalize(event?.distance || info.distance || '')
+            const dateStr  = info.next_date || info.start_date || event?.start_time || null
             const dateSort = dateStr?.substring(0, 10) || null
-            const dateDisplay = parseDate(dateSort)
-            const lat = parseFloat(info.address?.lat) || null
-            const lng = parseFloat(info.address?.lng) || null
+            const dateDisp = parseDate(dateSort)
+            const lat      = parseFloat(info.address?.lat) || null
+            const lng      = parseFloat(info.address?.lng) || null
             const priceRaw = info.registration_opens?.[0]?.fee
-            const price = priceRaw ? parseFloat(String(priceRaw).replace(/[^0-9.]/g,'')) || null : null
+            const price    = priceRaw ? parseFloat(String(priceRaw).replace(/[^0-9.]/g,'')) || null : null
 
             rows.push({
               id: String(info.race_id),
@@ -158,19 +214,28 @@ export default async function handler(req, res) {
               location: [info.address?.city, info.address?.state].filter(Boolean).join(', '),
               city: info.address?.city || null,
               state: info.address?.state || null,
-              lat, lng, distance: dist, distance_raw: event?.distance || null,
-              date: dateDisplay, date_sort: dateSort,
-              price, price_raw: priceRaw ? String(priceRaw) : null,
-              terrain: null, elevation: null, est_finishers: null,
+              lat, lng,
+              distance: dist,
+              distance_raw: event?.distance || null,
+              date: dateDisp,
+              date_sort: dateSort,
+              price,
+              price_raw: priceRaw ? String(priceRaw) : null,
+              terrain: null,
+              elevation: null,
+              est_finishers: null,
               registration_url: info.url || null,
-              unsplash_query: null,
+              // Extract logo/hero image during sync if available
+              hero_image: info.race_logo || info.logo_url || null,
               sport: dist === '70.3' || dist === '140.6' ? 'Triathlon' : 'Running',
-              is_past: false, last_updated: new Date().toISOString(), detail_fetched: false,
+              is_past: false,
+              last_updated: new Date().toISOString(),
+              detail_fetched: false,
             })
           }
 
           if (!dryRun && rows.length > 0) {
-            const { error } = await fetch(`${SUPABASE_URL}/rest/v1/races`, {
+            const upsertResp = await fetch(`${SUPABASE_URL}/rest/v1/races`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -179,8 +244,11 @@ export default async function handler(req, res) {
                 'Prefer': 'resolution=merge-duplicates,return=minimal',
               },
               body: JSON.stringify(rows),
-            }).then(r => r.ok ? { error: null } : r.json().then(e => ({ error: e })))
-            if (error) errors.push(`${state} p${page}: ${JSON.stringify(error).substring(0,100)}`)
+            })
+            if (!upsertResp.ok) {
+              const err = await upsertResp.json().catch(() => ({}))
+              errors.push(`${state} p${page}: ${JSON.stringify(err).substring(0,100)}`)
+            }
           }
 
           totalSynced += rows.length
@@ -194,8 +262,10 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      success: true, dry_run: dryRun, states: STATES.length,
-      synced: totalSynced, skipped: totalSkipped,
+      success: true,
+      dry_run: dryRun,
+      states: STATES.length,
+      synced: totalSynced,
       errors: errors.length > 0 ? errors : undefined,
     })
   }
