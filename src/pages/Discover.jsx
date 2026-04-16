@@ -28,7 +28,7 @@ const STATE_NAME_TO_ABBR = {
   'wisconsin':'WI','wyoming':'WY','dc':'DC','district of columbia':'DC',
 }
 
-const RESULTS_PER_PAGE = 24
+const RESULTS_PER_PAGE = 12
 const DIST_FILTERS = [
   { label:'All',   value:'ALL'   },
   { label:'5K',    value:'5K'    },
@@ -116,7 +116,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
   useEffect(() => {
     const enriched = { ...race, ...parseCityState(race) }
     loadRacePhoto(enriched).then(url => { if (url) setPhoto(url) })
-  }, [race.id])
+  }, [race.id, race.city, race.state, race.hero_image])
 
   return (
     <div ref={cardRef}
@@ -214,8 +214,10 @@ export default function Discover() {
   const [allRaces, setAllRaces]           = useState([])
   const [featuredRaces, setFeaturedRaces] = useState([])
   const [loading, setLoading]             = useState(true)
-  const [distFilter, setDistFilter]       = useState('ALL')
+
+  // Live input state (uncommitted — don't drive results until Search is hit)
   const [search, setSearch]               = useState('')
+  const [distFilter, setDistFilter]       = useState('ALL')
   const [sort, setSort]                   = useState('date-asc')
   const [showFilters, setShowFilters]     = useState(false)
   const [maxPrice, setMaxPrice]           = useState(400)
@@ -223,6 +225,10 @@ export default function Discover() {
   const [sportFilter, setSportFilter]     = useState('All')
   const [dateFrom, setDateFrom]           = useState('')
   const [dateTo, setDateTo]               = useState('')
+
+  // Committed state — null means "not searched yet", shows Featured Races
+  const [committed, setCommitted]         = useState(null)
+
   const [radius, setRadius]               = useState(75)
   const [userLat, setUserLat]             = useState(null)
   const [userLng, setUserLng]             = useState(null)
@@ -236,37 +242,60 @@ export default function Discover() {
   const markersRef     = useRef({})
   const dropdownRef    = useRef(null)
 
-  // ── DERIVED STATE — must be declared before any useEffect that uses them ──
-  const isSearching = (
-    search.trim() !== '' ||
-    distFilter !== 'ALL' ||
-    terrainFilter !== 'All' ||
-    sportFilter !== 'All' ||
-    maxPrice < 400 ||
-    dateFrom !== '' ||
-    dateTo !== '' ||
-    userLat !== null
-  )
+  // Commit current inputs → triggers results + map update
+  const commitSearch = () => {
+    setCommitted({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo })
+    setResultsPage(1)
+    setActiveId(null)
+  }
+
+  // Clear everything back to Featured Races view
+  const clearAll = () => {
+    setSearch(''); setDistFilter('ALL'); setMaxPrice(400)
+    setTerrainFilter('All'); setSportFilter('All'); setDateFrom(''); setDateTo('')
+    setCommitted(null); setResultsPage(1); setActiveId(null)
+  }
+
+  // ── DERIVED STATE — declared before any useEffect that uses them ──────────
+
+  // isSearching is true only when there's a committed search
+  const isSearching = committed !== null || userLat !== null
 
   const filtered = (() => {
     if (!isSearching) return []
+    const c = committed || { search:'', distFilter:'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:'', dateTo:'' }
+
+    // Filter out non-race entries by name keywords
+    const NON_RACE_KEYWORDS = [
+      'coaching','coach session','volunteer','clinic','camp','seminar','webinar',
+      'training session','training program','kids run','fun run series',
+      'virtual','online','membership','donation','fundraiser','raffle',
+      'merchandise','gear','registration fee waiver','transfer','deferral',
+      'information','info session','orientation','meeting','workshop',
+    ]
+    const isActualRace = (r) => {
+      const name = (r.name || '').toLowerCase()
+      return !NON_RACE_KEYWORDS.some(kw => name.includes(kw))
+    }
+
     let races = allRaces.filter(r => {
+      if (!isActualRace(r)) return false
       const d = (r.distance||'').toLowerCase()
       const known = ['5k','10k','13.1','26.2','70.3','140.6','tri','50k','50m','100k','100m']
       const matchDist =
-        distFilter === 'ALL'   ? true :
-        distFilter === 'TRI'   ? ['70.3','140.6','tri'].some(x => d.includes(x)) :
-        distFilter === 'ULTRA' ? ['50k','50m','100k','100m'].some(x => d.includes(x)) :
-        distFilter === 'OTHER' ? (!d || !known.some(x => d.includes(x))) :
-        d === distFilter.toLowerCase() || d.startsWith(distFilter.toLowerCase())
+        c.distFilter === 'ALL'   ? true :
+        c.distFilter === 'TRI'   ? ['70.3','140.6','tri'].some(x => d.includes(x)) :
+        c.distFilter === 'ULTRA' ? ['50k','50m','100k','100m'].some(x => d.includes(x)) :
+        c.distFilter === 'OTHER' ? (!d || !known.some(x => d.includes(x))) :
+        d === c.distFilter.toLowerCase() || d.startsWith(c.distFilter.toLowerCase())
       return (
         matchDist &&
-        matchesSearch(r, search) &&
-        (!r.price || r.price <= maxPrice) &&
-        (terrainFilter === 'All' || (r.terrain||'').toLowerCase().includes(terrainFilter.toLowerCase())) &&
-        (sportFilter === 'All' || r.sport === sportFilter) &&
-        (!dateFrom || (r.date_sort||'') >= dateFrom) &&
-        (!dateTo   || (r.date_sort||'') <= dateTo)
+        matchesSearch(r, c.search) &&
+        (!r.price || r.price <= c.maxPrice) &&
+        (c.terrainFilter === 'All' || (r.terrain||'').toLowerCase().includes(c.terrainFilter.toLowerCase())) &&
+        (c.sportFilter === 'All' || r.sport === c.sportFilter) &&
+        (!c.dateFrom || (r.date_sort||'') >= c.dateFrom) &&
+        (!c.dateTo   || (r.date_sort||'') <= c.dateTo)
       )
     })
     if (userLat && userLng) {
@@ -280,10 +309,10 @@ export default function Discover() {
         .sort((a,b) => (a._distMi||999)-(b._distMi||999))
     } else {
       races.sort((a,b) => {
-        if (sort==='date-asc')   return (a.date_sort||'').localeCompare(b.date_sort||'')
-        if (sort==='date-desc')  return (b.date_sort||'').localeCompare(a.date_sort||'')
-        if (sort==='price-asc')  return (a.price||0)-(b.price||0)
-        if (sort==='price-desc') return (b.price||0)-(a.price||0)
+        if (c.sort==='date-asc')   return (a.date_sort||'').localeCompare(b.date_sort||'')
+        if (c.sort==='date-desc')  return (b.date_sort||'').localeCompare(a.date_sort||'')
+        if (c.sort==='price-asc')  return (a.price||0)-(b.price||0)
+        if (c.sort==='price-desc') return (b.price||0)-(a.price||0)
         return 0
       })
     }
@@ -338,9 +367,6 @@ export default function Discover() {
     }
     loadAll()
   }, [])
-
-  // Reset pagination on filter change
-  useEffect(() => { setResultsPage(1) }, [search, distFilter, terrainFilter, sportFilter, maxPrice, dateFrom, dateTo, userLat])
 
   // Profile + inject styles
   useEffect(() => {
@@ -450,8 +476,14 @@ export default function Discover() {
   // ── Helpers ───────────────────────────────────────────────────────────────
   const initials      = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
-  const activeFilterCount = [terrainFilter!=='All',sportFilter!=='All',maxPrice<400,dateFrom!=='',dateTo!==''].filter(Boolean).length
-  const clearFilters  = () => { setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDistFilter('ALL'); setSearch(''); setDateFrom(''); setDateTo('') }
+  const c = committed || {}
+  const activeFilterCount = [
+    c.terrainFilter && c.terrainFilter!=='All',
+    c.sportFilter && c.sportFilter!=='All',
+    c.maxPrice && c.maxPrice<400,
+    !!c.dateFrom,
+    !!c.dateTo,
+  ].filter(Boolean).length
 
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
@@ -538,10 +570,19 @@ export default function Discover() {
         <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', background:t.inputBg, border:`1.5px solid ${t.border}`, borderRadius:'10px', padding:'10px 14px' }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke={t.textMuted} strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke={t.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search races, cities, states..."
+            <input value={search} onChange={e => setSearch(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') commitSearch() }}
+              placeholder="Search races, cities, states..."
               style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, width:'100%' }} />
             {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontSize:'18px', lineHeight:1, padding:0 }}>×</button>}
           </div>
+          {/* Search button */}
+          <button onClick={commitSearch}
+            style={{ padding:'10px 24px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
+            onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+            onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+            Search
+          </button>
           <select value={sort} onChange={e => setSort(e.target.value)} style={{ ...inputStyle, appearance:'none', cursor:'pointer' }}>
             {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
           </select>
@@ -562,15 +603,21 @@ export default function Discover() {
           {DIST_FILTERS.map(f => {
             const isAct = distFilter === f.value
             return (
-              <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
+              <button key={f.value} className="dist-pill" onClick={() => { setDistFilter(f.value); }}
                 style={{ color:isAct?'#fff':t.textMuted, borderColor:isAct?'#1B2A4A':t.border, background:isAct?'#1B2A4A':t.surface }}>
                 {f.label}
               </button>
             )
           })}
           {isSearching && (
-            <div style={{ marginLeft:'auto', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-              {loading ? 'Loading...' : `${filtered.length} of ${allRaces.length} races`}
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
+                {loading ? 'Loading...' : `${filtered.length} of ${allRaces.length} races`}
+              </span>
+              <button onClick={clearAll}
+                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>
+                Clear ×
+              </button>
             </div>
           )}
         </div>
@@ -612,7 +659,7 @@ export default function Discover() {
                 ))}
               </div>
             </div>
-            <button onClick={clearFilters}
+            <button onClick={clearAll}
               style={{ alignSelf:'flex-end', padding:'7px 16px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:t.surface, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor='#c53030'; e.currentTarget.style.color='#c53030' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>Clear All</button>
@@ -683,7 +730,7 @@ export default function Discover() {
           <>
             <div style={{ marginBottom:'24px' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>
-                {locationStatus==='granted' ? 'Races Near You' : search ? 'Race Results' : 'Upcoming Races'}
+                {locationStatus==='granted' ? 'Races Near You' : committed?.search ? 'Race Results' : 'Upcoming Races'}
               </div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'3px' }}>
                 {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
@@ -705,7 +752,7 @@ export default function Discover() {
               <div style={{ textAlign:'center', padding:'64px 24px', background:t.surface, borderRadius:'16px', border:`1.5px solid ${t.border}` }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:t.text, letterSpacing:'1px', marginBottom:'10px' }}>NO RACES FOUND</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:t.textMuted, marginBottom:'20px' }}>Try a state name like "Maryland" or a city like "Boston".</div>
-                <button onClick={clearFilters}
+                <button onClick={clearAll}
                   style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
                   onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
                   onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Clear Filters</button>
@@ -727,15 +774,19 @@ export default function Discover() {
                   ))}
                 </div>
                 {filtered.length > resultsPage*RESULTS_PER_PAGE && (
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'16px', marginTop:'40px' }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>
-                      Showing {Math.min(resultsPage*RESULTS_PER_PAGE,filtered.length)} of {filtered.length} races
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', marginTop:'48px' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, letterSpacing:'0.5px' }}>
+                      Showing <strong style={{ color:t.text }}>{Math.min(resultsPage*RESULTS_PER_PAGE, filtered.length)}</strong> of <strong style={{ color:t.text }}>{filtered.length}</strong> races
+                    </div>
+                    {/* Progress bar */}
+                    <div style={{ width:200, height:3, background:t.borderLight, borderRadius:'2px', overflow:'hidden' }}>
+                      <div style={{ height:'100%', background:'#C9A84C', borderRadius:'2px', width:`${Math.min(100, (resultsPage*RESULTS_PER_PAGE/filtered.length)*100)}%`, transition:'width 0.3s ease' }} />
                     </div>
                     <button onClick={() => setResultsPage(p => p+1)}
-                      style={{ padding:'12px 40px', border:`1.5px solid ${t.text}`, borderRadius:'10px', background:t.surface, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:t.text, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
-                      onMouseLeave={e => { e.currentTarget.style.background=t.surface; e.currentTarget.style.color=t.text }}>
-                      Show More Races
+                      style={{ padding:'13px 48px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+                      onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+                      onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+                      Load More Races
                     </button>
                   </div>
                 )}
