@@ -143,24 +143,24 @@ export default async function handler(req, res) {
     const LIGHTING = [
       'soft overcast morning light, diffused bright sky, cool tones',
       'golden hour late afternoon, warm glowing light, long shadows',
-      'crisp sunny midday, bright blue sky with white clouds, vivid colors',
-      'late afternoon sun breaking through clouds, dramatic shafts of light',
-      'early morning blue hour just after sunrise, soft pink and blue sky',
-      'approaching dusk, deep orange and purple sky, city lights beginning to glow',
-      'bright partly cloudy afternoon, dynamic cloud shadows across the scene',
-      'warm golden late morning light, clear sky, rich shadows',
+      'crisp sunny midday, bright blue sky with a few white clouds, vivid colors',
+      'late afternoon sun, warm directional light, clear sky',
+      'early morning just after sunrise, soft warm sky, gentle light',
+      'approaching dusk, deep orange sky on the horizon, clear air',
+      'bright partly cloudy afternoon, dynamic but clear conditions',
+      'warm late morning light, clear blue sky, sharp shadows',
     ]
 
-    // Varied weather conditions
+    // Varied weather conditions — subtle, not dramatic
     const WEATHER = [
-      'clear and sunny',
-      'light fog rolling in, misty atmosphere, soft diffused light',
-      'dramatic storm clouds gathering in the distance, moody sky',
-      'light rain, wet reflective surfaces, glistening pavement',
-      'overcast and brooding, rich dark clouds, flat even light',
-      'clearing storm, dramatic rays of sunlight breaking through dark clouds',
-      'crisp and clear, fresh after recent rain, vivid saturated colors',
-      'thin morning mist, soft atmospheric haze, ethereal quality',
+      'clear and sunny, sharp clean air',
+      'thin haze on the horizon, otherwise clear and bright',
+      'a few scattered clouds, mostly clear, fresh conditions',
+      'light overcast, soft even light, no harsh shadows',
+      'clear after recent rain, vivid saturated colors, clean air',
+      'partly cloudy, sunlight breaking through, bright patches on the ground',
+      'crisp and clear, excellent visibility, deep blue sky',
+      'mild and clear, calm conditions, good natural light',
     ]
 
     const lighting = LIGHTING[hash % LIGHTING.length]
