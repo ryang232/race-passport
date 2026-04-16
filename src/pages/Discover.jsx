@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -7,28 +7,12 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 
-// ── Known big races to surface as Featured (matched by name substring, case-insensitive) ──
 const FEATURED_RACE_NAMES = [
-  'boston marathon',
-  'new york city marathon',
-  'chicago marathon',
-  'marine corps marathon',
-  'la marathon',
-  'los angeles marathon',
-  'new york city half',
-  'united nyc half',
-  'broad street run',
-  'cherry blossom',
-  'bolder boulder',
-  'ironman 70.3 eagleman',
-  'ironman 70.3 atlantic city',
-  'richmond marathon',
-  'colorado marathon',
-  'philadelphia marathon',
-  'honolulu marathon',
-  'disney marathon',
-  'rock \'n\' roll',
-  'city of oaks',
+  'boston marathon','new york city marathon','chicago marathon','marine corps marathon',
+  'la marathon','los angeles marathon','new york city half','united nyc half',
+  'broad street run','cherry blossom','bolder boulder','ironman 70.3 eagleman',
+  'ironman 70.3 atlantic city','richmond marathon','colorado marathon',
+  'philadelphia marathon','honolulu marathon','disney marathon',"rock 'n' roll",'city of oaks',
 ]
 
 const STATE_NAME_TO_ABBR = {
@@ -44,7 +28,6 @@ const STATE_NAME_TO_ABBR = {
   'wisconsin':'WI','wyoming':'WY','dc':'DC','district of columbia':'DC',
 }
 
-const PAGE_SIZE = 500 // load all at once for client-side filtering
 const RESULTS_PER_PAGE = 24
 const DIST_FILTERS = [
   { label:'All',   value:'ALL'   },
@@ -84,26 +67,22 @@ function matchesSearch(race, q) {
   )
 }
 
-// Parse city/state out of a "City, ST" location string as fallback
 function parseCityState(race) {
   if (race.city && race.state) return { city: race.city, state: race.state }
   const loc = race.location || ''
   const parts = loc.split(',').map(s => s.trim())
-  if (parts.length >= 2) {
-    return { city: parts[0], state: parts[parts.length - 1].toUpperCase().slice(0,2) }
-  }
-  return { city: '', state: '' }
+  if (parts.length >= 2) return { city: parts[0], state: parts[parts.length-1].toUpperCase().slice(0,2) }
+  return { city:'', state:'' }
 }
 
 const API_BASE = '/api/runsignup'
 const enrichCache = new Set()
 
-// ── Sub-components ────────────────────────────────────────────────────────────
-
+// ── CardStamp ─────────────────────────────────────────────────────────────────
 function CardStamp({ distance, size=50 }) {
   const colors = getDistanceColor(distance)
   const cleaned = (distance||'').replace(' mi','')
-  const fs = cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14
+  const fs = cleaned.length>3 ? 9 : cleaned.length>2 ? 11 : 14
   return (
     <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
       <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
@@ -112,13 +91,13 @@ function CardStamp({ distance, size=50 }) {
   )
 }
 
+// ── RaceCard ──────────────────────────────────────────────────────────────────
 function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
   const [hovered, setHovered] = useState(false)
-  const [race, setRace] = useState(initialRace)
-  const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
+  const [race, setRace]       = useState(initialRace)
+  const [photo, setPhoto]     = useState(PHOTO_PLACEHOLDER)
   const cardRef = useRef(null)
 
-  // Enrich via API for hover stats (non-featured only)
   useEffect(() => {
     if (featured || race.hero_image || enrichCache.has(race.id)) return
     const observer = new IntersectionObserver(([entry]) => {
@@ -134,7 +113,6 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
     return () => observer.disconnect()
   }, [race.id, race.hero_image, featured])
 
-  // Load photo — parse city/state from location string if needed
   useEffect(() => {
     const enriched = { ...race, ...parseCityState(race) }
     loadRacePhoto(enriched).then(url => { if (url) setPhoto(url) })
@@ -144,19 +122,18 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
     <div ref={cardRef}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={onClick}
-      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink:featured?0:undefined, width:featured?'clamp(220px,20vw,300px)':undefined, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered?'translateY(-5px)':'none', outline:isActive?`2.5px solid #C9A84C`:'none', outlineOffset:'2px' }}>
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink:featured?0:undefined, width:featured?'clamp(220px,20vw,300px)':undefined, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered?'translateY(-5px)':'none', outline:isActive?'2.5px solid #C9A84C':'none', outlineOffset:'2px' }}>
       <div style={{ position:'relative', height:featured?170:200, overflow:'hidden', background:'#1B2A4A' }}>
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform:hovered?'scale(1.05)':'scale(1)' }} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
-        {/* Hover overlay — search cards only */}
         {!featured && (
           <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
               {[
-                { label:'Price',     value:race.price ? `$${race.price}` : 'TBD' },
-                { label:'Terrain',   value:race.terrain || 'Road' },
-                { label:'Elevation', value:race.elevation || '—' },
-                { label:'Finishers', value:race.est_finishers ? race.est_finishers.toLocaleString() : '—' },
+                { label:'Price',     value:race.price?`$${race.price}`:'TBD' },
+                { label:'Terrain',   value:race.terrain||'Road' },
+                { label:'Elevation', value:race.elevation||'—' },
+                { label:'Finishers', value:race.est_finishers?race.est_finishers.toLocaleString():'—' },
               ].map(s => (
                 <div key={s.label} style={{ textAlign:'center' }}>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
@@ -169,7 +146,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
         {featured && race.price && (
           <div style={{ position:'absolute', top:10, right:10, background:'rgba(27,42,74,0.85)', borderRadius:'6px', padding:'3px 9px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1px', color:'#fff' }}>${race.price}</div>
         )}
-        <div style={{ position:'absolute', bottom:10, left:10, opacity:(!featured && hovered) ? 0 : 1, transition:'opacity 0.2s' }}>
+        <div style={{ position:'absolute', bottom:10, left:10, opacity:(!featured&&hovered)?0:1, transition:'opacity 0.2s' }}>
           <CardStamp distance={race.distance||''} size={featured?42:50} />
         </div>
       </div>
@@ -184,11 +161,12 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
   )
 }
 
+// ── ScrollRow ─────────────────────────────────────────────────────────────────
 function ScrollRow({ children }) {
   const ref = useRef(null)
-  const [showLeft, setShowLeft] = useState(false)
+  const [showLeft, setShowLeft]   = useState(false)
   const [showRight, setShowRight] = useState(true)
-  const [hovering, setHovering] = useState(false)
+  const [hovering, setHovering]   = useState(false)
   const check = () => {
     const el = ref.current; if (!el) return
     setShowLeft(el.scrollLeft > 10)
@@ -199,7 +177,7 @@ function ScrollRow({ children }) {
     if (el) { el.addEventListener('scroll', check); check() }
     return () => el?.removeEventListener('scroll', check)
   }, [])
-  const scroll = d => ref.current?.scrollBy({ left: d * 360, behavior:'smooth' })
+  const scroll = d => ref.current?.scrollBy({ left:d*360, behavior:'smooth' })
   const btn = { position:'absolute', top:'45%', transform:'translateY(-50%)', zIndex:10, width:40, height:40, borderRadius:'50%', background:'#1B2A4A', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(27,42,74,0.25)', transition:'background 0.15s' }
   return (
     <div style={{ position:'relative' }} onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
@@ -212,6 +190,7 @@ function ScrollRow({ children }) {
   )
 }
 
+// ── ThemeToggle ───────────────────────────────────────────────────────────────
 function ThemeToggle({ t, isDark, toggleTheme }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'4px', cursor:'pointer' }} onClick={toggleTheme}>
@@ -223,235 +202,51 @@ function ThemeToggle({ t, isDark, toggleTheme }) {
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
-
+// ── Main ──────────────────────────────────────────────────────────────────────
 export default function Discover() {
-  const navigate    = useNavigate()
-  const location    = useLocation()
+  const navigate  = useNavigate()
+  const location  = useLocation()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
 
-  const [profile, setProfile]               = useState(null)
-  const [showDropdown, setShowDropdown]     = useState(false)
-  const [allRaces, setAllRaces]             = useState([])
-  const [featuredRaces, setFeaturedRaces]   = useState([])
-  const [loading, setLoading]               = useState(true)   // initial load
-  const [distFilter, setDistFilter]         = useState('ALL')
-  const [search, setSearch]                 = useState('')
-  const [sort, setSort]                     = useState('date-asc')
-  const [showFilters, setShowFilters]       = useState(false)
-  const [maxPrice, setMaxPrice]             = useState(400)
-  const [terrainFilter, setTerrainFilter]   = useState('All')
-  const [sportFilter, setSportFilter]       = useState('All')
-  const [dateFrom, setDateFrom]             = useState('')
-  const [dateTo, setDateTo]                 = useState('')
-  const [radius, setRadius]                 = useState(75)
-  const [userLat, setUserLat]               = useState(null)
-  const [userLng, setUserLng]               = useState(null)
+  const [profile, setProfile]             = useState(null)
+  const [showDropdown, setShowDropdown]   = useState(false)
+  const [allRaces, setAllRaces]           = useState([])
+  const [featuredRaces, setFeaturedRaces] = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [distFilter, setDistFilter]       = useState('ALL')
+  const [search, setSearch]               = useState('')
+  const [sort, setSort]                   = useState('date-asc')
+  const [showFilters, setShowFilters]     = useState(false)
+  const [maxPrice, setMaxPrice]           = useState(400)
+  const [terrainFilter, setTerrainFilter] = useState('All')
+  const [sportFilter, setSportFilter]     = useState('All')
+  const [dateFrom, setDateFrom]           = useState('')
+  const [dateTo, setDateTo]               = useState('')
+  const [radius, setRadius]               = useState(75)
+  const [userLat, setUserLat]             = useState(null)
+  const [userLng, setUserLng]             = useState(null)
   const [locationStatus, setLocationStatus] = useState('idle')
   const [showLocationBanner, setShowLocationBanner] = useState(true)
-  const [activeId, setActiveId]             = useState(null)
-  const [resultsPage, setResultsPage]       = useState(1)
+  const [activeId, setActiveId]           = useState(null)
+  const [resultsPage, setResultsPage]     = useState(1)
 
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
   const markersRef     = useRef({})
   const dropdownRef    = useRef(null)
 
-  // ── Load ALL races on mount ───────────────────────────────────────────────
-  useEffect(() => {
-    const loadAll = async () => {
-      setLoading(true)
-      try {
-        // Load in batches to get everything (Supabase default limit is 1000)
-        let all = []
-        let from = 0
-        const batchSize = 1000
-        while (true) {
-          const { data, error } = await supabase
-            .from('races')
-            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,price_raw,terrain,elevation,sport,est_finishers,is_past,registration_url')
-            .eq('is_past', false)
-            .order('date_sort', { ascending: true })
-            .range(from, from + batchSize - 1)
-          if (error) { console.warn('Load error:', error.message); break }
-          if (!data || data.length === 0) break
-          all = [...all, ...data]
-          if (data.length < batchSize) break
-          from += batchSize
-        }
-        setAllRaces(all)
-
-        // Pull featured from the full list by matching known race names
-        const featured = all.filter(r =>
-          FEATURED_RACE_NAMES.some(name =>
-            (r.name || '').toLowerCase().includes(name)
-          )
-        )
-        // If we got fewer than 6 featured matches, fall back to largest upcoming races
-        if (featured.length >= 6) {
-          setFeaturedRaces(featured.slice(0, 16))
-        } else {
-          // Fallback: first 16 upcoming races sorted by date
-          setFeaturedRaces(all.slice(0, 16))
-        }
-      } catch (e) {
-        console.error('Failed to load races:', e)
-      }
-      setLoading(false)
-    }
-    loadAll()
-  }, [])
-
-  // Reset pagination when filters change
-  useEffect(() => { setResultsPage(1) }, [search, distFilter, terrainFilter, sportFilter, maxPrice, dateFrom, dateTo, userLat])
-
-  // ── Profile + styles ──────────────────────────────────────────────────────
-  useEffect(() => {
-    const loadProfile = async () => {
-      if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
-      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      setProfile(data)
-    }
-    loadProfile()
-
-    const style = document.createElement('style')
-    style.id = 'rp-discover-styles'
-    style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
-      * { box-sizing: border-box; }
-      @keyframes fadeIn { from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);} }
-      @keyframes spin { to{transform:rotate(360deg);} }
-      @keyframes slideDown { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
-      @keyframes pulse { 0%,100%{opacity:0.5;}50%{opacity:1;} }
-      .rp-nav-tab { display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;height:64px;justify-content:center;cursor:pointer;border:none;background:none;transition:color 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap; }
-      .dist-pill { padding:6px 16px;border-radius:20px;border:1.5px solid;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;white-space:nowrap; }
-      .filter-chip { padding:6px 14px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.15s; }
-      .rp-map-pin { display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid rgba(255,255,255,0.9);font-family:'Bebas Neue',sans-serif;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.3);transition:transform 0.15s; }
-      .rp-map-pin:hover { transform:scale(1.2); }
-      .rp-map-pin.active { transform:scale(1.35); }
-      .leaflet-popup-content-wrapper { border-radius:10px!important;padding:0!important;overflow:hidden!important; }
-      .leaflet-popup-content { margin:0!important; }
-      .leaflet-popup-tip-container { display:none!important; }
-      .cards-grid { display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;animation:fadeIn 0.4s ease both; }
-      div::-webkit-scrollbar { display:none; }
-    `
-    if (!document.getElementById('rp-discover-styles')) document.head.appendChild(style)
-
-    const handleClick = (e) => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
-    document.addEventListener('mousedown', handleClick)
-    return () => {
-      document.getElementById('rp-discover-styles')?.remove()
-      document.removeEventListener('mousedown', handleClick)
-    }
-  }, [user])
-
-  // ── Location ──────────────────────────────────────────────────────────────
-  const requestLocation = () => {
-    setLocationStatus('requesting')
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setUserLat(pos.coords.latitude)
-        setUserLng(pos.coords.longitude)
-        setLocationStatus('granted')
-        setShowLocationBanner(false)
-        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([pos.coords.latitude, pos.coords.longitude], 10, { animate:true, duration:1.2 })
-      },
-      () => { setLocationStatus('denied'); setShowLocationBanner(false) },
-      { timeout:10000 }
-    )
-  }
-
-  // ── Leaflet map init ──────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return
-    const loadLeaflet = async () => {
-      if (!window.L) {
-        const link = document.createElement('link')
-        link.rel = 'stylesheet'
-        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
-        document.head.appendChild(link)
-        await new Promise(resolve => {
-          const s = document.createElement('script')
-          s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
-          s.onload = resolve
-          document.head.appendChild(s)
-        })
-      }
-      const L = window.L
-      const map = L.map(mapRef.current, { center:[39.5,-98.35], zoom:4, zoomControl:false })
-      L.tileLayer(
-        isDark
-          ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-          : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { attribution:'© OpenStreetMap © CARTO', maxZoom:18 }
-      ).addTo(map)
-      L.control.zoom({ position:'topright' }).addTo(map)
-      mapInstanceRef.current = map
-    }
-    loadLeaflet()
-  }, [])
-
-  // ── Update map markers whenever filtered results change ───────────────────
-  useEffect(() => {
-    const L = window.L
-    if (!L || !mapInstanceRef.current) return
-
-    const map = mapInstanceRef.current
-    // Clear existing markers
-    Object.values(markersRef.current).forEach(m => { try { m.remove() } catch(e){} })
-    markersRef.current = {}
-
-    // User location pin
-    if (userLat && userLng) {
-      L.marker([userLat, userLng], {
-        icon: L.divIcon({ className:'', html:`<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`, iconSize:[14,14], iconAnchor:[7,7] })
-      }).addTo(map).bindTooltip('You are here', { direction:'top', offset:[0,-10] })
-    }
-
-    // Decide which races to pin: filtered (if searching) or featured
-    const racesToPin = isSearching ? filtered.filter(r => r.lat && r.lng).slice(0,200)
-                                   : featuredRaces.filter(r => r.lat && r.lng)
-
-    racesToPin.forEach(race => {
-      const colors  = getDistanceColor(race.distance)
-      const cleaned = (race.distance||'').replace(' mi','')
-      const isAct   = activeId === race.id
-      const size    = isAct ? 42 : 36
-      const icon = L.divIcon({
-        className: '',
-        html: `<div class="rp-map-pin ${isAct?'active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`,
-        iconSize: [size,size], iconAnchor:[size/2,size/2]
-      })
-      const marker = L.marker([race.lat, race.lng], { icon }).addTo(map)
-        .on('click', () => {
-          setActiveId(race.id)
-          document.getElementById(`rc-${race.id}`)?.scrollIntoView({ behavior:'smooth', block:'center' })
-        })
-      marker.bindPopup(
-        `<div style="padding:12px 14px;min-width:180px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div>
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:6px;">${race.date||''} · ${race.location||''}</div>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span>
-        </div>`,
-        { maxWidth:220 }
-      )
-      markersRef.current[race.id] = marker
-    })
-
-    // Fit bounds to visible race markers (only when searching)
-    if (isSearching && racesToPin.length > 0) {
-      try {
-        map.fitBounds(
-          window.L.latLngBounds(racesToPin.map(r => [r.lat, r.lng])),
-          { padding:[40,40], maxZoom:12, animate:true, duration:0.8 }
-        )
-      } catch(e) {}
-    }
-  }, [filtered, activeId, userLat, userLng, featuredRaces])  // eslint-disable-line
-
-  // ── Filtered races (client-side) ──────────────────────────────────────────
-  const isSearching = search.trim() !== '' || distFilter !== 'ALL' || terrainFilter !== 'All' || sportFilter !== 'All' || maxPrice < 400 || dateFrom !== '' || dateTo !== '' || userLat !== null
+  // ── DERIVED STATE — must be declared before any useEffect that uses them ──
+  const isSearching = (
+    search.trim() !== '' ||
+    distFilter !== 'ALL' ||
+    terrainFilter !== 'All' ||
+    sportFilter !== 'All' ||
+    maxPrice < 400 ||
+    dateFrom !== '' ||
+    dateTo !== '' ||
+    userLat !== null
+  )
 
   const filtered = (() => {
     if (!isSearching) return []
@@ -460,9 +255,9 @@ export default function Discover() {
       const known = ['5k','10k','13.1','26.2','70.3','140.6','tri','50k','50m','100k','100m']
       const matchDist =
         distFilter === 'ALL'   ? true :
-        distFilter === 'TRI'   ? ['70.3','140.6','tri'].some(t => d.includes(t)) :
-        distFilter === 'ULTRA' ? ['50k','50m','100k','100m'].some(t => d.includes(t)) :
-        distFilter === 'OTHER' ? (!d || !known.some(t => d.includes(t))) :
+        distFilter === 'TRI'   ? ['70.3','140.6','tri'].some(x => d.includes(x)) :
+        distFilter === 'ULTRA' ? ['50k','50m','100k','100m'].some(x => d.includes(x)) :
+        distFilter === 'OTHER' ? (!d || !known.some(x => d.includes(x))) :
         d === distFilter.toLowerCase() || d.startsWith(distFilter.toLowerCase())
       return (
         matchDist &&
@@ -474,33 +269,189 @@ export default function Discover() {
         (!dateTo   || (r.date_sort||'') <= dateTo)
       )
     })
-
     if (userLat && userLng) {
       races = races
         .filter(r => {
           if (!r.lat || !r.lng) return false
           const dist = haversineDistance(userLat, userLng, r.lat, r.lng)
-          r._distMi = Math.round(dist * 10) / 10
+          r._distMi = Math.round(dist*10)/10
           return dist <= radius
         })
-        .sort((a, b) => (a._distMi||999) - (b._distMi||999))
+        .sort((a,b) => (a._distMi||999)-(b._distMi||999))
     } else {
       races.sort((a,b) => {
-        if (sort === 'date-asc')   return (a.date_sort||'').localeCompare(b.date_sort||'')
-        if (sort === 'date-desc')  return (b.date_sort||'').localeCompare(a.date_sort||'')
-        if (sort === 'price-asc')  return (a.price||0) - (b.price||0)
-        if (sort === 'price-desc') return (b.price||0) - (a.price||0)
+        if (sort==='date-asc')   return (a.date_sort||'').localeCompare(b.date_sort||'')
+        if (sort==='date-desc')  return (b.date_sort||'').localeCompare(a.date_sort||'')
+        if (sort==='price-asc')  return (a.price||0)-(b.price||0)
+        if (sort==='price-desc') return (b.price||0)-(a.price||0)
         return 0
       })
     }
     return races
   })()
 
-  // ── Nav helpers ───────────────────────────────────────────────────────────
-  const initials     = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
+  // ── Location request ─────────────────────────────────────────────────────
+  const requestLocation = () => {
+    setLocationStatus('requesting')
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setUserLat(pos.coords.latitude)
+        setUserLng(pos.coords.longitude)
+        setLocationStatus('granted')
+        setShowLocationBanner(false)
+        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([pos.coords.latitude,pos.coords.longitude],10,{animate:true,duration:1.2})
+      },
+      () => { setLocationStatus('denied'); setShowLocationBanner(false) },
+      { timeout:10000 }
+    )
+  }
+
+  // ── Effects ───────────────────────────────────────────────────────────────
+
+  // Load all races on mount
+  useEffect(() => {
+    const loadAll = async () => {
+      setLoading(true)
+      try {
+        let all = [], from = 0
+        while (true) {
+          const { data, error } = await supabase
+            .from('races')
+            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,price_raw,terrain,elevation,sport,est_finishers,is_past,registration_url')
+            .eq('is_past', false)
+            .order('date_sort', { ascending:true })
+            .range(from, from+999)
+          if (error || !data || data.length === 0) break
+          all = [...all, ...data]
+          if (data.length < 1000) break
+          from += 1000
+        }
+        setAllRaces(all)
+        const featured = all.filter(r =>
+          FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name))
+        )
+        setFeaturedRaces(featured.length >= 4 ? featured.slice(0,16) : all.slice(0,16))
+      } catch(e) {
+        console.error('Failed to load races:', e)
+      }
+      setLoading(false)
+    }
+    loadAll()
+  }, [])
+
+  // Reset pagination on filter change
+  useEffect(() => { setResultsPage(1) }, [search, distFilter, terrainFilter, sportFilter, maxPrice, dateFrom, dateTo, userLat])
+
+  // Profile + inject styles
+  useEffect(() => {
+    const loadProfile = async () => {
+      if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      setProfile(data)
+    }
+    loadProfile()
+    const style = document.createElement('style')
+    style.id = 'rp-discover-styles'
+    style.textContent = `
+      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
+      * { box-sizing:border-box; }
+      @keyframes fadeIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+      @keyframes spin{to{transform:rotate(360deg);}}
+      @keyframes slideDown{from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);}}
+      @keyframes pulse{0%,100%{opacity:0.5;}50%{opacity:1;}}
+      .rp-nav-tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;height:64px;justify-content:center;cursor:pointer;border:none;background:none;transition:color 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;}
+      .dist-pill{padding:6px 16px;border-radius:20px;border:1.5px solid;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+      .filter-chip{padding:6px 14px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:all 0.15s;}
+      .rp-map-pin{display:flex;align-items:center;justify-content:center;border-radius:50%;border:2.5px solid rgba(255,255,255,0.9);font-family:'Bebas Neue',sans-serif;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.3);transition:transform 0.15s;}
+      .rp-map-pin:hover{transform:scale(1.2);}
+      .rp-map-pin.active{transform:scale(1.35);}
+      .leaflet-popup-content-wrapper{border-radius:10px!important;padding:0!important;overflow:hidden!important;}
+      .leaflet-popup-content{margin:0!important;}
+      .leaflet-popup-tip-container{display:none!important;}
+      .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;animation:fadeIn 0.4s ease both;}
+      div::-webkit-scrollbar{display:none;}
+    `
+    if (!document.getElementById('rp-discover-styles')) document.head.appendChild(style)
+    const handleClick = e => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
+    document.addEventListener('mousedown', handleClick)
+    return () => {
+      document.getElementById('rp-discover-styles')?.remove()
+      document.removeEventListener('mousedown', handleClick)
+    }
+  }, [user])
+
+  // Leaflet map init
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current) return
+    const init = async () => {
+      if (!window.L) {
+        const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=resolve; document.head.appendChild(s) })
+      }
+      const L = window.L
+      const map = L.map(mapRef.current, { center:[39.5,-98.35], zoom:4, zoomControl:false })
+      L.tileLayer(
+        isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+               : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+        { attribution:'© OpenStreetMap © CARTO', maxZoom:18 }
+      ).addTo(map)
+      L.control.zoom({ position:'topright' }).addTo(map)
+      mapInstanceRef.current = map
+    }
+    init()
+  }, [])
+
+  // Map markers — runs after filtered/featuredRaces are defined above
+  useEffect(() => {
+    const L = window.L
+    if (!L || !mapInstanceRef.current) return
+    const map = mapInstanceRef.current
+    Object.values(markersRef.current).forEach(m => { try { m.remove() } catch(e){} })
+    markersRef.current = {}
+
+    if (userLat && userLng) {
+      L.marker([userLat,userLng], {
+        icon: L.divIcon({ className:'', html:`<div style="width:14px;height:14px;border-radius:50%;background:#C9A84C;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,0.35);"></div>`, iconSize:[14,14], iconAnchor:[7,7] })
+      }).addTo(map).bindTooltip('You are here',{direction:'top',offset:[0,-10]})
+    }
+
+    const racesToPin = isSearching
+      ? filtered.filter(r => r.lat && r.lng).slice(0,200)
+      : featuredRaces.filter(r => r.lat && r.lng)
+
+    racesToPin.forEach(race => {
+      const colors  = getDistanceColor(race.distance)
+      const cleaned = (race.distance||'').replace(' mi','')
+      const isAct   = activeId === race.id
+      const size    = isAct ? 42 : 36
+      const icon = L.divIcon({
+        className:'',
+        html:`<div class="rp-map-pin${isAct?' active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`,
+        iconSize:[size,size], iconAnchor:[size/2,size/2]
+      })
+      const marker = L.marker([race.lat,race.lng],{icon}).addTo(map)
+        .on('click',()=>{ setActiveId(race.id); document.getElementById(`rc-${race.id}`)?.scrollIntoView({behavior:'smooth',block:'center'}) })
+      marker.bindPopup(
+        `<div style="padding:12px 14px;min-width:180px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div>
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:6px;">${race.date||''} · ${race.location||''}</div>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span>
+        </div>`,
+        { maxWidth:220 }
+      )
+      markersRef.current[race.id] = marker
+    })
+
+    if (isSearching && racesToPin.length > 0) {
+      try { map.fitBounds(L.latLngBounds(racesToPin.map(r=>[r.lat,r.lng])),{padding:[40,40],maxZoom:12,animate:true,duration:0.8}) } catch(e){}
+    }
+  }, [filtered, activeId, userLat, userLng, featuredRaces, isSearching])
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const initials      = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
-  const activeFilterCount = [terrainFilter!=='All', sportFilter!=='All', maxPrice<400, dateFrom!=='', dateTo!==''].filter(Boolean).length
-  const clearFilters = () => { setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDistFilter('ALL'); setSearch(''); setDateFrom(''); setDateTo('') }
+  const activeFilterCount = [terrainFilter!=='All',sportFilter!=='All',maxPrice<400,dateFrom!=='',dateTo!==''].filter(Boolean).length
+  const clearFilters  = () => { setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDistFilter('ALL'); setSearch(''); setDateFrom(''); setDateTo('') }
 
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
@@ -545,12 +496,14 @@ export default function Discover() {
                 </div>
                 {[['My Passport','/passport'],['Settings','/profile']].map(([label,path]) => (
                   <button key={path} style={{ display:'block', width:'100%', padding:'10px 18px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text, cursor:'pointer' }}
-                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt}
+                    onMouseLeave={e => e.currentTarget.style.background='transparent'}
                     onClick={() => { navigate(path); setShowDropdown(false) }}>{label}</button>
                 ))}
                 <div style={{ height:'1px', background:t.borderLight }} />
                 <button style={{ display:'block', width:'100%', padding:'10px 18px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#c53030', cursor:'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}
+                  onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt}
+                  onMouseLeave={e => e.currentTarget.style.background='transparent'}
                   onClick={handleSignOut}>Log Out</button>
               </div>
             )}
@@ -585,8 +538,7 @@ export default function Discover() {
         <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'12px' }}>
           <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', background:t.inputBg, border:`1.5px solid ${t.border}`, borderRadius:'10px', padding:'10px 14px' }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke={t.textMuted} strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke={t.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>
-            <input value={search} onChange={e => setSearch(e.target.value)}
-              placeholder="Search races, cities, states..."
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search races, cities, states..."
               style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, width:'100%' }} />
             {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontSize:'18px', lineHeight:1, padding:0 }}>×</button>}
           </div>
@@ -606,8 +558,6 @@ export default function Discover() {
             </div>
           )}
         </div>
-
-        {/* Distance pills */}
         <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
           {DIST_FILTERS.map(f => {
             const isAct = distFilter === f.value
@@ -624,8 +574,6 @@ export default function Discover() {
             </div>
           )}
         </div>
-
-        {/* Advanced filters */}
         {showFilters && (
           <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:`1px solid ${t.borderLight}`, display:'flex', gap:'24px', alignItems:'flex-start', flexWrap:'wrap', animation:'slideDown 0.2s ease' }}>
             <div>
@@ -675,15 +623,9 @@ export default function Discover() {
       {/* MAP */}
       <div style={{ position:'relative', height:'45vh', background:t.isDark?'#0f1520':'#e8eaed' }}>
         <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
-        {/* Legend */}
         <div style={{ position:'absolute', bottom:16, left:16, background:t.isDark?'rgba(26,34,53,0.95)':'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:`1px solid ${t.border}`, zIndex:400 }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Distance</div>
-          {[
-            { label:'5K · 10K · 13.1', color:'#1E5FA8' },
-            { label:'Marathon 26.2',   color:'#C9A84C' },
-            { label:'Triathlon',       color:'#B83232' },
-            { label:'Ultra',           color:'#9C7C4A' },
-          ].map(l => (
+          {[{label:'5K · 10K · 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
             <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
               <div style={{ width:10, height:10, borderRadius:'50%', background:l.color, flexShrink:0 }} />
               <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>{l.label}</span>
@@ -700,7 +642,7 @@ export default function Discover() {
       {/* CONTENT */}
       <div style={{ padding:'32px 40px 80px' }}>
 
-        {/* FEATURED — shown when not searching */}
+        {/* FEATURED — shown when not actively searching */}
         {!isSearching && (
           <div style={{ animation:'fadeIn 0.4s ease both' }}>
             <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:'20px' }}>
@@ -725,8 +667,7 @@ export default function Discover() {
             ) : featuredRaces.length > 0 ? (
               <ScrollRow>
                 {featuredRaces.map(race => (
-                  <RaceCard key={race.id} race={race} featured t={t}
-                    onClick={() => navigate(`/race-detail/${race.id}`)} />
+                  <RaceCard key={race.id} race={race} featured t={t} onClick={() => navigate(`/race-detail/${race.id}`)} />
                 ))}
               </ScrollRow>
             ) : (
@@ -748,7 +689,6 @@ export default function Discover() {
                 {loading ? 'Loading races...' : `${filtered.length} race${filtered.length!==1?'s':''} matching your filters`}
               </div>
             </div>
-
             {loading ? (
               <div className="cards-grid">
                 {[1,2,3,4,5,6].map(i => (
@@ -773,23 +713,23 @@ export default function Discover() {
             ) : (
               <>
                 <div className="cards-grid">
-                  {filtered.slice(0, resultsPage * RESULTS_PER_PAGE).map(race => (
+                  {filtered.slice(0, resultsPage*RESULTS_PER_PAGE).map(race => (
                     <div key={race.id} id={`rc-${race.id}`}>
                       <RaceCard race={race} t={t} isActive={activeId===race.id}
                         onClick={() => {
                           setActiveId(race.id)
                           if (mapInstanceRef.current && race.lat && race.lng) {
-                            mapInstanceRef.current.flyTo([race.lat, race.lng], 11, { animate:true, duration:0.8 })
+                            mapInstanceRef.current.flyTo([race.lat,race.lng],11,{animate:true,duration:0.8})
                           }
                           navigate(`/race-detail/${race.id}`)
                         }} />
                     </div>
                   ))}
                 </div>
-                {filtered.length > resultsPage * RESULTS_PER_PAGE && (
+                {filtered.length > resultsPage*RESULTS_PER_PAGE && (
                   <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'16px', marginTop:'40px' }}>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>
-                      Showing {Math.min(resultsPage*RESULTS_PER_PAGE, filtered.length)} of {filtered.length} races
+                      Showing {Math.min(resultsPage*RESULTS_PER_PAGE,filtered.length)} of {filtered.length} races
                     </div>
                     <button onClick={() => setResultsPage(p => p+1)}
                       style={{ padding:'12px 40px', border:`1.5px solid ${t.text}`, borderRadius:'10px', background:t.surface, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:t.text, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
@@ -804,6 +744,10 @@ export default function Discover() {
           </>
         )}
       </div>
+
     </div>
   )
 }
+
+
+
