@@ -65,21 +65,17 @@ function ThemeToggle({ t, isDark, toggleTheme }) {
 
 // ── Full-width stats conveyor belt ────────────────────────────────────────────
 function StatsTicker({ t }) {
-  // Triple the items so the loop is seamless
   const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
   return (
     <div style={{ background:'#1B2A4A', overflow:'hidden', position:'relative', borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
-      {/* Fade edges */}
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:120, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
       <div style={{ position:'absolute', right:0, top:0, bottom:0, width:120, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      {/* Strava badge bottom-right */}
       <div style={{ position:'absolute', bottom:10, right:32, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
         <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'1px' }}>Synced via Strava</span>
       </div>
-      {/* Scrolling track */}
       <div style={{ display:'flex', alignItems:'center', padding:'26px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
         {items.map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
@@ -87,7 +83,6 @@ function StatsTicker({ t }) {
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(44px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', whiteSpace:'nowrap' }}>{item.label}</div>
             </div>
-            {/* Dot separator */}
             <div style={{ width:5, height:5, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
           </div>
         ))}
@@ -151,12 +146,9 @@ function CardStamp({ distance, size=48 }) {
   )
 }
 
+// All card clicks always navigate to the detail page
 function handleCardClick(race, navigate) {
-  if (String(race.id).match(/^[du]/)) {
-    if (race.registration_url) window.open(race.registration_url, '_blank', 'noopener')
-  } else {
-    navigate(`/race-detail/${race.id}`)
-  }
+  navigate(`/race-detail/${race.id}`)
 }
 
 function NearbyCard({ race, t }) {
@@ -354,12 +346,10 @@ export default function Home() {
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, transition:'background 0.25s, border-color 0.25s' }}>
         <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
-          {/* Logo */}
           <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
           </div>
-          {/* Nav tabs */}
           <div style={{ display:'flex', alignItems:'stretch' }}>
             {NAV_TABS.map(tab => (
               <button key={tab.path} className="rp-nav-tab"
@@ -367,7 +357,6 @@ export default function Home() {
                 onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
             ))}
           </div>
-          {/* Right: theme toggle + avatar */}
           <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
             <ThemeToggle t={t} isDark={isDark} toggleTheme={toggleTheme} />
             <div ref={dropdownRef} style={{ position:'relative' }}>
@@ -416,7 +405,7 @@ export default function Home() {
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
       </div>
 
-      {/* STATS BAR — full width, edge to edge, no card container */}
+      {/* STATS BAR */}
       <div style={{ position:'relative', zIndex:10 }}>
         {STRAVA_CONNECTED ? <StatsTicker t={t} /> : <StravaConnect t={t} />}
       </div>
