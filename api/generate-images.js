@@ -132,52 +132,81 @@ export default async function handler(req, res) {
   // ── Build prompt ──────────────────────────────────────────────────────────
   function buildPrompt(city, state) {
     const cityLower = city.toLowerCase().trim()
-    const suffix    = 'photorealistic, ultra detailed, wide cinematic composition, no people, no cars, no text, no logos'
 
     // Hash city name for consistent but varied look per city
     let h = 0
     for (let i = 0; i < city.length; i++) h = Math.imul(31, h) + city.charCodeAt(i) | 0
     const hash = Math.abs(h)
 
-    // Varied lighting conditions — no pure night, but dusk is fine
+    // Lighting — time of day with physical specificity
     const LIGHTING = [
-      'soft overcast morning light, diffused bright sky, cool tones',
-      'golden hour late afternoon, warm glowing light, long shadows',
-      'crisp sunny midday, bright blue sky with a few white clouds, vivid colors',
-      'late afternoon sun, warm directional light, clear sky',
-      'early morning just after sunrise, soft warm sky, gentle light',
-      'approaching dusk, deep orange sky on the horizon, clear air',
-      'bright partly cloudy afternoon, dynamic but clear conditions',
-      'warm late morning light, clear blue sky, sharp shadows',
+      'golden hour just before sunset, warm amber light reflecting off glass facades, long shadows stretching across the scene',
+      'crisp sunny midday, bright directional light from directly overhead, vivid saturated colors, deep blue sky',
+      'early morning just after sunrise, soft warm pink light raking across buildings at a low angle, long gentle shadows',
+      'late afternoon sun low on the horizon, warm golden directional light, strong contrast between lit and shaded faces',
+      'overcast morning, soft diffused light with no harsh shadows, cool neutral tones, even illumination across the scene',
+      'bright partly cloudy afternoon, dynamic patches of sunlight and shadow moving across the scene, vivid colors',
+      'approaching dusk, deep orange on the horizon fading to blue overhead, warm ambient glow on building faces',
+      'clear late morning, sun at about 45 degrees, warm white light, crisp shadows, excellent visibility',
     ]
 
-    // Varied weather conditions — subtle, not dramatic
+    // Weather — subtle and grounded, no fantasy atmospherics
     const WEATHER = [
-      'clear and sunny, sharp clean air',
-      'thin haze on the horizon, otherwise clear and bright',
-      'a few scattered clouds, mostly clear, fresh conditions',
-      'light overcast, soft even light, no harsh shadows',
-      'clear after recent rain, vivid saturated colors, clean air',
-      'partly cloudy, sunlight breaking through, bright patches on the ground',
-      'crisp and clear, excellent visibility, deep blue sky',
-      'mild and clear, calm conditions, good natural light',
+      'crisp clear air, excellent visibility, deep blue sky, sharp horizon',
+      'clear after recent rain, vivid saturated colors, slightly reflective surfaces, clean fresh atmosphere',
+      'mild thin haze on the distant horizon creating natural depth layers, otherwise clear and bright',
+      'partly cloudy, sunlight breaking through in places, bright patches illuminating parts of the scene',
+      'perfectly clear, calm conditions, no haze, maximum sharpness and detail throughout',
+      'light scattered clouds adding texture to the sky without blocking sun, clean air, good light',
+      'clear and calm, subtle atmospheric perspective softening distant elements slightly, foreground sharp',
+      'bright and clear, a few high cirrus clouds, natural depth from atmospheric haze in the far distance',
+    ]
+
+    // Shot angles — vary perspective so not every image looks the same
+    const SKYLINE_ANGLES = [
+      'viewed from across the river looking toward the downtown core, water in the foreground reflecting the skyline',
+      'shot from a helicopter at 800 feet, looking toward the city center at a slight downward angle',
+      'viewed from a harbor vantage point, waterfront in the foreground, full skyline behind',
+      'shot from an elevated hillside overlooking the city, natural terrain framing the buildings below',
+      'straight-on skyline view from medium altitude, buildings filling the frame horizontally',
+      '45-degree angled aerial perspective showing the city grid and skyline depth simultaneously',
+      'low aerial at 300 feet looking up toward the tallest buildings, dramatic upward compression',
+      'wide high aerial at 2000 feet showing city and surrounding geography, full urban footprint visible',
+    ]
+
+    const LANDMARK_ANGLES = [
+      'shot from ground level at a natural visitor viewpoint, true-to-life perspective',
+      'captured from a slight elevated angle showing the landmark in its full context',
+      'wide establishing shot from across an open space, landmark centered with surroundings visible',
+      'shot at a natural approach angle, as a visitor would first encounter it',
+      'from a slightly elevated vantage point, landmark in foreground, cityscape or landscape behind',
+      'wide-angle ground-level shot showing the landmark and its immediate environment',
+      'captured from the classic iconic viewpoint known to most visitors',
+      'shot from a distance showing the landmark within its natural or urban setting',
     ]
 
     const lighting = LIGHTING[hash % LIGHTING.length]
     const weather  = WEATHER[(hash >> 3) % WEATHER.length]
+    const skylineAngle  = SKYLINE_ANGLES[(hash >> 5) % SKYLINE_ANGLES.length]
+    const landmarkAngle = LANDMARK_ANGLES[(hash >> 7) % LANDMARK_ANGLES.length]
+
+    const cameraBlock   = 'shot on a full-frame camera with an 85mm lens, natural perspective with slight telephoto compression, no wide-angle distortion, realistic depth of field'
+    const textureBlock  = 'realistic glass reflections, visible window patterns, accurate building materials, subtle surface imperfections, natural color grading'
+    const atmosphereBlock = 'subtle atmospheric haze creating depth layers between foreground, mid-ground, and distant elements, realistic aerial perspective'
+    const qualityBlock  = 'looks like a real photograph not CGI, indistinguishable from a professional DSLR photo, no surreal or stylized elements, no people, no cars, no text, no logos'
 
     // Tier 1: major city skyline
     if (TIER1_SKYLINE.has(cityLower)) {
-      return `Dramatic aerial skyline of ${city}, ${state}, ${lighting}, ${weather}, showing iconic buildings and city silhouette, wide cinematic shot from above, ${suffix}`
+      return `A hyper-realistic aerial photograph of the skyline of ${city}, ${state}, ${skylineAngle}, ${cameraBlock}, ${lighting}, ${weather}, ${atmosphereBlock}, ${textureBlock}, wide cinematic composition, ${qualityBlock}`
     }
 
     // Tier 2: known landmark
     if (LANDMARK_CITIES[cityLower]) {
-      return `A stunning photorealistic image of ${LANDMARK_CITIES[cityLower]}, ${lighting}, ${weather}, wide cinematic composition, ${suffix}`
+      return `A hyper-realistic photograph of ${LANDMARK_CITIES[cityLower]}, ${landmarkAngle}, ${cameraBlock}, ${lighting}, ${weather}, ${atmosphereBlock}, realistic textures and materials, natural lighting behavior, wide cinematic composition, ${qualityBlock}`
     }
 
-    // Tier 3: all other cities — most iconic landmark or feature
-    return `A stunning photorealistic image of the most iconic landmark or recognizable feature of ${city}, ${state}, ${lighting}, ${weather}, wide cinematic composition, architectural or natural beauty, ${suffix}`
+    // Tier 3: all other cities
+    return `A hyper-realistic photograph of the most iconic landmark or recognizable feature of ${city}, ${state}, ${landmarkAngle}, ${cameraBlock}, ${lighting}, ${weather}, ${atmosphereBlock}, realistic textures and materials, wide cinematic composition, ${qualityBlock}`
   }
 
   // ── Sleep helper ──────────────────────────────────────────────────────────
@@ -198,8 +227,8 @@ export default async function handler(req, res) {
             prompt,
             width: 1280,
             height: 720,
-            num_inference_steps: 28,
-            guidance: 3.5,
+            num_inference_steps: 35,
+            guidance: 5.0,
             output_format: 'webp',
             output_quality: 90,
           }
