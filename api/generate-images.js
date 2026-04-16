@@ -132,20 +132,52 @@ export default async function handler(req, res) {
   // ── Build prompt ──────────────────────────────────────────────────────────
   function buildPrompt(city, state) {
     const cityLower = city.toLowerCase().trim()
-    const suffix    = 'dramatic lighting, photorealistic, ultra detailed, wide cinematic composition, no people, no cars, no text, no logos, golden hour or blue hour light'
+    const suffix    = 'photorealistic, ultra detailed, wide cinematic composition, no people, no cars, no text, no logos'
+
+    // Hash city name for consistent but varied look per city
+    let h = 0
+    for (let i = 0; i < city.length; i++) h = Math.imul(31, h) + city.charCodeAt(i) | 0
+    const hash = Math.abs(h)
+
+    // Varied lighting conditions — no pure night, but dusk is fine
+    const LIGHTING = [
+      'soft overcast morning light, diffused bright sky, cool tones',
+      'golden hour late afternoon, warm glowing light, long shadows',
+      'crisp sunny midday, bright blue sky with white clouds, vivid colors',
+      'late afternoon sun breaking through clouds, dramatic shafts of light',
+      'early morning blue hour just after sunrise, soft pink and blue sky',
+      'approaching dusk, deep orange and purple sky, city lights beginning to glow',
+      'bright partly cloudy afternoon, dynamic cloud shadows across the scene',
+      'warm golden late morning light, clear sky, rich shadows',
+    ]
+
+    // Varied weather conditions
+    const WEATHER = [
+      'clear and sunny',
+      'light fog rolling in, misty atmosphere, soft diffused light',
+      'dramatic storm clouds gathering in the distance, moody sky',
+      'light rain, wet reflective surfaces, glistening pavement',
+      'overcast and brooding, rich dark clouds, flat even light',
+      'clearing storm, dramatic rays of sunlight breaking through dark clouds',
+      'crisp and clear, fresh after recent rain, vivid saturated colors',
+      'thin morning mist, soft atmospheric haze, ethereal quality',
+    ]
+
+    const lighting = LIGHTING[hash % LIGHTING.length]
+    const weather  = WEATHER[(hash >> 3) % WEATHER.length]
 
     // Tier 1: major city skyline
     if (TIER1_SKYLINE.has(cityLower)) {
-      return `Dramatic aerial skyline of ${city}, ${state} at golden hour, showing iconic buildings and city silhouette against a glowing sky, wide cinematic shot from above, ${suffix}`
+      return `Dramatic aerial skyline of ${city}, ${state}, ${lighting}, ${weather}, showing iconic buildings and city silhouette, wide cinematic shot from above, ${suffix}`
     }
 
     // Tier 2: known landmark
     if (LANDMARK_CITIES[cityLower]) {
-      return `A stunning photorealistic image of ${LANDMARK_CITIES[cityLower]}, golden hour light, wide cinematic composition, ${suffix}`
+      return `A stunning photorealistic image of ${LANDMARK_CITIES[cityLower]}, ${lighting}, ${weather}, wide cinematic composition, ${suffix}`
     }
 
-    // Tier 3: all other cities — best landmark or feature
-    return `A stunning photorealistic image of the most iconic landmark or recognizable feature of ${city}, ${state}, dramatic golden hour light, wide cinematic composition, architectural or natural beauty, ${suffix}`
+    // Tier 3: all other cities — most iconic landmark or feature
+    return `A stunning photorealistic image of the most iconic landmark or recognizable feature of ${city}, ${state}, ${lighting}, ${weather}, wide cinematic composition, architectural or natural beauty, ${suffix}`
   }
 
   // ── Sleep helper ──────────────────────────────────────────────────────────
