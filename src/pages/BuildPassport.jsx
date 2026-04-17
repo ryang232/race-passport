@@ -119,8 +119,6 @@ export default function BuildPassport() {
         shirt_size:              shirtSize           || null,
         experience_level:        experience          || null,
         favorite_distance:       goalDistance        || null,
-        done_marathon:           doneMarathon,
-        done_ironman:            doneIronman,
         address:                 address.trim()      || null,
         city:                    city.trim()         || null,
         state:                   state.trim()        || null,
@@ -277,17 +275,6 @@ export default function BuildPassport() {
             ))}
           </div>
         </div>
-        <div style={{ marginBottom:'14px' }}>
-          <label className="field-label">Have you run a marathon (26.2)?</label>
-          <YesNo value={doneMarathon} onChange={setDoneMarathon} />
-        </div>
-        {doneMarathon === true && (
-          <div style={{ marginBottom:'14px' }}>
-            <label className="field-label">Have you completed an IRONMAN?</label>
-            <YesNo value={doneIronman} onChange={setDoneIronman} />
-          </div>
-        )}
-
         {/* Payment stub */}
         <div className="section-header">Payment Method</div>
         <div style={{ background:'#f8f9fb', border:'1.5px dashed #e2e6ed', borderRadius:'8px', padding:'16px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'12px' }}>
