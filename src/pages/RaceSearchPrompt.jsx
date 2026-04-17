@@ -32,8 +32,8 @@ export default function RaceSearchPrompt() {
 
   // Sources we'll search
   const SOURCES = [
-    { name:'RunSignup',  color:'#2563EB', desc:'Race registrations & finish times' },
-    { name:'Athlinks',   color:'#7c3aed', desc:'Verified race results database' },
+    { name:'Athlinks',  color:'#7c3aed', desc:'Verified race results from thousands of events', optional:false },
+    { name:'Strava',    color:'#FC4C02', desc:'We\'ll scan for activities that look like recorded races', optional:true },
   ]
 
   return (
@@ -83,12 +83,15 @@ export default function RaceSearchPrompt() {
                 <div style={{ width:32, height:32, borderRadius:'8px', background:`${s.color}15`, border:`1px solid ${s.color}30`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                   <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'10px', color:s.color, letterSpacing:'0.5px' }}>{s.name.slice(0,2).toUpperCase()}</span>
                 </div>
-                <div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#1B2A4A', letterSpacing:'0.5px' }}>{s.name}</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#1B2A4A', letterSpacing:'0.5px' }}>{s.name}</div>
+                    {s.optional && <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', textTransform:'uppercase', border:'1px solid #e2e6ed', borderRadius:'4px', padding:'1px 5px' }}>Optional</span>}
+                  </div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{s.desc}</div>
                 </div>
                 <div style={{ marginLeft:'auto', flexShrink:0 }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
+                  <div style={{ width:7, height:7, borderRadius:'50%', background:s.optional?'#e2e6ed':'#C9A84C' }} />
                 </div>
               </div>
             ))}
