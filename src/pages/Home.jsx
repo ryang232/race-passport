@@ -326,11 +326,14 @@ export default function Home() {
   const location = useLocation()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
-  const [profile, setProfile] = useState(null)
-  const [showDropdown, setShowDropdown] = useState(false)
-  const [greeting, setGreeting] = useState('GOOD MORNING')
+  const [profile, setProfile]             = useState(null)
+  const [showDropdown, setShowDropdown]   = useState(false)
+  const [greeting, setGreeting]           = useState('GOOD MORNING')
   const [showImportBanner, setShowImportBanner] = useState(!!location.state?.imported)
-  const [importedCount] = useState(location.state?.imported || 0)
+  const [importedCount]                   = useState(location.state?.imported || 0)
+  const [nearbyRaces, setNearbyRaces]     = useState([])
+  const [suggestedRaces, setSuggestedRaces] = useState([])
+  const [nearbyLoading, setNearbyLoading] = useState(true)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -338,10 +341,67 @@ export default function Home() {
     if (h >= 12 && h < 17) setGreeting('GOOD AFTERNOON')
     else if (h >= 17) setGreeting('GOOD EVENING')
     const loadProfile = async () => {
-      if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
+      if (!user || isDemo(user?.email)) {
+        setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}`, state:'MD', favorite_distance:'13.1' })
+        // Load demo nearby from Supabase using MD
+        loadNearbyAndSuggested('MD', '13.1')
+        return
+      }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(data)
+      loadNearbyAndSuggested(data?.state, data?.favorite_distance)
     }
+
+    const loadNearbyAndSuggested = async (userState, favDistance) => {
+      setNearbyLoading(true)
+      try {
+        if (userState) {
+          // Races Near You — upcoming races in user's state, soonest first
+          const { data: nearby } = await supabase
+            .from('races')
+            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+            .eq('state', userState.toUpperCase())
+            .eq('is_past', false)
+            .order('date_sort', { ascending: true })
+            .limit(8)
+          if (nearby) setNearbyRaces(nearby)
+
+          // Suggested For You — if we have a favorite distance, find matching races
+          // otherwise fall back to popular races in their state
+          if (favDistance) {
+            const distMap = {
+              '5K':'5K', '10K':'10K', '10 Mile':'10 mi',
+              'Half Marathon':'13.1', 'Marathon':'26.2',
+              'Ultra':'ULTRA', 'Triathlon':'70.3',
+            }
+            const targetDist = distMap[favDistance] || favDistance
+            const { data: suggested } = await supabase
+              .from('races')
+              .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+              .eq('is_past', false)
+              .ilike('distance', targetDist)
+              .neq('state', userState?.toUpperCase() || '') // slightly further afield for discovery
+              .order('date_sort', { ascending: true })
+              .limit(6)
+            if (suggested?.length) {
+              setSuggestedRaces(suggested)
+            } else {
+              // fallback: any upcoming races matching that distance
+              const { data: fallback } = await supabase
+                .from('races')
+                .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+                .eq('is_past', false)
+                .ilike('distance', targetDist)
+                .order('date_sort', { ascending: true })
+                .limit(6)
+              if (fallback) setSuggestedRaces(fallback)
+            }
+          }
+        }
+      } catch(e) { console.error('Failed to load nearby races:', e) }
+      setNearbyLoading(false)
+    }
+
     loadProfile()
     const style = document.createElement('style')
     style.id = 'rp-home-styles'
@@ -349,6 +409,7 @@ export default function Home() {
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing: border-box; }
       @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pulse { 0%,100%{opacity:0.5;}50%{opacity:1;} }
       @keyframes statsTicker { 0% { transform: translateX(0); } 100% { transform: translateX(-33.333%); } }
       .rp-nav-tab { display:flex; flex-direction:column; align-items:center; gap:4px; padding:0 24px; height:64px; justify-content:center; cursor:pointer; border:none; background:none; transition:color 0.15s; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; border-bottom:2px solid transparent; white-space:nowrap; }
       .rp-dropdown-item { display:block; width:100%; padding:10px 18px; background:none; border:none; text-align:left; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:1px; cursor:pointer; transition:background 0.1s; }
@@ -467,11 +528,57 @@ export default function Home() {
         {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Races Near You</span>
+            <div>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>
+                Races Near You{profile?.state ? ` in ${profile.state}` : ''}
+              </span>
+            </div>
             <button onClick={() => navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
           </div>
-          <ScrollRow>{MOCK_NEARBY.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
+          {nearbyLoading ? (
+            <div style={{ display:'flex', gap:'24px', overflow:'hidden' }}>
+              {[1,2,3,4].map(i => (
+                <div key={i} style={{ flexShrink:0, width:'clamp(260px,22vw,320px)', borderRadius:'16px', overflow:'hidden', background:t.surface, height:'340px', animation:'pulse 1.5s ease infinite' }}>
+                  <div style={{ height:'200px', background:t.surfaceAlt }} />
+                  <div style={{ padding:'16px' }}>
+                    <div style={{ height:'14px', background:t.border, borderRadius:'4px', marginBottom:'8px', width:'70%' }} />
+                    <div style={{ height:'11px', background:t.borderLight, borderRadius:'4px', width:'50%' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : nearbyRaces.length > 0 ? (
+            <ScrollRow>{nearbyRaces.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
+          ) : (
+            <div style={{ padding:'32px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>No races found nearby</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'16px' }}>Add your location in Profile to see races near you.</div>
+              <button onClick={() => navigate('/profile')}
+                style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+                onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+                Update Location →
+              </button>
+            </div>
+          )}
         </div>
+
+        {/* SUGGESTED FOR YOU */}
+        {suggestedRaces.length > 0 && (
+          <div style={{ marginBottom:'52px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Based on your goal distance</div>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Suggested For You</span>
+              </div>
+              <button onClick={() => navigate('/discover', { state:{ autoSearch:{ distFilter: profile?.favorite_distance === 'Half Marathon' ? '13.1' : profile?.favorite_distance || 'ALL' } } })}
+                style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>
+                See More →
+              </button>
+            </div>
+            <ScrollRow>{suggestedRaces.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
+          </div>
+        )}
 
         {/* YOUR STAMPS */}
         <div style={{ marginBottom:'52px' }}>
