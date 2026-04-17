@@ -32,7 +32,98 @@ function ConfidenceBadge({ score }) {
   )
 }
 
-function RaceCard({ race, selected, onToggle, onRemove }) {
+// ── Add Race Manually Modal ───────────────────────────────────────────────────
+function AddManualRaceModal({ onAdd, onClose }) {
+  const [name, setName]     = useState('')
+  const [distance, setDist] = useState('')
+  const [time, setTime]     = useState('')
+  const DISTANCES = ['5K','10K','10 Mile','13.1','26.2','70.3','140.6','Ultra','Other']
+  const inp = { width:'100%', padding:'10px 13px', borderRadius:'6px', border:'1.5px solid #e2e6ed', background:'#fafbfc', color:'#1B2A4A', fontSize:'14px', fontFamily:"'Barlow',sans-serif", outline:'none', boxSizing:'border-box', transition:'border-color 0.15s' }
+  return (
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'16px', padding:'28px', width:'100%', maxWidth:'400px', boxShadow:'0 24px 64px rgba(0,0,0,0.25)' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'4px' }}>Add a Race Manually</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginBottom:'20px' }}>This race will be added to your Passport.</div>
+        <div style={{ marginBottom:'12px' }}>
+          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'5px' }}>Race Name <span style={{ color:'#C9A84C' }}>*</span></label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Cherry Blossom 10 Miler" style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+        </div>
+        <div style={{ marginBottom:'12px' }}>
+          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'5px' }}>Distance <span style={{ color:'#C9A84C' }}>*</span></label>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+            {DISTANCES.map(d => (
+              <button key={d} onClick={() => setDist(d)}
+                style={{ padding:'7px 12px', borderRadius:'6px', border:`1.5px solid ${distance===d?'#1B2A4A':'#e2e6ed'}`, background:distance===d?'#1B2A4A':'#fafbfc', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:distance===d?'#fff':'#9aa5b4', cursor:'pointer', transition:'all 0.15s' }}>{d}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ marginBottom:'24px' }}>
+          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'5px' }}>Finish Time <span style={{ fontWeight:400, color:'#b0b8c4', textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
+          <input value={time} onChange={e => setTime(e.target.value)} placeholder="e.g. 1:57:40" style={inp} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+        </div>
+        <div style={{ display:'flex', gap:'10px' }}>
+          <button onClick={onClose} style={{ flex:1, padding:'11px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
+          <button onClick={() => { if (name.trim() && distance) onAdd({ id:`manual_${Date.now()}`, name:name.trim(), distance, time:time.trim(), date:'', location:'', city:'', state:'', source:'MANUAL', confidence:3 }) }}
+            disabled={!name.trim() || !distance}
+            style={{ flex:2, padding:'11px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', opacity:(!name.trim()||!distance)?0.5:1 }}
+            onMouseEnter={e => { if(name.trim()&&distance) e.currentTarget.style.background='#C9A84C' }}
+            onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+            Add to My List →
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Not Mine Confirmation Modal ───────────────────────────────────────────────
+function NotMineModal({ race, onConfirm, onCancel }) {
+  const colors = getDistanceColor(race.distance)
+  return (
+    <div onClick={onCancel} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'16px', padding:'28px', width:'100%', maxWidth:'380px', boxShadow:'0 24px 64px rgba(0,0,0,0.25)' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'4px' }}>Not Your Race?</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4', marginBottom:'16px' }}>Double-check this is the one you want to remove:</div>
+        {/* Race summary */}
+        <div style={{ background:'#f8f9fb', border:`1.5px solid ${colors.stampBorder}`, borderRadius:'10px', padding:'14px 16px', marginBottom:'20px', borderLeft:`4px solid ${colors.stampBorder}` }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'3px' }}>{race.name}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>{race.location}{race.date ? ` · ${race.date}` : ''}</div>
+          <div style={{ display:'flex', alignItems:'center', gap:'12px', marginTop:'8px' }}>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:colors.stampBorder, background:`${colors.stampBorder}15`, padding:'3px 8px', borderRadius:'4px' }}>{race.distance}</span>
+            {race.time && <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A' }}>{race.time}</span>}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:'10px' }}>
+          <button onClick={onCancel} style={{ flex:1, padding:'11px', border:'1.5px solid #e2e6ed', borderRadius:'10px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}>Keep It</button>
+          <button onClick={onConfirm} style={{ flex:1, padding:'11px', border:'none', borderRadius:'10px', background:'rgba(197,48,48,0.9)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+            onMouseEnter={e => e.currentTarget.style.background='#c53030'}
+            onMouseLeave={e => e.currentTarget.style.background='rgba(197,48,48,0.9)'}>
+            Yes, Remove It
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Undo Toast ────────────────────────────────────────────────────────────────
+function UndoToast({ raceName, onUndo, onDismiss }) {
+  useEffect(() => { const t = setTimeout(onDismiss, 5000); return () => clearTimeout(t) }, [])
+  return (
+    <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', zIndex:400, background:'#1B2A4A', borderRadius:'10px', padding:'12px 20px', display:'flex', alignItems:'center', gap:'16px', boxShadow:'0 8px 32px rgba(0,0,0,0.25)', animation:'fadeIn 0.3s ease', whiteSpace:'nowrap' }}>
+      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.8)' }}>
+        Removed <strong style={{ color:'#fff' }}>{raceName.length > 24 ? raceName.slice(0,24)+'...' : raceName}</strong>
+      </span>
+      <button onClick={onUndo} style={{ padding:'5px 14px', border:'1.5px solid rgba(201,168,76,0.5)', borderRadius:'6px', background:'rgba(201,168,76,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+        onMouseEnter={e => { e.currentTarget.style.background='rgba(201,168,76,0.2)' }}
+        onMouseLeave={e => { e.currentTarget.style.background='rgba(201,168,76,0.1)' }}>
+        Undo
+      </button>
+    </div>
+  )
+}
+
+function RaceCard({ race, selected, onToggle, onNotMine }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto]     = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
@@ -44,7 +135,7 @@ function RaceCard({ race, selected, onToggle, onRemove }) {
 
   return (
     <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'10px', overflow:'hidden', border:selected?`2.5px solid ${colors.stampBorder}`:'1.5px solid #e2e6ed', background:'#fff', transition:'border-color 0.15s, transform 0.2s', transform:hovered?'translateY(-3px)':'translateY(0)', position:'relative', cursor:'pointer' }}
+      style={{ borderRadius:'10px', overflow:'hidden', border:selected?`2.5px solid #1B2A4A`:'1.5px solid #e2e6ed', background:'#fff', transition:'border-color 0.15s, transform 0.2s', transform:hovered?'translateY(-3px)':'translateY(0)', position:'relative', cursor:'pointer' }}
       onClick={() => onToggle(race.id)}>
 
       {/* Source badge */}
@@ -52,8 +143,8 @@ function RaceCard({ race, selected, onToggle, onRemove }) {
         {race.source}
       </div>
 
-      {/* Checkmark */}
-      <div style={{ position:'absolute', top:10, right:10, zIndex:10, width:24, height:24, borderRadius:'50%', background:selected?colors.stampBorder:'rgba(255,255,255,0.9)', border:selected?`2px solid ${colors.stampBorder}`:'2px solid rgba(255,255,255,0.7)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
+      {/* Navy checkmark */}
+      <div style={{ position:'absolute', top:10, right:10, zIndex:10, width:24, height:24, borderRadius:'50%', background:selected?'#1B2A4A':'rgba(255,255,255,0.9)', border:selected?'2px solid #1B2A4A':'2px solid rgba(255,255,255,0.7)', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}>
         {selected && <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 6l3 3 5-5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>}
       </div>
 
@@ -61,36 +152,35 @@ function RaceCard({ race, selected, onToggle, onRemove }) {
       <div style={{ position:'relative', height:150, background:'#1B2A4A', overflow:'hidden' }}>
         <img src={photo} alt={race.city} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform:hovered?'scale(1.06)':'scale(1)', opacity:photoLoaded?1:0 }} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05),rgba(0,0,0,0.45))' }} />
-        {/* Hover overlay — finish time */}
+        {/* Hover overlay — gold finish time */}
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity:hovered?1:0, transition:'opacity 0.2s' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'8px' }}>Finish Time</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:colors.stampBorder, letterSpacing:'2px', lineHeight:1 }}>{race.time}</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{race.time || '—'}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginTop:'6px', textTransform:'uppercase' }}>{race.distance}</div>
         </div>
         {/* Distance stamp — hides on hover */}
         <div style={{ position:'absolute', bottom:10, left:10, opacity:hovered?0:1, transition:'opacity 0.2s' }}>
-          <div style={{ width:44, height:44, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:race.distance.length>3?9:race.distance.length>2?11:14, color:colors.stampBorder, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{race.distance.replace(' mi','')}</span>
+          <div style={{ width:44, height:44, borderRadius:'50%', border:'2px solid #1B2A4A', background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+            <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:'0.75px dashed rgba(27,42,74,0.6)' }} />
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:race.distance.length>3?9:race.distance.length>2?11:14, color:'#fff', letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{race.distance.replace(' mi','')}</span>
           </div>
         </div>
       </div>
 
       {/* Info row */}
-      <div style={{ padding:'10px 12px 12px', borderTop:`2px solid ${colors.stampBorder}22` }}>
+      <div style={{ padding:'10px 12px 12px', borderTop:'2px solid rgba(27,42,74,0.08)' }}>
         <div style={{ marginBottom:'6px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'2px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#6b7a8d' }}>{race.location} · {race.date}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#6b7a8d' }}>{race.location}{race.date ? ` · ${race.date}` : ''}</div>
         </div>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <ConfidenceBadge score={race.confidence} />
           {/* "Not my race" button */}
           <button
-            onClick={e => { e.stopPropagation(); onRemove(race.id) }}
+            onClick={e => { e.stopPropagation(); onNotMine(race) }}
             style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:'pointer', padding:'3px 6px', borderRadius:'4px', transition:'background 0.15s' }}
             onMouseEnter={e => e.currentTarget.style.background='rgba(197,48,48,0.08)'}
-            onMouseLeave={e => e.currentTarget.style.background='none'}
-            title="Not my race">
+            onMouseLeave={e => e.currentTarget.style.background='none'}>
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 2l6 6M8 2l-6 6" stroke="#c53030" strokeWidth="1.2" strokeLinecap="round"/></svg>
             <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#c53030', textTransform:'uppercase' }}>Not mine</span>
           </button>
@@ -105,12 +195,16 @@ export default function RaceImport() {
   const { state: locationState } = useLocation()
   const { user } = useAuth()
   const [loading, setLoading]           = useState(true)
-  const [loadingStatus, setLoadingStatus] = useState('Connecting to RunSignup...')
+  const [loadingStatus, setLoadingStatus] = useState('Connecting to Athlinks...')
   const [races, setRaces]               = useState([])
   const [selected, setSelected]         = useState({})
   const [activeSource, setActiveSource] = useState('ALL')
   const [saving, setSaving]             = useState(false)
   const [firstName, setFirstName]       = useState('Ryan')
+  const [showAddManual, setShowAddManual]   = useState(false)
+  const [notMineRace, setNotMineRace]       = useState(null)   // race object pending not-mine confirm
+  const [undoRace, setUndoRace]             = useState(null)   // race object for undo toast
+  const [undoSelected, setUndoSelected]     = useState(null)   // selected state snapshot for undo
 
   useEffect(() => {
     const run = async () => {
@@ -124,11 +218,10 @@ export default function RaceImport() {
       setFirstName(fn)
 
       const steps = [
-        { msg:`Connecting to RunSignup...`,          ms:800 },
+        { msg:`Connecting to Athlinks...`,           ms:800 },
         { msg:`Searching race history for ${fn}...`, ms:1000 },
         { msg:'Matching race registrations...',      ms:900 },
         { msg:'Pulling finish times & results...',   ms:700 },
-        { msg:'Checking Athlinks for results...',    ms:800 },
         { msg:'Ordering by confidence...',           ms:400 },
       ]
       for (const s of steps) { setLoadingStatus(s.msg); await new Promise(r => setTimeout(r, s.ms)) }
@@ -165,7 +258,36 @@ export default function RaceImport() {
   }, [user])
 
   const toggleRace  = id => setSelected(p => ({ ...p, [id]: !p[id] }))
-  const removeRace  = id => setRaces(p => p.filter(r => r.id !== id))
+
+  const handleNotMine = (race) => setNotMineRace(race)
+
+  const confirmNotMine = () => {
+    if (!notMineRace) return
+    // Snapshot for undo
+    setUndoRace(notMineRace)
+    setUndoSelected({ ...selected })
+    setRaces(p => p.filter(r => r.id !== notMineRace.id))
+    setSelected(p => { const n = {...p}; delete n[notMineRace.id]; return n })
+    setNotMineRace(null)
+  }
+
+  const handleUndo = () => {
+    if (!undoRace) return
+    setRaces(p => {
+      // Re-insert in original position by confidence
+      const withBack = [...p, undoRace].sort((a,b) => b.confidence - a.confidence)
+      return withBack
+    })
+    setSelected(undoSelected)
+    setUndoRace(null); setUndoSelected(null)
+  }
+
+  const handleAddManual = (newRace) => {
+    setRaces(p => [{ ...newRace, selected:true }, ...p])
+    setSelected(p => ({ ...p, [newRace.id]: true }))
+    setShowAddManual(false)
+  }
+
   const selectedCount = Object.values(selected).filter(Boolean).length
   const allSelected   = races.length > 0 && selectedCount === races.length
   const toggleAll     = () => { const n = {}; races.forEach(r => { n[r.id] = !allSelected }); setSelected(n) }
@@ -263,35 +385,35 @@ export default function RaceImport() {
         {/* Cards grid */}
         <div className="cards-grid" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))', gap:'16px', marginBottom:'24px' }}>
           {filteredRaces.map(race => (
-            <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} onRemove={removeRace} />
+            <RaceCard key={race.id} race={race} selected={!!selected[race.id]} onToggle={toggleRace} onNotMine={handleNotMine} />
           ))}
         </div>
 
-        {/* Missing a race */}
-        <div style={{ border:'1.5px dashed #e2e6ed', borderRadius:'8px', padding:'14px 16px', marginBottom:'20px', background:'rgba(255,255,255,0.9)' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Missing a race?</div>
-          <p style={{ fontSize:'13px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.6 }}>
-            Don't see something that should be here?{' '}
-            <span style={{ color:'#C9A84C', fontWeight:600, cursor:'pointer' }}>Add it manually</span>
-            {' '}after confirming, or connect Strava below.
-          </p>
-        </div>
-
-        {/* Strava connect banner */}
-        <div style={{ background:'#1B2A4A', borderRadius:'12px', padding:'18px 20px', marginBottom:'24px', display:'flex', alignItems:'center', gap:'16px', animation:'stravaSlide 0.5s ease 0.3s both' }}>
-          <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.15)', border:'1px solid rgba(252,76,2,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+        {/* Combined Missing Race + Strava banner */}
+        <div style={{ background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', borderRadius:'14px', padding:'22px 24px', marginBottom:'24px', display:'flex', alignItems:'center', gap:'20px', animation:'stravaSlide 0.5s ease 0.3s both' }}>
+          <div style={{ width:44, height:44, borderRadius:'10px', background:'rgba(252,76,2,0.15)', border:'1px solid rgba(252,76,2,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
           </div>
           <div style={{ flex:1 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#fff', letterSpacing:'0.5px', marginBottom:'3px' }}>Connect Strava as your safety net</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)', lineHeight:1.5 }}>We'll scan your Strava activities to find any races we may have missed and unlock deeper insights.</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, color:'#fff', letterSpacing:'0.5px', marginBottom:'4px' }}>Missing a Race?</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>
+              Connect Strava to scan your activities that look like races and unlock more insights — or add a race manually.
+            </div>
           </div>
-          <button
-            style={{ padding:'9px 18px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
-            onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.2)'; e.currentTarget.style.borderColor='#FC4C02' }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
-            Connect Strava
-          </button>
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px', flexShrink:0 }}>
+            <button
+              style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)'; e.currentTarget.style.borderColor='#FC4C02' }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
+              Connect Strava
+            </button>
+            <button onClick={() => setShowAddManual(true)}
+              style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'rgba(255,255,255,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+              Add Manually
+            </button>
+          </div>
         </div>
 
         {/* Confirm CTA */}
@@ -304,6 +426,11 @@ export default function RaceImport() {
           Skip import — I'll add races later
         </p>
       </div>
+
+      {/* Modals + toast */}
+      {showAddManual && <AddManualRaceModal onAdd={handleAddManual} onClose={() => setShowAddManual(false)} />}
+      {notMineRace && <NotMineModal race={notMineRace} onConfirm={confirmNotMine} onCancel={() => setNotMineRace(null)} />}
+      {undoRace && <UndoToast raceName={undoRace.name} onUndo={handleUndo} onDismiss={() => { setUndoRace(null); setUndoSelected(null) }} />}
     </div>
   )
 }
