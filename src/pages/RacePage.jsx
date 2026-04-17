@@ -399,6 +399,52 @@ export default function RacePage() {
           </div>
         )}
 
+        {/* MUSIC */}
+        <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+            <div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Music</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'3px' }}>What were you listening to?</div>
+            </div>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+            {/* Spotify */}
+            <div style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center', transition:'border-color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor='#1DB954'}
+              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(29,185,84,0.1)', border:'1.5px solid rgba(29,185,84,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>Spotify</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>Connect to show what you played on race day</div>
+              </div>
+              <button style={{ padding:'8px 20px', border:'1.5px solid #1DB954', borderRadius:'8px', background:'rgba(29,185,84,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1DB954', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='#1DB954'; e.currentTarget.style.color='#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(29,185,84,0.08)'; e.currentTarget.style.color='#1DB954' }}>
+                Connect Spotify
+              </button>
+            </div>
+            {/* Apple Music */}
+            <div style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center', transition:'border-color 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.borderColor='#FA2D55'}
+              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(250,45,85,0.1)', border:'1.5px solid rgba(250,45,85,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="#FA2D55"><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.816.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.55.053 1.1.06 1.65.06h11.033c.49 0 .978-.034 1.466-.1.837-.105 1.622-.351 2.295-.849 1.013-.741 1.651-1.731 1.917-2.952.133-.613.17-1.238.17-1.864l.003-12.16zm-6.17 3.38l-4.577 7.83a.78.78 0 01-.672.39.802.802 0 01-.413-.113l-2.155-1.328a.78.78 0 01-.27-1.07l4.576-7.83a.782.782 0 011.345 0l1.94 3.12h.227z"/></svg>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>Apple Music</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>Connect to show what you played on race day</div>
+              </div>
+              <button style={{ padding:'8px 20px', border:'1.5px solid #FA2D55', borderRadius:'8px', background:'rgba(250,45,85,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FA2D55', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='#FA2D55'; e.currentTarget.style.color='#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(250,45,85,0.08)'; e.currentTarget.style.color='#FA2D55' }}>
+                Connect Apple Music
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* BOTTOM NAV */}
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px' }}>
           <div style={{ background:t.surface, borderRadius:'16px', padding:'20px 24px', border:`1px solid ${t.border}` }}>
