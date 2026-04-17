@@ -48,6 +48,11 @@ const MOCK_UPCOMING = [
   { id:'u2', name:'Baltimore Running Festival', date:'Oct 18, 2026', location:'Baltimore, MD',  city:'Baltimore',  state:'MD', distance:'26.2',  registration_url:'https://www.thebaltimoremarathon.com' },
 ]
 
+// Read any races the user registered for via the "Did you sign up?" flow
+function getSessionUpcoming() {
+  try { return JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]') } catch(e) { return [] }
+}
+
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
 // ── Theme toggle button ───────────────────────────────────────────────────────
@@ -433,10 +438,22 @@ export default function Home() {
         </div>
       )}
 
-      {/* GREETING */}
+      {/* GREETING + SPONSOR SLOT */}
       <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
+        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
+          <div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
+          </div>
+          {/* Sponsor slot — reserved for brand partnerships */}
+          <div style={{ flexShrink:0, alignSelf:'center', opacity:0.35, border:`1px dashed ${t.border}`, borderRadius:'10px', padding:'10px 18px', display:'flex', alignItems:'center', gap:'8px', minWidth:'160px' }}>
+            <div style={{ width:28, height:28, borderRadius:'6px', background:t.border }} />
+            <div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Sponsored by</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.textMuted, letterSpacing:'1px' }}>Partner Name</div>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* STATS BAR */}
@@ -482,7 +499,24 @@ export default function Home() {
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Your Upcoming Races</span>
           </div>
-          <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} t={t} />)}</ScrollRow>
+          {(() => {
+            // Merge session-stored registrations with mock, deduplicate by id, sort by date
+            const sessionRaces = getSessionUpcoming()
+            const allUpcoming = [...sessionRaces, ...MOCK_UPCOMING.filter(m => !sessionRaces.find(s => s.id === m.id))]
+            if (allUpcoming.length === 0) return (
+              <div style={{ padding:'32px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>No upcoming races yet</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'16px' }}>Find a race and register to see your countdown here.</div>
+                <button onClick={() => navigate('/discover')}
+                  style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+                  onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+                  Find Races →
+                </button>
+              </div>
+            )
+            return <ScrollRow>{allUpcoming.map(race => <UpcomingCard key={race.id} race={race} t={t} />)}</ScrollRow>
+          })()}
         </div>
 
       </div>
