@@ -7,7 +7,7 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 
-const STRAVA_CONNECTED = true
+const STRAVA_CONNECTED = false
 
 const STAT_ITEMS = [
   { label:'Total Races',    value:'10'      },
@@ -480,8 +480,7 @@ export default function Home() {
         {/* UPCOMING RACES */}
         <div>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Upcoming Races</span>
-            <button onClick={() => navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View All →</button>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Your Upcoming Races</span>
           </div>
           <ScrollRow>{MOCK_UPCOMING.map(race => <UpcomingCard key={race.id} race={race} t={t} />)}</ScrollRow>
         </div>
