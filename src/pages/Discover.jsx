@@ -21,20 +21,28 @@ const FEATURED_RACE_NAMES = [
 ]
 
 // Anything matching these keywords is NOT a real race — excluded from results + featured
+// Short words (<=4 chars) use whole-word matching to avoid false positives
 const NON_RACE_KEYWORDS = [
-  'coaching','coach session','volunteer','clinic','camp','seminar','webinar',
-  'training session','training program','training class','training run','shakeout',
-  'shakeout run','fun run series','virtual','online','membership','donation',
-  'fundraiser','raffle','merchandise','gear','registration fee waiver','transfer',
-  'deferral','information','info session','orientation','meeting','workshop',
-  'water stop','bagel run','group run','pacer','pace group','kickoff',
-  'open house','expo','packet pickup',
-  // Transportation
-  'bus service','charter bus','charter busses','shuttle bus','transportation',
-  'busing','busses','charter coach',
+  // Non-race event types
+  'coaching','volunteering','volunteer','clinic','seminar','webinar',
+  'information','info session','orientation','meeting','workshop','open house',
+  'expo','packet pickup','membership','donation','fundraiser','raffle',
+  'merchandise','transfer','deferral',
+  // Training programs (whole-word: "training" won't match "trail racing")
+  'training session','training program','training class','training run',
+  'training series','training schedule',
+  // Shakeout / fun runs that aren't timed races
+  'shakeout run','shakeout','water stop','bagel run','group run',
+  'pacer','pace group','kickoff run','fun run series',
+  // Transportation — whole-word "bus" avoids Columbus/Malibu false positives
+  'bus service','charter bus','chartered bus','busses','charter coach',
+  'shuttle bus','motor coach','transportation to','bus and amenities',
+  'bus trip','marathon bus','race bus',
   // Training programs disguised as races
-  'couch to','hibernation to','0 to 5k','zero to','beginners to',
-  'from couch','learn to run','intro to running',
+  'couch to','hibernation to','0 to 5k','zero to 5k','beginners to',
+  'from couch','learn to run','intro to running','road to','program',
+  // Virtual / non-physical
+  'virtual race','virtual run','online race',
 ]
 
 // Distance bucket classification — strict, anything uncertain → Other
@@ -102,9 +110,20 @@ function parseCityState(race) {
   return { city:'', state:'' }
 }
 
+// Whole-word keyword check — prevents "bus" matching "Columbus", "training" matching "trail racing" etc.
+function nameContainsKeyword(name, kw) {
+  // For short keywords (<=4 chars) use word-boundary check
+  // For longer keywords, substring is fine
+  if (kw.length <= 4) {
+    const re = new RegExp(`(^|\\s|-)${kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(\\s|-|$)`, 'i')
+    return re.test(name)
+  }
+  return name.includes(kw)
+}
+
 function isActualRace(r) {
   const name = (r.name || '').toLowerCase()
-  return !NON_RACE_KEYWORDS.some(kw => name.includes(kw))
+  return !NON_RACE_KEYWORDS.some(kw => nameContainsKeyword(name, kw))
 }
 
 // Strict distance classification — uncertain → OTHER
@@ -486,11 +505,17 @@ export default function Discover() {
         }
         setAllRaces(all)
         // Featured: strict filter — real races, known names, max 5
+        // Extra check: exclude anything with "training" or "program" as standalone words
+        const isFeaturedSafe = (r) => {
+          const name = (r.name || '').toLowerCase()
+          return !/\btraining\b/.test(name) && !/\bprogram\b/.test(name) && !/\bbus\b/.test(name) && !/\bcharter\b/.test(name)
+        }
         const featured = all.filter(r =>
           isActualRace(r) &&
+          isFeaturedSafe(r) &&
           FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name))
         )
-        setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(isActualRace).slice(0,5))
+        setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(r => isActualRace(r) && isFeaturedSafe(r)).slice(0,5))
       } catch(e) { console.error('Failed to load races:', e) }
       setLoading(false)
     }
