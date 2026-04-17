@@ -29,6 +29,12 @@ const NON_RACE_KEYWORDS = [
   'deferral','information','info session','orientation','meeting','workshop',
   'water stop','bagel run','group run','pacer','pace group','kickoff',
   'open house','expo','packet pickup',
+  // Transportation
+  'bus service','charter bus','charter busses','shuttle bus','transportation',
+  'busing','busses','charter coach',
+  // Training programs disguised as races
+  'couch to','hibernation to','0 to 5k','zero to','beginners to',
+  'from couch','learn to run','intro to running',
 ]
 
 // Distance bucket classification — strict, anything uncertain → Other
@@ -358,7 +364,7 @@ export default function Discover() {
   const [locationStatus, setLocationStatus] = useState('idle')
   const [showLocationBanner, setShowLocationBanner] = useState(true)
   const [activeId, setActiveId]           = useState(null)
-  const [mapBounds, setMapBounds]         = useState(null) // for "search this area"
+  const [mapBounds, setMapBounds]         = useState(null) // never restored — always fresh on load
   const [showSearchArea, setShowSearchArea] = useState(false)
 
   const mapRef         = useRef(null)
@@ -446,6 +452,18 @@ export default function Discover() {
     ...group,
     races: filtered.filter(r => classifyDistance(r) === group.key)
   })).filter(g => g.races.length > 0)
+
+  // Batch-preload photos for the first 24 races whenever filtered results change
+  // loadRacePhoto has its own internal cache — preloading populates it so
+  // cards render instantly when they scroll into view
+  useEffect(() => {
+    if (filtered.length === 0) return
+    const first24 = filtered.slice(0, 24)
+    first24.forEach(race => {
+      const enriched = { ...race, ...parseCityState(race) }
+      loadRacePhoto(enriched) // fire and forget — populates photos.js internal cache
+    })
+  }, [filtered.length, committed])
 
   // ── Effects ───────────────────────────────────────────────────────────────
 
@@ -815,15 +833,15 @@ export default function Discover() {
       <div style={{ position:'relative', height:'45vh', background:t.isDark?'#0f1520':'#e8eaed' }}>
         <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
 
-        {/* Search This Area button */}
+        {/* Search This Area button — bottom center */}
         {showSearchArea && (
-          <div style={{ position:'absolute', top:'50%', left:'50%', transform:'translate(-50%,-50%)', zIndex:400 }}>
+          <div style={{ position:'absolute', bottom:20, left:'50%', transform:'translateX(-50%)', zIndex:400 }}>
             <button
               onClick={() => {
                 setCommitted(prev => ({ ...(prev || { search:'', distFilter:'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:'', dateTo:'' }), mapBoundsSearch: true }))
                 setShowSearchArea(false)
               }}
-              style={{ padding:'10px 22px', border:'none', borderRadius:'24px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', boxShadow:'0 4px 20px rgba(0,0,0,0.35)', transition:'background 0.15s, transform 0.15s', display:'flex', alignItems:'center', gap:'8px' }}
+              style={{ padding:'10px 22px', border:'none', borderRadius:'24px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', boxShadow:'0 4px 20px rgba(0,0,0,0.35)', transition:'background 0.15s', display:'flex', alignItems:'center', gap:'8px' }}
               onMouseEnter={e => { e.currentTarget.style.background='#C9A84C'; e.currentTarget.style.color='#1B2A4A' }}
               onMouseLeave={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}>
               <svg width="13" height="13" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
