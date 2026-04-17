@@ -42,31 +42,29 @@ function SignupBanner({ race, onYes, onNo }) {
 
 // ── Signup confirmation modal ─────────────────────────────────────────────────
 function SignupModal({ race, onSave, onClose, t }) {
-  const [wave, setWave]     = useState('')
-  const [goal, setGoal]     = useState('')
-  const [bib, setBib]       = useState('')
-  const [saving, setSaving] = useState(false)
+  const [goal, setGoal]           = useState('')
+  const [specificTime, setSpecificTime] = useState('')
+  const [saving, setSaving]       = useState(false)
 
-  const WAVES = ['Before 7am','7–9am','9–11am','Afternoon','TBD']
-  const GOALS = ['Finish strong','PR attempt','Fun / social','First at this distance','Support a cause']
+  const GOALS = [
+    { key:'pr',    label:'Go for a PR 🏆' },
+    { key:'time',  label:'Hit a specific time 🎯' },
+    { key:'fun',   label:'Have fun 🎉' },
+    { key:'finish',label:'Just finish strong 💪' },
+    { key:'cause', label:'Support a cause ❤️' },
+  ]
 
   const handleSave = async () => {
     setSaving(true)
     await new Promise(r => setTimeout(r, 400))
-    onSave({ wave, goal, bib })
+    onSave({ goal, specificTime })
     setSaving(false)
   }
 
-  const chip = (val, active, onClick) => (
-    <button onClick={onClick}
-      style={{ padding:'6px 13px', borderRadius:'20px', border:`1.5px solid ${active?'#1B2A4A':t.border}`, background:active?'#1B2A4A':t.inputBg, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'0.5px', color:active?'#fff':t.textMuted, cursor:'pointer', transition:'all 0.15s' }}>
-      {val}
-    </button>
-  )
-
   return (
     <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:t.surface, borderRadius:'20px', padding:'32px', width:'100%', maxWidth:'440px', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', border:`1px solid ${t.border}` }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:t.surface, borderRadius:'20px', padding:'32px', width:'100%', maxWidth:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', border:`1px solid ${t.border}` }}>
+        {/* Header */}
         <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'24px' }}>
           <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(201,168,76,0.12)', border:'1.5px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'20px' }}>🎉</div>
           <div>
@@ -75,27 +73,26 @@ function SignupModal({ race, onSave, onClose, t }) {
           </div>
         </div>
 
-        <div style={{ marginBottom:'16px' }}>
-          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Wave / start time</label>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-            {WAVES.map(w => chip(w, wave===w, () => setWave(wave===w?'':w)))}
-          </div>
-        </div>
-
-        <div style={{ marginBottom:'16px' }}>
-          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Your goal for this race</label>
-          <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-            {GOALS.map(g => chip(g, goal===g, () => setGoal(goal===g?'':g)))}
-          </div>
-        </div>
-
+        {/* Single question */}
         <div style={{ marginBottom:'24px' }}>
-          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>
-            Bib number <span style={{ color:t.border, fontWeight:400 }}>(optional)</span>
-          </label>
-          <input value={bib} onChange={e => setBib(e.target.value)} placeholder="e.g. 4821"
-            style={{ width:'100%', padding:'10px 14px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.inputBg, color:t.text, fontFamily:"'Barlow',sans-serif", fontSize:'14px', outline:'none', transition:'border-color 0.15s' }}
-            onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor=t.border} />
+          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'12px' }}>What's your goal for this race?</label>
+          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+            {GOALS.map(g => (
+              <button key={g.key} onClick={() => setGoal(goal===g.key?'':g.key)}
+                style={{ padding:'10px 16px', borderRadius:'10px', border:`1.5px solid ${goal===g.key?'#C9A84C':t.border}`, background:goal===g.key?'rgba(201,168,76,0.1)':t.inputBg, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'0.5px', color:goal===g.key?'#C9A84C':t.textMuted, cursor:'pointer', transition:'all 0.15s', textAlign:'left' }}>
+                {g.label}
+              </button>
+            ))}
+          </div>
+          {/* Specific time input — only shows when "Hit a specific time" is selected */}
+          {goal === 'time' && (
+            <div style={{ marginTop:'12px' }}>
+              <input value={specificTime} onChange={e => setSpecificTime(e.target.value)} placeholder="e.g. 1:55:00"
+                style={{ width:'100%', padding:'10px 14px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.inputBg, color:t.text, fontFamily:"'Barlow',sans-serif", fontSize:'14px', outline:'none', transition:'border-color 0.15s' }}
+                onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor=t.border} />
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, marginTop:'4px' }}>Enter your target finish time (HH:MM:SS)</div>
+            </div>
+          )}
         </div>
 
         <div style={{ display:'flex', gap:'10px' }}>
@@ -107,7 +104,7 @@ function SignupModal({ race, onSave, onClose, t }) {
             style={{ flex:2, padding:'11px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', opacity:saving?0.7:1 }}
             onMouseEnter={e => { if(!saving) e.currentTarget.style.background='#C9A84C' }}
             onMouseLeave={e => { if(!saving) e.currentTarget.style.background='#1B2A4A' }}>
-            {saving ? 'Saving...' : 'Add to My Races →'}
+            {saving ? 'Adding...' : 'Add to My Races →'}
           </button>
         </div>
       </div>
@@ -196,12 +193,18 @@ export default function RaceDetail() {
     window.open(url, '_blank')
   }
 
-  const handleSignupSave = ({ wave, goal, bib }) => {
+  const handleSignupSave = ({ goal, specificTime }) => {
     setSignedUp(true)
     setShowSignupModal(false)
     try {
       const existing = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
-      const entry = { id:race.id, name:race.name, location:race.location, date:race.date, date_sort:race.date_sort, distance:race.distance, registration_url:race.registration_url, wave, goal, bib, addedAt:Date.now() }
+      const entry = {
+        id: race.id, name: race.name, location: race.location,
+        date: race.date, date_sort: race.date_sort,
+        distance: race.distance, registration_url: race.registration_url,
+        city: race.city, state: race.state,
+        goal, specificTime, addedAt: Date.now()
+      }
       sessionStorage.setItem('rp_upcoming', JSON.stringify([entry, ...existing.filter(r => r.id !== race.id)]))
     } catch(e) {}
   }
