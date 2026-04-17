@@ -115,21 +115,26 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
     return () => observer.disconnect()
   }, [race.id, race.hero_image, featured])
 
-  // Load photo only when card enters viewport — prevents 12 simultaneous DB queries
+  // Load photo — featured cards load immediately, search cards load lazily on scroll
   useEffect(() => {
     setPhotoLoaded(false)
     setPhoto(PHOTO_PLACEHOLDER)
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return
-      observer.disconnect()
-      const enriched = { ...race, ...parseCityState(race) }
-      loadRacePhoto(enriched).then(url => {
-        if (url) { setPhoto(url); setPhotoLoaded(true) }
-      })
-    }, { rootMargin:'100px' }) // start loading slightly before visible
-    if (cardRef.current) observer.observe(cardRef.current)
-    return () => observer.disconnect()
-  }, [race.id, race.city, race.state, race.hero_image])
+    const enriched = { ...race, ...parseCityState(race) }
+
+    if (featured) {
+      // Featured cards are always visible — load immediately
+      loadRacePhoto(enriched).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+    } else {
+      // Search result cards — lazy load via IntersectionObserver
+      const observer = new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) return
+        observer.disconnect()
+        loadRacePhoto(enriched).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+      }, { rootMargin:'100px' })
+      if (cardRef.current) observer.observe(cardRef.current)
+      return () => observer.disconnect()
+    }
+  }, [race.id, race.city, race.state, race.hero_image, featured])
 
   return (
     <div ref={cardRef}
