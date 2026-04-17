@@ -20,7 +20,7 @@ export default async function handler(req, res) {
 
   const action = req.query.action || 'status'
 
-  const BATCH_SIZE  = 25
+  const BATCH_SIZE  = 10
   const MAX_RETRIES = 5
   const RETRY_DELAY = 12000
 
@@ -300,7 +300,8 @@ export default async function handler(req, res) {
   }
 
   // ── Save to city_images table ─────────────────────────────────────────────
-  // Always uses race_type = 'standard' now — one image per city
+  // Always uses race_type = 'standard' — one image per city
+  // Uses upsert so re-runs overwrite instead of erroring on duplicates
   async function saveToDatabase(city, state, imageUrl, prompt) {
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/city_images`, {
       method: 'POST',
@@ -309,6 +310,7 @@ export default async function handler(req, res) {
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
         'Prefer': 'resolution=merge-duplicates,return=minimal',
+        'on-conflict': 'city,state,race_type',
       },
       body: JSON.stringify({ city, state, race_type: 'standard', image_url: imageUrl, prompt })
     })
