@@ -63,7 +63,7 @@ export default function VerifyEmail() {
     if (isDemo(email)) {
       setLoading(false)
       setVerified(true)
-      setTimeout(() => navigate(isNewUser ? '/build-passport' : '/home'), 2200)
+      setTimeout(() => navigate(isNewUser ? '/race-search-prompt' : '/home', { state: { firstName } }), 2200)
       return
     }
 
@@ -72,7 +72,7 @@ export default function VerifyEmail() {
     setLoading(false)
 
     if (result.error) setError('Invalid or expired code. Please check and try again, or resend.')
-    else { setVerified(true); setTimeout(() => navigate(isNewUser ? '/build-passport' : '/home'), 2200) }
+    else { setVerified(true); setTimeout(() => navigate(isNewUser ? '/race-search-prompt' : '/home', { state: { firstName } }), 2200) }
   }
 
   const handleResend = async () => {
