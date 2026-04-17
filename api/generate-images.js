@@ -300,17 +300,24 @@ export default async function handler(req, res) {
   }
 
   // ── Save to city_images table ─────────────────────────────────────────────
-  // Always uses race_type = 'standard' — one image per city
-  // Uses upsert so re-runs overwrite instead of erroring on duplicates
+  // Delete-then-insert to avoid duplicate key conflicts reliably
   async function saveToDatabase(city, state, imageUrl, prompt) {
+    // Delete any existing row first
+    await fetch(
+      `${SUPABASE_URL}/rest/v1/city_images?city=eq.${encodeURIComponent(city)}&state=eq.${encodeURIComponent(state)}&race_type=eq.standard`,
+      {
+        method: 'DELETE',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` }
+      }
+    )
+    // Now insert fresh
     const resp = await fetch(`${SUPABASE_URL}/rest/v1/city_images`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'apikey': SUPABASE_KEY,
         'Authorization': `Bearer ${SUPABASE_KEY}`,
-        'Prefer': 'resolution=merge-duplicates,return=minimal',
-        'on-conflict': 'city,state,race_type',
+        'Prefer': 'return=minimal',
       },
       body: JSON.stringify({ city, state, race_type: 'standard', image_url: imageUrl, prompt })
     })
