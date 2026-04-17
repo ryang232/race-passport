@@ -154,14 +154,27 @@ function handleCardClick(race, navigate) {
 function NearbyCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
+  const [photoLoaded, setPhotoLoaded] = useState(false)
   const navigate = useNavigate()
-  useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
+  const cardRef = useRef(null)
+
+  useEffect(() => {
+    setPhotoLoaded(false)
+    setPhoto(PHOTO_PLACEHOLDER)
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+    }, { rootMargin:'100px' })
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [race.id])
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+    <div ref={cardRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} onError={e => e.target.style.display='none'} />
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
@@ -211,15 +224,29 @@ function useCountdown(dateStr) {
 function UpcomingCard({ race, t }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
+  const [photoLoaded, setPhotoLoaded] = useState(false)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date)
-  useEffect(() => { loadRacePhoto(race).then(url => { if (url) setPhoto(url) }) }, [race.id])
+  const cardRef = useRef(null)
+
+  useEffect(() => {
+    setPhotoLoaded(false)
+    setPhoto(PHOTO_PLACEHOLDER)
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+    }, { rootMargin:'100px' })
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
+  }, [race.id])
+
   return (
-    <div onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+    <div ref={cardRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)' }} onError={e => e.target.style.display='none'} />
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
         <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
