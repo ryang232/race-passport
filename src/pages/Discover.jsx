@@ -472,13 +472,21 @@ export default function Discover() {
     races: filtered.filter(r => classifyDistance(r) === group.key)
   })).filter(g => g.races.length > 0)
 
-  // Batch-preload photos for the first 24 races whenever filtered results change
-  // loadRacePhoto has its own internal cache — preloading populates it so
-  // cards render instantly when they scroll into view
+  // Preload photos per distance group — ensures each section's first 8 cards
+  // get photos immediately, regardless of their position in the flat sorted list.
+  // (Previous flat slice(0,24) missed 5K races that appeared after position 24)
   useEffect(() => {
     if (filtered.length === 0) return
-    const first24 = filtered.slice(0, 24)
-    first24.forEach(race => {
+    const toPreload = []
+    const seen = new Set()
+    // Take first 8 from each distance bucket
+    DISTANCE_GROUPS.forEach(group => {
+      const groupRaces = filtered.filter(r => classifyDistance(r) === group.key)
+      groupRaces.slice(0, 8).forEach(r => {
+        if (!seen.has(r.id)) { seen.add(r.id); toPreload.push(r) }
+      })
+    })
+    toPreload.forEach(race => {
       const enriched = { ...race, ...parseCityState(race) }
       loadRacePhoto(enriched) // fire and forget — populates photos.js internal cache
     })
