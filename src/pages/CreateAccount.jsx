@@ -65,6 +65,7 @@ export default function CreateAccount() {
   const [loading, setLoading]             = useState(false)
 
   useEffect(() => {
+    // Only auto-fill for demo — real users start with blank fields
     if (isDemo(prefillEmail)) { setFirstName(DEMO_FIRST_NAME); setLastName(DEMO_LAST_NAME) }
     const style = document.createElement('style')
     style.id = 'rp-ca-styles'
@@ -110,6 +111,9 @@ export default function CreateAccount() {
 
     setLoading(true)
 
+    // Request location immediately when they hit Create Account — browser prompt fires right away
+    const locPromise = requestLocation()
+
     // Create auth user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
@@ -145,8 +149,8 @@ export default function CreateAccount() {
         race_name:     bibName.trim() || null,
         full_name:     `${firstName.trim()} ${lastName.trim()}`,
       }
-      // Also try to grab location to pre-seed address region
-      const loc = await requestLocation()
+      // Await the location that was already requested on button click
+      const loc = await locPromise
       if (loc) { updates.signup_lat = loc.lat; updates.signup_lng = loc.lng }
       await supabase.from('profiles').update(updates).eq('id', data.user.id)
     }
@@ -190,11 +194,11 @@ export default function CreateAccount() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="rp-label">First Name <span style={{ color:'#C9A84C' }}>*</span></label>
-            <input className="rp-input" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" />
+            <input className="rp-input" type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Ryan" />
           </div>
           <div>
             <label className="rp-label">Last Name <span style={{ color:'#C9A84C' }}>*</span></label>
-            <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Doe" />
+            <input className="rp-input" type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Runner" />
           </div>
         </div>
 
@@ -208,14 +212,12 @@ export default function CreateAccount() {
         <div style={{ marginBottom:'10px' }}>
           <label className="rp-label">Date of Birth <span style={{ color:'#C9A84C' }}>*</span></label>
           <DobPicker value={dob} onChange={setDob} />
-          <p style={{ fontSize:'10px', color:'#b0b8c4', margin:'4px 0 0', fontFamily:"'Barlow Condensed',sans-serif" }}>Used to find your race history — never shown publicly.</p>
         </div>
 
         {/* Bib name */}
         <div style={{ marginBottom:'10px' }}>
           <label className="rp-label">Bib Name <span style={{ fontWeight:400, color:'#b0b8c4', textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
           <input className="rp-input" type="text" value={bibName} onChange={e => setBibName(e.target.value)} placeholder="e.g. Ryan" />
-          <p style={{ fontSize:'10px', color:'#b0b8c4', margin:'4px 0 0', fontFamily:"'Barlow Condensed',sans-serif" }}>The name on your race bib. Leave blank to use your full name.</p>
         </div>
 
         {/* Password */}
@@ -226,14 +228,6 @@ export default function CreateAccount() {
         <div style={{ marginBottom:'20px' }}>
           <label className="rp-label">Confirm Password <span style={{ color:'#C9A84C' }}>*</span></label>
           <input className="rp-input" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="••••••••" onKeyDown={e => e.key==='Enter' && handleSignUp()} />
-        </div>
-
-        {/* Location notice */}
-        <div style={{ display:'flex', alignItems:'flex-start', gap:'10px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:'6px', padding:'10px 12px', marginBottom:'18px' }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" style={{ flexShrink:0, marginTop:'1px' }}><circle cx="12" cy="12" r="3" stroke="#C9A84C" strokeWidth="1.5"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          <p style={{ fontSize:'11px', color:'#6b7a8d', margin:0, fontFamily:"'Barlow Condensed',sans-serif", lineHeight:1.5 }}>
-            We'll ask for your location after sign-up to show <strong style={{ color:'#1B2A4A' }}>Races Near You</strong> on your homepage.
-          </p>
         </div>
 
         <button className="rp-primary" onClick={handleSignUp} disabled={loading} style={{ marginBottom:'12px' }}>
