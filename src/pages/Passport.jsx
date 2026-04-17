@@ -58,6 +58,34 @@ function PassportCard({ race, index, onClick, t }) {
 
 function GoalSection({ goal, navigate, t }) {
   const colors = getDistanceColor(goal.label)
+
+  // Map goal distance label to Discover distFilter value
+  const distFilterMap = {
+    '5K':'5K', '10K':'10K', '13.1':'13.1', 'Half Marathon':'13.1',
+    '26.2':'26.2', 'Marathon':'26.2', '70.3':'TRI', '140.6':'TRI',
+    'Triathlon':'TRI', 'Ultra':'ULTRA',
+  }
+
+  const handleViewRaces = () => {
+    // Build date range: ±1 month around target date
+    let dateFrom = '', dateTo = ''
+    if (goal.targetDate) {
+      // targetDate format: "Sep 2026"
+      const parts = goal.targetDate.split(' ')
+      const months = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 }
+      const m = months[parts[0]]
+      const y = parseInt(parts[1])
+      if (!isNaN(m) && !isNaN(y)) {
+        const from = new Date(y, m-1, 1)
+        const to   = new Date(y, m+1, 0)
+        dateFrom = from.toISOString().slice(0,10)
+        dateTo   = to.toISOString().slice(0,10)
+      }
+    }
+    const distFilter = distFilterMap[goal.distance] || distFilterMap[goal.label] || 'ALL'
+    navigate('/discover', { state: { autoSearch:{ distFilter, dateFrom, dateTo } } })
+  }
+
   return (
     <div style={{ marginTop:'48px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
@@ -71,24 +99,30 @@ function GoalSection({ goal, navigate, t }) {
           onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>Edit Goal</button>
       </div>
       <div style={{ background:t.surface, border:`1.5px solid ${t.border}`, borderRadius:'14px', overflow:'hidden', marginBottom:'16px' }}>
-        <div style={{ padding:'20px 24px', display:'flex', alignItems:'center', gap:'20px' }}>
-          <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-            <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:goal.label.length>3?14:goal.label.length>2?18:24, color:colors.stampText, position:'relative', zIndex:1, letterSpacing:'0.04em' }}>{goal.label}</span>
-          </div>
-          <div style={{ flex:1 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'6px' }}>
-              <div style={{ background:`${t.isDark?'rgba(201,168,76,0.15)':'rgba(27,42,74,0.08)'}`, border:`1px solid ${t.isDark?'rgba(201,168,76,0.3)':'rgba(27,42,74,0.18)'}`, borderRadius:'5px', padding:'3px 9px' }}>
+        <div style={{ padding:'24px 32px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'24px' }}>
+          {/* Left: stamp + goal info centered together */}
+          <div style={{ display:'flex', alignItems:'center', gap:'20px', flex:1 }}>
+            <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+              <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:goal.label.length>3?14:goal.label.length>2?18:24, color:colors.stampText, position:'relative', zIndex:1, letterSpacing:'0.04em' }}>{goal.label}</span>
+            </div>
+            <div>
+              <div style={{ display:'inline-flex', alignItems:'center', background:t.isDark?'rgba(201,168,76,0.15)':'rgba(27,42,74,0.08)', border:`1px solid ${t.isDark?'rgba(201,168,76,0.3)':'rgba(27,42,74,0.18)'}`, borderRadius:'5px', padding:'3px 9px', marginBottom:'8px' }}>
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'2px', color:t.text, textTransform:'uppercase' }}>Active Goal</span>
               </div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>{goal.distance}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, letterSpacing:'0.5px' }}>
+                {goal.targetDate && `Target: ${goal.targetDate}`}{goal.suggestedRace && ` · ${goal.suggestedRace} suggested`}
+              </div>
             </div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>{goal.distance}</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, letterSpacing:'0.5px' }}>{goal.targetDate&&`Target: ${goal.targetDate}`}{goal.suggestedRace&&` · ${goal.suggestedRace} suggested`}</div>
           </div>
-          <button onClick={() => navigate('/discover')}
-            style={{ padding:'7px 14px', border:`1.5px solid ${t.text}`, borderRadius:'8px', background:'rgba(27,42,74,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.text, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
+          {/* Right: CTA */}
+          <button onClick={handleViewRaces}
+            style={{ padding:'10px 20px', border:`1.5px solid ${t.text}`, borderRadius:'8px', background:'rgba(27,42,74,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:t.text, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
             onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
-            onMouseLeave={e => { e.currentTarget.style.background='rgba(27,42,74,0.06)'; e.currentTarget.style.color=t.text }}>View Races →</button>
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(27,42,74,0.06)'; e.currentTarget.style.color=t.text }}>
+            View Races →
+          </button>
         </div>
       </div>
     </div>
