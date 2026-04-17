@@ -96,8 +96,10 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
   const [hovered, setHovered] = useState(false)
   const [race, setRace]       = useState(initialRace)
   const [photo, setPhoto]     = useState(PHOTO_PLACEHOLDER)
+  const [photoLoaded, setPhotoLoaded] = useState(false)
   const cardRef = useRef(null)
 
+  // Enrich via API for hover stats (non-featured only)
   useEffect(() => {
     if (featured || race.hero_image || enrichCache.has(race.id)) return
     const observer = new IntersectionObserver(([entry]) => {
@@ -113,9 +115,20 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
     return () => observer.disconnect()
   }, [race.id, race.hero_image, featured])
 
+  // Load photo only when card enters viewport — prevents 12 simultaneous DB queries
   useEffect(() => {
-    const enriched = { ...race, ...parseCityState(race) }
-    loadRacePhoto(enriched).then(url => { if (url) setPhoto(url) })
+    setPhotoLoaded(false)
+    setPhoto(PHOTO_PLACEHOLDER)
+    const observer = new IntersectionObserver(([entry]) => {
+      if (!entry.isIntersecting) return
+      observer.disconnect()
+      const enriched = { ...race, ...parseCityState(race) }
+      loadRacePhoto(enriched).then(url => {
+        if (url) { setPhoto(url); setPhotoLoaded(true) }
+      })
+    }, { rootMargin:'100px' }) // start loading slightly before visible
+    if (cardRef.current) observer.observe(cardRef.current)
+    return () => observer.disconnect()
   }, [race.id, race.city, race.state, race.hero_image])
 
   return (
@@ -124,7 +137,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t }) {
       onClick={onClick}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink:featured?0:undefined, width:featured?'clamp(220px,20vw,300px)':undefined, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered?'translateY(-5px)':'none', outline:isActive?'2.5px solid #C9A84C':'none', outlineOffset:'2px' }}>
       <div style={{ position:'relative', height:featured?170:200, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s', transform:hovered?'scale(1.05)':'scale(1)' }} onError={e => e.target.style.display='none'} />
+        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform:hovered?'scale(1.05)':'scale(1)', opacity:photoLoaded||photo===PHOTO_PLACEHOLDER?1:0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
         {!featured && (
           <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
