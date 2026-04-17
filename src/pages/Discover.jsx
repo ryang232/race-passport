@@ -378,10 +378,10 @@ export default function Discover() {
   const [dateTo, setDateTo]               = useState(saved?.dateTo || '')
   const [committed, setCommitted]         = useState(saved?.committed || null)
   const [radius, setRadius]               = useState(saved?.radius || 75)
-  const [userLat, setUserLat]             = useState(null)
-  const [userLng, setUserLng]             = useState(null)
-  const [locationStatus, setLocationStatus] = useState('idle')
-  const [showLocationBanner, setShowLocationBanner] = useState(true)
+  const [userLat, setUserLat]             = useState(() => { try { const v=sessionStorage.getItem('rp_user_lat'); return v?parseFloat(v):null } catch{return null} })
+  const [userLng, setUserLng]             = useState(() => { try { const v=sessionStorage.getItem('rp_user_lng'); return v?parseFloat(v):null } catch{return null} })
+  const [locationStatus, setLocationStatus] = useState(() => { try { return sessionStorage.getItem('rp_user_lat')?'granted':'idle' } catch{return 'idle'} })
+  const [showLocationBanner, setShowLocationBanner] = useState(() => { try { return !sessionStorage.getItem('rp_user_lat') } catch{return true} })
   const [activeId, setActiveId]           = useState(null)
   const [mapBounds, setMapBounds]         = useState(null) // never restored — always fresh on load
   const [showSearchArea, setShowSearchArea] = useState(false)
@@ -636,16 +636,42 @@ export default function Discover() {
     setLocationStatus('requesting')
     navigator.geolocation.getCurrentPosition(
       pos => {
-        setUserLat(pos.coords.latitude)
-        setUserLng(pos.coords.longitude)
+        const lat = pos.coords.latitude
+        const lng = pos.coords.longitude
+        setUserLat(lat)
+        setUserLng(lng)
         setLocationStatus('granted')
         setShowLocationBanner(false)
-        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([pos.coords.latitude,pos.coords.longitude],10,{animate:true,duration:1.2})
+        try { sessionStorage.setItem('rp_user_lat', lat); sessionStorage.setItem('rp_user_lng', lng) } catch(e) {}
+        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([lat, lng],10,{animate:true,duration:1.2})
       },
       () => { setLocationStatus('denied'); setShowLocationBanner(false) },
       { timeout:10000 }
     )
   }
+
+  const navState = location.state || {}
+
+  // Scroll to top on mount so "Browse All" from Home doesn't land mid-page
+  useEffect(() => { window.scrollTo(0, 0) }, [])
+
+  // Apply auto-search filters passed from Passport Goals "View Races"
+  useEffect(() => {
+    if (navState.autoSearch) {
+      const { distFilter: df, dateFrom: from, dateTo: to } = navState.autoSearch
+      if (df) setDistFilter(df)
+      if (from) setDateFrom(from)
+      if (to) setDateTo(to)
+      setCommitted({ search:'', distFilter:df||'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:from||'', dateTo:to||'' })
+    }
+  }, [])
+
+  // If location was already granted in a previous visit, fly map to it once map is ready
+  useEffect(() => {
+    if (userLat && userLng && mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo([userLat, userLng], 10, { animate:false })
+    }
+  }, [mapInstanceRef.current !== null])
 
   // ── Helpers ───────────────────────────────────────────────────────────────
   const initials      = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
@@ -682,8 +708,8 @@ export default function Discover() {
   return (
     <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s' }}>
 
-      {/* NAV */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'stretch', justifyContent:'space-between', padding:'0 40px', transition:'background 0.25s' }}>
+      {/* NAV — zIndex 500 so dropdown clears Leaflet map at zIndex 400 */}
+      <div style={{ position:'sticky', top:0, zIndex:500, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'stretch', justifyContent:'space-between', padding:'0 40px', transition:'background 0.25s' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
           <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
@@ -704,7 +730,7 @@ export default function Discover() {
               <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C' }}>{initials}</span>
             </div>
             {showDropdown && (
-              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:100 }}>
+              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:600 }}>
                 <div style={{ padding:'14px 18px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text }}>{profile?.full_name||'Ryan Groene'}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>racepassportapp.com/ryan-groene</div>
