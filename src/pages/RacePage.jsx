@@ -2,7 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
+import { supabase } from '../lib/supabase'
 import { getDistanceColor } from '../lib/colors'
+import { useStrava, looksLikeRace } from '../lib/useStrava'
 
 const RYAN_RACE_DATA = {
   1:  { id:1,  distance:'10K',  name:'Sole of the City 10K',          location:'Baltimore, MD',   date:'October 16, 2021',   time:'47:49',   pace:'7:42/mi',  place:null, elevation:'190ft', weather:'64°F, Cloudy',       pr:true,  story:'', photos:[], gear:[], splits:[] },
@@ -61,6 +63,181 @@ function AddGearForm({ onAdd, onCancel, t }) {
         <button onClick={() => { if (cat&&brand&&model) onAdd({ id:Date.now(), category:cat, brand, model, color, url, note }) }} disabled={!cat||!brand||!model}
           style={{ flex:1, padding:'10px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', opacity:(!cat||!brand||!model)?0.5:1 }}>Add to Page</button>
         <button onClick={onCancel} style={{ padding:'10px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
+      </div>
+    </div>
+  )
+}
+
+// ── Strava Activity Section ───────────────────────────────────────────────────
+function StravaActivitySection({ race, t }) {
+  const { user }    = useAuth()
+  const [profile, setProfile]       = useState(null)
+  const [activity, setActivity]     = useState(null)
+  const [loading, setLoading]       = useState(true)
+  const [mapRendered, setMapRendered] = useState(false)
+  const mapRef = useRef(null)
+
+  // Load profile to get Strava tokens
+  useEffect(() => {
+    if (!user) { setLoading(false); return }
+    supabase.from('profiles').select('strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected').eq('id', user.id).single()
+      .then(({ data }) => setProfile(data))
+  }, [user])
+
+  const { connected, getActivities, connectStrava } = useStrava(profile, user?.id)
+
+  // Try to find matching Strava activity for this race
+  useEffect(() => {
+    if (!connected || !race.date) { setLoading(false); return }
+    const findActivity = async () => {
+      setLoading(true)
+      try {
+        // Parse race date to Unix timestamp window
+        const raceDate = new Date(race.date)
+        const after    = Math.floor(raceDate.getTime() / 1000) - 86400  // day before
+        const before   = Math.floor(raceDate.getTime() / 1000) + 86400  // day after
+        const acts = await getActivities({ per_page: 30, after })
+        // Find the activity that best matches this race
+        const match = acts.find(a => {
+          const aDate = new Date(a.start_date_local)
+          const sameDay = aDate.toDateString() === raceDate.toDateString()
+          return sameDay && looksLikeRace(a)
+        }) || acts.find(a => {
+          const aDate = new Date(a.start_date_local)
+          const closeDay = Math.abs(aDate - raceDate) < 2 * 86400 * 1000
+          return closeDay && looksLikeRace(a)
+        })
+        if (match) setActivity(match)
+      } catch(e) {}
+      setLoading(false)
+    }
+    findActivity()
+  }, [connected, race.date])
+
+  // Draw Leaflet map from polyline when activity loads
+  useEffect(() => {
+    if (!activity?.map?.summary_polyline || !mapRef.current || mapRendered) return
+    const draw = async () => {
+      if (!window.L) {
+        const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=resolve; document.head.appendChild(s) })
+      }
+      if (!window.L.Polyline) return
+      // Decode the polyline
+      if (!window.L.PolylineEncoded) {
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js'; s.onload=resolve; document.head.appendChild(s) })
+      }
+      const L     = window.L
+      const poly  = window.polyline || window.Polyline
+      if (!poly) return
+      const latlngs = poly.decode(activity.map.summary_polyline)
+      if (!latlngs.length) return
+      const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
+      const line = L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.85 }).addTo(map)
+      map.fitBounds(line.getBounds(), { padding:[12,12] })
+      setMapRendered(true)
+    }
+    draw()
+  }, [activity])
+
+  const fmt = (m) => m ? `${(m / 1609.34).toFixed(2)} mi` : '—'
+  const fmtTime = (s) => { if (!s) return '—'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}` }
+  const fmtPace = (s, m) => { if (!s||!m) return '—'; const secPerMi=s/(m/1609.34); const mm=Math.floor(secPerMi/60),ss=Math.round(secPerMi%60); return `${mm}:${String(ss).padStart(2,'0')}/mi` }
+
+  // Not connected
+  if (!loading && !connected) {
+    return (
+      <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, transition:'background 0.25s' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
+        <div style={{ display:'flex', alignItems:'center', gap:'16px', padding:'16px', background:t.surfaceAlt, borderRadius:'10px', border:`1px solid ${t.border}` }}>
+          <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.1)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+          </div>
+          <div style={{ flex:1 }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px' }}>Connect Strava to see your activity</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>We'll match this race to your Strava activity and show your map and stats.</div>
+          </div>
+          <button onClick={() => connectStrava('/passport')}
+            style={{ padding:'8px 18px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', flexShrink:0 }}
+            onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.18)' }}
+            onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.08)' }}>
+            Connect Strava
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Connected but no matching activity found
+  if (!loading && connected && !activity) {
+    return (
+      <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, transition:'background 0.25s' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'16px' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
+          <div style={{ display:'flex', alignItems:'center', gap:'5px', padding:'3px 8px', background:'rgba(252,76,2,0.08)', border:'1px solid rgba(252,76,2,0.2)', borderRadius:'6px' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Connected</span>
+          </div>
+        </div>
+        <div style={{ textAlign:'center', padding:'24px', border:`2px dashed ${t.border}`, borderRadius:'10px', background:t.surfaceAlt }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.border, letterSpacing:'1px', marginBottom:'6px' }}>NO MATCHING ACTIVITY FOUND</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>We couldn't find a Strava activity matching this race date.</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Loading
+  if (loading) {
+    return (
+      <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, transition:'background 0.25s' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
+        <div style={{ height:'180px', background:t.surfaceAlt, borderRadius:'10px', animation:'pulse 1.5s ease infinite' }} />
+      </div>
+    )
+  }
+
+  // Activity found — show map + stats
+  return (
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, transition:'background 0.25s', animation:'fadeIn 0.4s ease both' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
+          <div style={{ display:'flex', alignItems:'center', gap:'5px', padding:'3px 8px', background:'rgba(252,76,2,0.08)', border:'1px solid rgba(252,76,2,0.2)', borderRadius:'6px' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Matched</span>
+          </div>
+        </div>
+        <a href={`https://www.strava.com/activities/${activity.id}`} target="_blank" rel="noreferrer"
+          style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', border:'1.5px solid rgba(252,76,2,0.3)', borderRadius:'8px', background:'rgba(252,76,2,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textDecoration:'none', textTransform:'uppercase', transition:'all 0.15s' }}
+          onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.14)'}
+          onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.06)'}>
+          View on Strava →
+        </a>
+      </div>
+
+      {/* Activity name */}
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:t.textMuted, marginBottom:'16px' }}>{activity.name}</div>
+
+      {/* Map */}
+      {activity.map?.summary_polyline && (
+        <div ref={mapRef} style={{ height:'200px', borderRadius:'10px', overflow:'hidden', background:t.surfaceAlt, marginBottom:'16px' }} />
+      )}
+
+      {/* Stats grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+        {[
+          { label:'Distance',  value: fmt(activity.distance) },
+          { label:'Time',      value: fmtTime(activity.moving_time) },
+          { label:'Avg Pace',  value: fmtPace(activity.moving_time, activity.distance) },
+          { label:'Elevation', value: activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—' },
+        ].map(s => (
+          <div key={s.label} style={{ background:t.surfaceAlt, borderRadius:'8px', padding:'14px', textAlign:'center', borderTop:'3px solid #FC4C02' }}>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
+          </div>
+        ))}
       </div>
     </div>
   )
@@ -398,6 +575,9 @@ export default function RacePage() {
             )}
           </div>
         )}
+
+        {/* STRAVA ACTIVITY */}
+        <StravaActivitySection race={race} t={t} />
 
         {/* MUSIC */}
         <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
