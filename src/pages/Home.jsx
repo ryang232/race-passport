@@ -6,10 +6,10 @@ import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
+import { useStrava, stravaStatsToItems } from '../lib/useStrava'
 
-const STRAVA_CONNECTED = false
-
-const STAT_ITEMS = [
+// Race PR stats — from passport data (hardcoded for now, Strava supplements)
+const RACE_STAT_ITEMS = [
   { label:'Total Races',    value:'10'      },
   { label:'Race Miles',     value:'199'     },
   { label:'5K PR',          value:'28:16'   },
@@ -19,9 +19,6 @@ const STAT_ITEMS = [
   { label:'70.3 PR',        value:'6:32:08' },
   { label:'Marathons',      value:'2'       },
   { label:'Half Marathons', value:'3'       },
-  { label:'Triathlons',     value:'1'       },
-  { label:'10K Races',      value:'3'       },
-  { label:'5K Races',       value:'2'       },
 ]
 
 const RYAN_STAMPS = [
@@ -69,8 +66,8 @@ function ThemeToggle({ t, isDark, toggleTheme }) {
 }
 
 // ── Full-width stats conveyor belt ────────────────────────────────────────────
-function StatsTicker({ t }) {
-  const items = [...STAT_ITEMS, ...STAT_ITEMS, ...STAT_ITEMS]
+function StatsTicker({ t, items }) {
+  const displayItems = [...(items||[]), ...(items||[]), ...(items||[])]
   return (
     <div style={{ background:'#1B2A4A', overflow:'hidden', position:'relative', borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:120, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
@@ -82,7 +79,7 @@ function StatsTicker({ t }) {
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'1px' }}>Synced via Strava</span>
       </div>
       <div style={{ display:'flex', alignItems:'center', padding:'26px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
-        {items.map((item, i) => (
+        {displayItems.map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
             <div style={{ textAlign:'center', padding:'0 48px' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(44px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
@@ -97,7 +94,7 @@ function StatsTicker({ t }) {
 }
 
 // ── Strava connect — full width ───────────────────────────────────────────────
-function StravaConnect({ t }) {
+function StravaConnect({ t, onConnect }) {
   return (
     <div style={{ background:'#1B2A4A', borderTop:'1px solid rgba(201,168,76,0.12)', borderBottom:'1px solid rgba(201,168,76,0.12)', padding:'24px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'24px' }}>
       <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
@@ -109,7 +106,7 @@ function StravaConnect({ t }) {
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>Race miles, PRs by distance, activity history — all pulled automatically.</div>
         </div>
       </div>
-      <button style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'8px', padding:'12px 28px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', whiteSpace:'nowrap', transition:'opacity 0.15s' }}
+      <button onClick={onConnect} style={{ flexShrink:0, background:'#FC4C02', border:'none', borderRadius:'8px', padding:'12px 28px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:700, letterSpacing:'2px', color:'#fff', textTransform:'uppercase', cursor:'pointer', whiteSpace:'nowrap', transition:'opacity 0.15s' }}
         onMouseEnter={e => e.currentTarget.style.opacity='0.85'} onMouseLeave={e => e.currentTarget.style.opacity='1'}>
         Connect Strava
       </button>
@@ -421,8 +418,15 @@ export default function Home() {
     return () => { document.getElementById('rp-home-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
 
+  const { connected: stravaConnected, stats: stravaStats, connectStrava } = useStrava(profile, user?.id)
+
+  // Build stat items — Strava activity stats + our race PRs
+  const statItems = stravaConnected && stravaStats
+    ? stravaStatsToItems(stravaStats, RACE_STAT_ITEMS)
+    : RACE_STAT_ITEMS
+
   const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
-  const initials = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
+  const initials  = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
 
   const NAV_TABS = [
@@ -519,7 +523,9 @@ export default function Home() {
 
       {/* STATS BAR */}
       <div style={{ position:'relative', zIndex:10 }}>
-        {STRAVA_CONNECTED ? <StatsTicker t={t} /> : <StravaConnect t={t} />}
+        {stravaConnected
+          ? <StatsTicker t={t} items={statItems} />
+          : <StravaConnect t={t} onConnect={() => connectStrava('/home')} />}
       </div>
 
       {/* PAGE CONTENT */}
