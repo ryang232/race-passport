@@ -18,6 +18,7 @@ import RaceDetail from './pages/RaceDetail'
 import Passport from './pages/Passport'
 import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
+import StravaCallback from './pages/StravaCallback'
 
 export default function App() {
   return (
@@ -36,6 +37,7 @@ export default function App() {
             <Route path="/build-passport"      element={<BuildPassport />} />
             <Route path="/race-import"         element={<RaceImport />} />
             <Route path="/goal-races"          element={<GoalRaces />} />
+            <Route path="/strava-callback"     element={<StravaCallback />} />
             <Route path="/home"                element={<Home />} />
             <Route path="/discover"            element={<Discover />} />
             <Route path="/race/:id"            element={<RacePage />} />
