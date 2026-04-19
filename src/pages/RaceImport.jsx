@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { isDemo } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { loadRacePhoto, PHOTO_PLACEHOLDER } from '../lib/photos'
+import { useStrava } from '../lib/useStrava'
 
 // Confidence score 1-3: 3 = very confident, 1 = less certain
 // Higher confidence races appear first
@@ -201,10 +202,13 @@ export default function RaceImport() {
   const [activeSource, setActiveSource] = useState('ALL')
   const [saving, setSaving]             = useState(false)
   const [firstName, setFirstName]       = useState('Ryan')
+  const [profile, setProfile]           = useState(null)
   const [showAddManual, setShowAddManual]   = useState(false)
-  const [notMineRace, setNotMineRace]       = useState(null)   // race object pending not-mine confirm
-  const [undoRace, setUndoRace]             = useState(null)   // race object for undo toast
-  const [undoSelected, setUndoSelected]     = useState(null)   // selected state snapshot for undo
+  const [notMineRace, setNotMineRace]       = useState(null)
+  const [undoRace, setUndoRace]             = useState(null)
+  const [undoSelected, setUndoSelected]     = useState(null)
+
+  const { connected: stravaConnected, connectStrava } = useStrava(profile, user?.id)
 
   useEffect(() => {
     const run = async () => {
@@ -216,6 +220,15 @@ export default function RaceImport() {
         } catch(e) {}
       }
       setFirstName(fn)
+      // Load profile for Strava token access
+      if (user && !isDemo(user?.email)) {
+        try {
+          const { data: prof } = await supabase.from('profiles')
+            .select('strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
+            .eq('id', user.id).single()
+          if (prof) setProfile(prof)
+        } catch(e) {}
+      }
 
       const steps = [
         { msg:`Connecting to Athlinks...`,           ms:800 },
@@ -401,12 +414,19 @@ export default function RaceImport() {
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px', flexShrink:0 }}>
-            <button
-              style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-              onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)'; e.currentTarget.style.borderColor='#FC4C02' }}
-              onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
-              Connect Strava
-            </button>
+            {stravaConnected ? (
+              <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
+                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Connected</span>
+              </div>
+            ) : (
+              <button onClick={() => { sessionStorage.setItem('strava_return_to', '/race-import'); connectStrava('/race-import') }}
+                style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)'; e.currentTarget.style.borderColor='#FC4C02' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
+                Connect Strava
+              </button>
+            )}
             <button onClick={() => setShowAddManual(true)}
               style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'rgba(255,255,255,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
               onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
