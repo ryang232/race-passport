@@ -11,8 +11,48 @@ export default async function handler(req, res) {
   const CLIENT_ID     = process.env.STRAVA_CLIENT_ID
   const CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET
   const REDIRECT_URI  = process.env.STRAVA_REDIRECT_URI || 'https://racepassportapp.com/strava-callback'
+  const SUPABASE_URL  = process.env.VITE_SUPABASE_URL  || process.env.SUPABASE_URL
+  const SUPABASE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   try {
+    // ── Save tokens server-side (bypasses RLS using service role key) ────────
+    if (action === 'save_tokens') {
+      const body = req.method === 'POST' ? req.body : req.query
+      const { user_id, access_token, refresh_token, expires_at, athlete_id } = body
+
+      if (!user_id || !access_token) {
+        return res.status(400).json({ error: 'Missing user_id or access_token' })
+      }
+
+      if (!SUPABASE_URL || !SUPABASE_KEY) {
+        return res.status(500).json({ error: 'Missing Supabase env vars' })
+      }
+
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${user_id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type':  'application/json',
+          'apikey':         SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify({
+          strava_access_token:  access_token,
+          strava_refresh_token: refresh_token,
+          strava_expires_at:    parseInt(expires_at),
+          strava_athlete_id:    athlete_id?.toString(),
+          strava_connected:     true,
+        }),
+      })
+
+      if (!r.ok) {
+        const txt = await r.text()
+        return res.status(r.status).json({ error: txt })
+      }
+
+      return res.json({ success: true })
+    }
+
     // ── Exchange code for tokens ─────────────────────────────────────────────
     if (action === 'exchange') {
       const { code } = req.method === 'POST' ? req.body : req.query
