@@ -337,23 +337,24 @@ export default function Home() {
     const h = new Date().getHours()
     if (h >= 12 && h < 17) setGreeting('GOOD AFTERNOON')
     else if (h >= 17) setGreeting('GOOD EVENING')
+
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) {
         setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}`, state:'MD', favorite_distance:'13.1' })
-        // Load demo nearby from Supabase using MD
         loadNearbyAndSuggested('MD', '13.1')
         return
       }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-      setProfile(data)
-      loadNearbyAndSuggested(data?.state, data?.favorite_distance)
+      if (data) {
+        setProfile(data)
+        loadNearbyAndSuggested(data?.state, data?.favorite_distance)
+      }
     }
 
     const loadNearbyAndSuggested = async (userState, favDistance) => {
       setNearbyLoading(true)
       try {
         if (userState) {
-          // Races Near You — upcoming races in user's state, soonest first
           const { data: nearby } = await supabase
             .from('races')
             .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
@@ -363,8 +364,6 @@ export default function Home() {
             .limit(8)
           if (nearby) setNearbyRaces(nearby)
 
-          // Suggested For You — if we have a favorite distance, find matching races
-          // otherwise fall back to popular races in their state
           if (favDistance) {
             const distMap = {
               '5K':'5K', '10K':'10K', '10 Mile':'10 mi',
@@ -377,13 +376,12 @@ export default function Home() {
               .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
               .eq('is_past', false)
               .ilike('distance', targetDist)
-              .neq('state', userState?.toUpperCase() || '') // slightly further afield for discovery
+              .neq('state', userState?.toUpperCase() || '')
               .order('date_sort', { ascending: true })
               .limit(6)
             if (suggested?.length) {
               setSuggestedRaces(suggested)
             } else {
-              // fallback: any upcoming races matching that distance
               const { data: fallback } = await supabase
                 .from('races')
                 .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
@@ -400,6 +398,7 @@ export default function Home() {
     }
 
     loadProfile()
+
     const style = document.createElement('style')
     style.id = 'rp-home-styles'
     style.textContent = `
@@ -427,13 +426,22 @@ export default function Home() {
 
   const stravaJustConnected = location.state?.stravaConnected
 
+  // When returning from Strava OAuth, poll Supabase until tokens are saved
+  // The StravaCallback saves tokens then immediately redirects, so there can
+  // be a brief window where the profile fetch returns stale data
   useEffect(() => {
-    // If we just returned from Strava OAuth, force a fresh profile re-fetch
-    // so the useStrava hook immediately sees the new tokens
-    if (stravaJustConnected && user && !isDemo(user?.email)) {
-      supabase.from('profiles').select('*').eq('id', user.id).single()
-        .then(({ data }) => { if (data) setProfile(data) })
+    if (!stravaJustConnected || !user || isDemo(user?.email)) return
+    let attempts = 0
+    const poll = async () => {
+      attempts++
+      const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+      if (data?.strava_connected && data?.strava_access_token) {
+        setProfile(data)
+      } else if (attempts < 8) {
+        setTimeout(poll, 800) // retry every 800ms, up to ~6 seconds
+      }
     }
+    poll()
   }, [stravaJustConnected, user])
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
