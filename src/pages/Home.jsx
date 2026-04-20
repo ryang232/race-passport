@@ -418,12 +418,23 @@ export default function Home() {
     return () => { document.getElementById('rp-home-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
 
-  const { connected: stravaConnected, stats: stravaStats, connectStrava } = useStrava(profile, user?.id)
+  const { connected: stravaConnected, stats: stravaStats, monthMiles, todayMiles, connectStrava } = useStrava(profile, user?.id)
 
-  // Build stat items — Strava activity stats + our race PRs
+  // Build stat items — Strava activity stats + race PRs
   const statItems = stravaConnected && stravaStats
-    ? stravaStatsToItems(stravaStats, RACE_STAT_ITEMS)
+    ? stravaStatsToItems(stravaStats, monthMiles, todayMiles, RACE_STAT_ITEMS)
     : RACE_STAT_ITEMS
+
+  const stravaJustConnected = location.state?.stravaConnected
+
+  useEffect(() => {
+    // If we just returned from Strava OAuth, force a fresh profile re-fetch
+    // so the useStrava hook immediately sees the new tokens
+    if (stravaJustConnected && user && !isDemo(user?.email)) {
+      supabase.from('profiles').select('*').eq('id', user.id).single()
+        .then(({ data }) => { if (data) setProfile(data) })
+    }
+  }, [stravaJustConnected, user])
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
   const initials  = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
