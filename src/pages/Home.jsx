@@ -545,7 +545,14 @@ export default function Home() {
         {stravaConnected
           ? <StatsTicker t={t} items={statItems} />
           : <StravaConnect t={t} onConnect={async () => {
-              const uid = user?.id || profile?.id
+              // Get user ID directly from Supabase — most reliable method
+              let uid = user?.id || profile?.id
+              if (!uid) {
+                try {
+                  const { data: { session } } = await supabase.auth.getSession()
+                  uid = session?.user?.id
+                } catch(e) {}
+              }
               sessionStorage.setItem('strava_return_to', '/home')
               if (uid) sessionStorage.setItem('strava_user_id', uid)
               const r = await fetch(`/api/strava?action=auth_url${uid ? `&user_id=${uid}` : ''}`)
