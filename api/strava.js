@@ -158,8 +158,10 @@ export default async function handler(req, res) {
 
     // ── Build auth URL ────────────────────────────────────────────────────────
     if (action === 'auth_url') {
+      const { user_id } = req.query
       const scope = 'read,activity:read_all'
-      const url = `https://www.strava.com/oauth/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&approval_prompt=force&scope=${scope}`
+      const state = user_id ? encodeURIComponent(user_id) : ''
+      const url = `https://www.strava.com/oauth/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&approval_prompt=force&scope=${scope}&state=${state}`
       return res.json({ url })
     }
 
