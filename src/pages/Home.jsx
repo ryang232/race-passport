@@ -544,7 +544,14 @@ export default function Home() {
       <div style={{ position:'relative', zIndex:10 }}>
         {stravaConnected
           ? <StatsTicker t={t} items={statItems} />
-          : <StravaConnect t={t} onConnect={() => connectStrava('/home')} />}
+          : <StravaConnect t={t} onConnect={async () => {
+              const uid = user?.id || profile?.id
+              sessionStorage.setItem('strava_return_to', '/home')
+              if (uid) sessionStorage.setItem('strava_user_id', uid)
+              const r = await fetch(`/api/strava?action=auth_url${uid ? `&user_id=${uid}` : ''}`)
+              const d = await r.json()
+              if (d.url) window.location.href = d.url
+            }} />}
       </div>
 
       {/* PAGE CONTENT */}
