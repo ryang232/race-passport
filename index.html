@@ -29,7 +29,6 @@ body {
   overflow-x: hidden;
 }
 
-/* ── NAV ── */
 nav {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -52,26 +51,12 @@ nav {
   display: flex;
   align-items: center;
   gap: 10px;
+  cursor: pointer;
+  user-select: none;
 }
 
 .logo-dot { width: 8px; height: 8px; background: var(--gold); border-radius: 50%; flex-shrink: 0; }
 
-.nav-cta {
-  font-family: 'Barlow Condensed', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--navy);
-  text-decoration: none;
-  border: 1px solid var(--navy);
-  padding: 10px 22px;
-  transition: all 0.3s ease;
-}
-
-.nav-cta:hover { background: var(--navy); color: var(--white); }
-
-/* ── HERO ── */
 .hero {
   min-height: 100vh;
   display: flex;
@@ -194,6 +179,7 @@ nav {
   text-decoration: none;
   display: inline-block;
   transition: all 0.3s ease;
+  cursor: pointer;
 }
 
 .btn-primary:hover { background: var(--gold); transform: translateY(-2px); }
@@ -245,7 +231,6 @@ nav {
   writing-mode: vertical-rl;
 }
 
-/* ── SHARED ── */
 .section-tag {
   font-family: 'Barlow Condensed', sans-serif;
   font-size: 10px;
@@ -261,7 +246,6 @@ nav {
 
 .section-tag::before { content: ''; width: 24px; height: 1px; background: var(--gold); }
 
-/* ── HOW IT WORKS ── */
 .section-how {
   padding: 120px 48px;
   background: var(--off);
@@ -323,7 +307,6 @@ nav {
   color: rgba(27,42,74,0.55);
 }
 
-/* ── TWO SIDES ── */
 .section-sides-wrapper {
   border-top: 1px solid var(--light-border);
   border-bottom: 1px solid var(--light-border);
@@ -392,7 +375,6 @@ nav {
 
 .side-list li::before { content: '—'; color: var(--gold); flex-shrink: 0; }
 
-/* ── STAMPS ── */
 .section-stamps {
   padding: 120px 0 120px 48px;
   overflow: hidden;
@@ -451,7 +433,6 @@ nav {
 .stamp-location { font-family: 'Barlow Condensed', sans-serif; font-size: 8px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--gold); margin-top: 3px; }
 .stamp-year { font-family: 'Barlow Condensed', sans-serif; font-size: 8px; letter-spacing: 0.2em; color: rgba(27,42,74,0.3); margin-top: 1px; }
 
-/* ── PASSPORT SHOWCASE ── */
 .section-passport-showcase {
   padding: 120px 48px;
   background: var(--white);
@@ -498,7 +479,6 @@ nav {
 
 .btn-open-passport:hover { background: var(--gold); transform: translateY(-2px); }
 
-/* ── MODAL ── */
 .passport-modal-overlay {
   display: none;
   position: fixed;
@@ -676,7 +656,6 @@ nav {
 .modal-share-btn:hover { background: var(--gold); }
 .modal-share-btn.copied { background: #2a7a4b; }
 
-/* ── WAITLIST ── */
 .section-waitlist {
   padding: 140px 48px;
   background: var(--navy);
@@ -755,7 +734,6 @@ nav {
 
 .success-msg { display: none; font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--gold); letter-spacing: 0.1em; margin-top: 20px; }
 
-/* ── FOOTER ── */
 footer {
   padding: 36px 48px;
   border-top: 1px solid var(--light-border);
@@ -769,7 +747,6 @@ footer {
 .footer-email { font-family: 'Barlow Condensed', sans-serif; font-size: 11px; letter-spacing: 0.12em; color: rgba(27,42,74,0.35); text-decoration: none; transition: color 0.3s; }
 .footer-email:hover { color: var(--gold); }
 
-/* ── ANIMATIONS ── */
 @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes fadeIn { to { opacity: 1; } }
 
@@ -779,11 +756,7 @@ footer {
 <body>
 
 <nav>
-  <a href="#" class="logo"><span class="logo-dot"></span>Race Passport</a>
-  <div style="display:flex;align-items:center;gap:12px;">
-  <a href="https://race-passport-git-app-ryans-projects-29f7f58e.vercel.app/login" class="nav-cta" style="background:transparent;">Log In</a>
-  <a href="https://race-passport-git-app-ryans-projects-29f7f58e.vercel.app/signup" class="nav-cta" style="background:var(--navy);color:var(--white);">Sign Up</a>
-</div>
+  <span class="logo" id="logoLink"><span class="logo-dot"></span>Race Passport</span>
 </nav>
 
 <section class="hero" id="top">
@@ -856,7 +829,7 @@ footer {
         <li>Find any race in the world — 5K to IRONMAN — in one place</li>
         <li>Full race history, times, splits & PR tracking</li>
         <li>Race day info: parking, packet pickup, start times</li>
-        <li>Live tracking for family & friends</li>
+        <li>Live tracking for family &amp; friends</li>
         <li>Strava integration — post races and results automatically</li>
         <li>Collect a stamp for every race completed — your passport fills up over time</li>
       </ul>
@@ -983,13 +956,13 @@ footer {
 </footer>
 
 <script>
-  // Hero ticker
+  // Hero ticker parallax
   const ticker = document.getElementById('heroTicker');
   window.addEventListener('scroll', () => {
     ticker.style.transform = `translateX(${-window.scrollY * 0.4}px)`;
   });
 
-  // Stamps scroll
+  // Stamps scroll animation
   const stampsTrack = document.getElementById('stampsTrack');
   let stampsX = 0, animRunning = true;
 
@@ -1007,7 +980,21 @@ footer {
   stampsTrack.addEventListener('mouseenter', () => animRunning = false);
   stampsTrack.addEventListener('mouseleave', () => animRunning = true);
 
-  // Modal
+  // Secret backdoor: triple-click the logo to navigate to /login
+  let logoClicks = 0;
+  let logoTimer = null;
+
+  document.getElementById('logoLink').addEventListener('click', () => {
+    logoClicks++;
+    clearTimeout(logoTimer);
+    logoTimer = setTimeout(() => { logoClicks = 0; }, 600);
+    if (logoClicks >= 3) {
+      logoClicks = 0;
+      window.location.href = '/login';
+    }
+  });
+
+  // Passport modal
   function openPassportModal() {
     document.getElementById('passportModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1033,7 +1020,7 @@ footer {
 
   document.addEventListener('keydown', e => { if (e.key === 'Escape') closePassportModal(); });
 
-  // Waitlist
+  // Waitlist form
   async function handleSubmit(e) {
     e.preventDefault();
     const email = document.getElementById('emailInput').value;
