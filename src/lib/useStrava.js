@@ -89,7 +89,8 @@ export function useStrava(profile, userId) {
   const connectStrava = async (returnTo = '/home') => {
     sessionStorage.setItem('strava_return_to', returnTo)
     try {
-      const r    = await fetch(`${API}?action=auth_url`)
+      const userIdParam = userId ? `&user_id=${userId}` : ''
+      const r    = await fetch(`${API}?action=auth_url${userIdParam}`)
       const data = await r.json()
       if (data.url) window.location.href = data.url
     } catch(e) {}
