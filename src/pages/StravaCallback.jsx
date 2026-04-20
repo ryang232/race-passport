@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { supabase } from '../lib/supabase'
 
 export default function StravaCallback() {
   const navigate = useNavigate()
@@ -12,7 +13,16 @@ export default function StravaCallback() {
       const params = new URLSearchParams(location.search)
       const code   = params.get('code')
       const err    = params.get('error')
-      const userId = params.get('state') ? decodeURIComponent(params.get('state')) : null
+
+      // Try all three ways to get the user ID
+      let userId = params.get('state') ? decodeURIComponent(params.get('state')) : null
+      if (!userId) userId = sessionStorage.getItem('strava_user_id')
+      if (!userId) {
+        try {
+          const { data: { session } } = await supabase.auth.getSession()
+          userId = session?.user?.id
+        } catch(e) {}
+      }
 
       if (err || !code) {
         setError('Strava authorization was denied or cancelled.')
@@ -34,12 +44,13 @@ export default function StravaCallback() {
         setStatus('Saving your connection...')
 
         if (!userId) {
-          setError('Could not identify your account. Please try again.')
+          setError(`No user ID found. State: ${params.get('state')}, Session: none`)
           setTimeout(() => navigate('/home'), 3000)
           return
         }
 
-        // Save tokens server-side via API (bypasses RLS issues)
+        sessionStorage.removeItem('strava_user_id')
+
         const saveRes = await fetch(
           `/api/strava?action=save_tokens&user_id=${userId}&access_token=${encodeURIComponent(data.access_token)}&refresh_token=${encodeURIComponent(data.refresh_token)}&expires_at=${data.expires_at}&athlete_id=${data.athlete?.id}`
         )
@@ -52,13 +63,12 @@ export default function StravaCallback() {
         }
 
         setStatus('Connected! Redirecting...')
-        // Pass a flag so Home knows to show the success message
         const returnTo = sessionStorage.getItem('strava_return_to') || '/home'
         sessionStorage.removeItem('strava_return_to')
         setTimeout(() => navigate(returnTo, { state: { stravaConnected: true } }), 1000)
 
       } catch(e) {
-        setError('Something went wrong. Please try again.')
+        setError(`Error: ${e.message}`)
         setTimeout(() => navigate('/home'), 3000)
       }
     }
