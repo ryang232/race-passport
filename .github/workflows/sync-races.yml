@@ -1,8 +1,11 @@
 name: Sync Races from RunSignup
 
 on:
+  # Run every day at 3:00 AM UTC (11pm ET / 10pm CT)
   schedule:
     - cron: '0 3 * * *'
+
+  # Allow manual trigger from GitHub Actions tab
   workflow_dispatch:
     inputs:
       states:
@@ -17,338 +20,33 @@ on:
 jobs:
   sync-races:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
 
     steps:
-      - name: Write sync script
+      - name: Sync races from RunSignup
         run: |
-          cat > /tmp/sync.py << 'EOF'
-          import sys, json, urllib.request, urllib.error, os, re
-          from datetime import datetime, date, timedelta
+          STATES="${{ github.event.inputs.states }}"
+          DRY_RUN="${{ github.event.inputs.dry_run || 'false' }}"
 
-          RUNSIGNUP_KEY = os.environ['RUNSIGNUP_API_KEY']
-          RUNSIGNUP_SECRET = os.environ['RUNSIGNUP_API_SECRET']
-          SUPABASE_URL = os.environ['SUPABASE_URL'].rstrip('/')
-          SERVICE_KEY = os.environ['SUPABASE_SERVICE_ROLE_KEY']
-          DRY_RUN = os.environ.get('DRY_RUN', 'false') == 'true'
-          INPUT_STATES = os.environ.get('INPUT_STATES', '').strip()
+          # Build the URL
+          BASE_URL="https://race-passport-3yy6sezil-ryans-projects-29f7f58e.vercel.app/api/runsignup"
+          PARAMS="action=sync_races&sync_key=${{ secrets.SYNC_SECRET_KEY }}&dry_run=${DRY_RUN}"
+          if [ -n "$STATES" ]; then
+            PARAMS="${PARAMS}&states=${STATES}"
+          fi
 
-          STATES = [s.strip() for s in INPUT_STATES.split(',')] if INPUT_STATES else [
-            'MD','VA','DC','PA','NY','NJ','DE','WV','NC','SC',
-            'GA','FL','TX','CA','IL','OH','MA','CT','CO','WA',
-            'AL','AK','AZ','AR','HI','ID','IN','IA','KS','KY',
-            'LA','ME','MI','MN','MS','MO','MT','NE','NV','NH',
-            'NM','ND','OK','OR','RI','SD','TN','UT','VT','WY'
-          ]
+          echo "Calling: ${BASE_URL}?${PARAMS}"
+          
+          RESPONSE=$(curl -s -w "\n%{http_code}" "${BASE_URL}?${PARAMS}")
+          HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+          BODY=$(echo "$RESPONSE" | head -n -1)
 
-          STATE_COORDS = {
-            'MD':[39.0639,-76.8021],'VA':[37.7693,-78.1699],'DC':[38.8974,-77.0268],
-            'PA':[40.5908,-77.2098],'NY':[42.1657,-74.9481],'NJ':[40.2989,-74.5210],
-            'DE':[39.3185,-75.5071],'WV':[38.4913,-80.9545],'NC':[35.6301,-79.8064],
-            'SC':[33.8569,-80.9450],'GA':[33.0406,-83.6431],'FL':[27.7663,-81.6868],
-            'TX':[31.0545,-97.5635],'CA':[36.1162,-119.6815],'IL':[40.3495,-88.9861],
-            'OH':[40.3888,-82.7649],'MA':[42.2302,-71.5301],'CT':[41.5978,-72.7554],
-            'CO':[39.0598,-105.3111],'WA':[47.4009,-121.4905],
-            'AL':[32.8067,-86.7911],'AK':[61.3707,-152.4044],'AZ':[33.7298,-111.4313],
-            'AR':[34.9697,-92.3731],'HI':[21.0943,-157.4983],'ID':[44.2405,-114.4788],
-            'IN':[39.8494,-86.2583],'IA':[42.0115,-93.2105],'KS':[38.5266,-96.7265],
-            'KY':[37.6681,-84.6701],'LA':[31.1696,-91.8678],'ME':[44.6939,-69.3819],
-            'MI':[43.3266,-84.5361],'MN':[45.6945,-93.9002],'MS':[32.7416,-89.6787],
-            'MO':[38.4561,-92.2884],'MT':[46.9219,-110.4544],'NE':[41.1254,-98.2681],
-            'NV':[38.3135,-117.0554],'NH':[43.4525,-71.5639],'NM':[34.8405,-106.2485],
-            'ND':[47.5289,-99.7840],'OK':[35.5653,-96.9289],'OR':[44.5720,-122.0709],
-            'RI':[41.6809,-71.5118],'SD':[44.2998,-99.4388],'TN':[35.7478,-86.6923],
-            'UT':[40.1500,-111.8624],'VT':[44.0459,-72.7106],'WY':[42.7560,-107.3025]
-          }
+          echo "HTTP Status: $HTTP_CODE"
+          echo "Response: $BODY"
 
-          CITY_COORDS = {
-            'Baltimore,MD':[39.2904,-76.6122],'Annapolis,MD':[38.9784,-76.4922],
-            'Bethesda,MD':[38.9807,-77.1003],'Rockville,MD':[39.0840,-77.1528],
-            'Gaithersburg,MD':[39.1434,-77.2011],'Silver Spring,MD':[38.9907,-77.0261],
-            'Columbia,MD':[39.2037,-76.8610],'Frederick,MD':[39.4143,-77.4105],
-            'Washington,DC':[38.9072,-77.0369],
-            'Arlington,VA':[38.8799,-77.1068],'Alexandria,VA':[38.8048,-77.0469],
-            'Richmond,VA':[37.5407,-77.4360],'Virginia Beach,VA':[36.8529,-75.9780],
-            'Philadelphia,PA':[39.9526,-75.1652],'Pittsburgh,PA':[40.4406,-79.9959],
-            'New York,NY':[40.7128,-74.0060],'Buffalo,NY':[42.8864,-78.8784],
-            'Newark,NJ':[40.7357,-74.1724],'Atlantic City,NJ':[39.3643,-74.4229],
-            'Atlanta,GA':[33.7490,-84.3880],'Miami,FL':[25.7617,-80.1918],
-            'Tampa,FL':[27.9506,-82.4572],'Orlando,FL':[28.5383,-81.3792],
-            'Houston,TX':[29.7604,-95.3698],'Austin,TX':[30.2672,-97.7431],
-            'Dallas,TX':[32.7767,-96.7970],'San Antonio,TX':[29.4241,-98.4936],
-            'Los Angeles,CA':[34.0522,-118.2437],'San Diego,CA':[32.7157,-117.1611],
-            'San Francisco,CA':[37.7749,-122.4194],'Sacramento,CA':[38.5816,-121.4944],
-            'Chicago,IL':[41.8781,-87.6298],'Columbus,OH':[39.9612,-82.9988],
-            'Boston,MA':[42.3601,-71.0589],'Denver,CO':[39.7392,-104.9903],
-            'Seattle,WA':[47.6062,-122.3321],'Charlotte,NC':[35.2271,-80.8431],
-          }
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "Sync failed with status $HTTP_CODE"
+            exit 1
+          fi
 
-          def get_coords(city, state):
-            key = f"{city},{state}"
-            if key in CITY_COORDS:
-              return CITY_COORDS[key]
-            return STATE_COORDS.get(state, [None, None])
-
-          def _extract_distance(text):
-            if not text: return None
-            r = text.lower().strip()
-            if '140.6' in r or ('ironman' in r and '70' not in r and 'half' not in r): return '140.6'
-            if '70.3' in r or 'half iron' in r: return '70.3'
-            if 'triathlon' in r: return 'Tri'
-            if '100 mile' in r or '100-mile' in r: return '100M'
-            if '100k' in r or '100 km' in r: return '100K'
-            if '50 mile' in r or '50-mile' in r: return '50M'
-            if '50k' in r or '50 km' in r: return '50K'
-            if 'marathon' in r and 'half' not in r and 'mini' not in r: return '26.2'
-            if 'half marathon' in r or 'half-marathon' in r or '13.1' in r: return '13.1'
-            if '15k' in r or '15 km' in r: return '15K'
-            if '10 mile' in r or '10-mile' in r or '10 miler' in r: return '10 mi'
-            if '10k' in r or '10 km' in r: return '10K'
-            if '8k' in r or '8 km' in r: return '8K'
-            if '5k' in r or '5 km' in r: return '5K'
-            if '1 mile' in r or 'one mile' in r: return '1 mi'
-            return None
-
-          def normalize_distance(raw):
-            return _extract_distance(raw)
-
-          def extract_distance_from_all(race_name, event_name, desc, dist_raw):
-            for source in [dist_raw, event_name, race_name, (desc or '')[:200]]:
-              result = _extract_distance(source or '')
-              if result: return result, (source or '')
-            return None, ''
-
-          def parse_date(date_val):
-            if not date_val:
-              return None, None
-            if isinstance(date_val, dict):
-              date_val = (date_val.get('start_time') or
-                         date_val.get('date') or '')
-            if not date_val:
-              return None, None
-            s = str(date_val).strip()
-            # MM/DD/YYYY
-            m = re.match(r'^(\d{1,2})/(\d{1,2})/(\d{4})$', s)
-            if m:
-              try:
-                d = datetime(int(m.group(3)), int(m.group(1)), int(m.group(2)))
-                return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
-              except: pass
-            # YYYY-MM-DD (with optional time)
-            m = re.match(r'^(\d{4})-(\d{2})-(\d{2})', s)
-            if m:
-              try:
-                d = datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-                return d.strftime('%Y-%m-%d'), d.strftime('%b %-d, %Y')
-              except: pass
-            return None, None
-
-          def upsert_chunk(chunk):
-            payload = json.dumps(chunk).encode('utf-8')
-            req = urllib.request.Request(
-              f"{SUPABASE_URL}/rest/v1/races",
-              data=payload,
-              headers={
-                'apikey': SERVICE_KEY,
-                'Authorization': f'Bearer {SERVICE_KEY}',
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal,resolution=merge-duplicates'
-              },
-              method='POST'
-            )
-            try:
-              with urllib.request.urlopen(req, timeout=30) as resp:
-                return len(chunk), 0, None
-            except urllib.error.HTTPError as e:
-              body = e.read().decode('utf-8')
-              return 0, len(chunk), f"HTTP {e.code}: {body[:300]}"
-            except Exception as e:
-              return 0, len(chunk), str(e)
-
-          # Test Supabase
-          print("Testing Supabase connection...")
-          try:
-            req = urllib.request.Request(
-              f"{SUPABASE_URL}/rest/v1/races?select=id&limit=1",
-              headers={'apikey': SERVICE_KEY, 'Authorization': f'Bearer {SERVICE_KEY}'}
-            )
-            with urllib.request.urlopen(req, timeout=10) as resp:
-              print(f"Supabase OK")
-          except Exception as e:
-            print(f"Supabase FAILED: {e}")
-            sys.exit(1)
-
-          today = date.today().isoformat()
-          one_year = (date.today() + timedelta(days=365)).isoformat()
-          total_added = 0
-          total_errors = 0
-
-          for state in STATES:
-            state = state.strip()
-            if not state: continue
-            print(f"Syncing {state}...")
-            state_added = 0
-            state_errors = 0
-            page = 1
-
-            while page <= 20:
-              url = (
-                f"https://api.runsignup.com/rest/races"
-                f"?api_key={RUNSIGNUP_KEY}&api_secret={RUNSIGNUP_SECRET}"
-                f"&format=json&state={state}&results_per_page=100&page={page}"
-                f"&start_date={today}&end_date={one_year}&include_event_details=T"
-              )
-              try:
-                with urllib.request.urlopen(url, timeout=30) as resp:
-                  data = json.loads(resp.read())
-              except Exception as e:
-                print(f"  Fetch error: {e}")
-                break
-
-              races = data.get('races', [])
-              if not races: break
-              print(f"  Page {page}: {len(races)} races fetched")
-
-              normalized = []
-              for item in races:
-                try:
-                  race = item.get('race', item)
-                  name = race.get('name', '').strip()
-                  if not name: continue
-
-                  date_val = (race.get('next_date') or
-                             race.get('start_time') or
-                             race.get('last_date') or '')
-                  date_sort, date_display = parse_date(date_val)
-                  if not date_sort: continue
-
-                  events = []
-                  nd = race.get('next_date')
-                  if isinstance(nd, dict):
-                    events = nd.get('events', [])
-                  if not events:
-                    events = race.get('events', [])
-                  first_event = events[0].get('event', events[0]) if events else {}
-
-                  race_id = f"rs_{race.get('race_id', '')}"
-                  city = (race.get('address') or {}).get('city', '')
-                  st = (race.get('address') or {}).get('state', state)
-                  coords = get_coords(city, st)
-                  # Description — strip HTML tags
-                  raw_desc = race.get('description') or ''
-                  import re as _re
-                  description = _re.sub(r'<[^>]+>', ' ', raw_desc).strip()
-                  description = _re.sub(r'\s+', ' ', description)[:1000] if description else None
-
-                  # Get all text sources for distance extraction
-                  event_name_str = first_event.get('name', '') or ''
-                  dist_raw = first_event.get('distance', '') or ''
-                  # Try all sources: explicit distance field, event name, race name, description
-                  distance, dist_raw = extract_distance_from_all(name, event_name_str, description, dist_raw)
-                  if not dist_raw: dist_raw = event_name_str
-                  combined = f"{dist_raw} {name}".lower()
-                  sport = 'Triathlon' if ('ironman' in combined or 'triathlon' in combined or '70.3' in combined) else 'Running'
-                  reg_url = race.get('url') or f"https://runsignup.com/Race/{race.get('race_id', '')}"
-                  location = f"{city}, {st}" if city and st else (st or city or '')
-
-                  # Terrain from name/description
-                  nd_lower = f"{name} {description or ''}".lower()
-                  if any(w in nd_lower for w in ['trail','mountain','ridge','forest','creek','dirt']):
-                    terrain = 'Trail'
-                  elif any(w in nd_lower for w in ['triathlon','ironman','70.3','140.6']):
-                    terrain = 'Multi'
-                  elif 'bridge' in nd_lower:
-                    terrain = 'Bridge/Road'
-                  else:
-                    terrain = 'Road'
-
-                  # Difficulty
-                  dl = (dist_raw or '').lower()
-                  if '5k' in dl or dl == '5 km': difficulty = 'Beginner'
-                  elif '10k' in dl or dl == '10 km': difficulty = 'Easy'
-                  elif 'half' in dl or '13.1' in dl: difficulty = 'Moderate'
-                  elif 'marathon' in dl and 'half' not in dl: difficulty = 'Hard'
-                  elif any(w in dl for w in ['ultra','50k','50m','100k','100m','70.3','140.6']): difficulty = 'Expert'
-                  else: difficulty = 'Moderate'
-
-                  # Price from events — check multiple fields RunSignup uses
-                  price = None
-                  for ev in events:
-                    e = ev.get('event', ev)
-                    # Try registration_opens array first
-                    reg_opens = e.get('registration_opens') or []
-                    for ro in reg_opens:
-                      fee = ro.get('fee') or ro.get('registration_fee')
-                      if fee:
-                        try:
-                          p = round(float(str(fee).replace('$','')))
-                          if p > 0 and (price is None or p < price): price = p
-                        except: pass
-                    # Also try direct fee fields on event
-                    for field in ['fee','registration_fee','price','cost']:
-                      fee = e.get(field)
-                      if fee:
-                        try:
-                          p = round(float(str(fee).replace('$','')))
-                          if p > 0 and (price is None or p < price): price = p
-                        except: pass
-
-                  normalized.append({
-                    'id': race_id,
-                    'source': 'runsignup',
-                    'name': name,
-                    'location': location,
-                    'city': city,
-                    'state': st,
-                    'lat': coords[0],
-                    'lng': coords[1],
-                    'distance': distance,
-                    'distance_raw': dist_raw,
-                    'date': date_display,
-                    'date_sort': date_sort,
-                    'price': price,
-                    'terrain': terrain,
-                    'difficulty': difficulty,
-                    'sport': sport,
-                    'description': description,
-                    'website_url': reg_url,
-                    'is_past': False,
-                    'registration_url': reg_url,
-                  })
-                except Exception as e:
-                  pass
-
-              print(f"  Normalized: {len(normalized)} valid races")
-
-              if normalized and not DRY_RUN:
-                for i in range(0, len(normalized), 50):
-                  chunk = normalized[i:i+50]
-                  added, errors, err_msg = upsert_chunk(chunk)
-                  if err_msg:
-                    print(f"  UPSERT ERROR: {err_msg}")
-                  else:
-                    print(f"  Upserted {added} rows")
-                  state_added += added
-                  state_errors += errors
-
-              if len(races) < 100: break
-              page += 1
-
-            print(f"  {state} TOTAL: added={state_added} errors={state_errors}")
-            total_added += state_added
-            total_errors += state_errors
-
-          print(f"=============================")
-          print(f"Sync complete: added={total_added} errors={total_errors}")
-          print(f"=============================")
-          EOF
-
-      - name: Run sync
-        env:
-          RUNSIGNUP_API_KEY: ${{ secrets.RUNSIGNUP_API_KEY }}
-          RUNSIGNUP_API_SECRET: ${{ secrets.RUNSIGNUP_API_SECRET }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
-          INPUT_STATES: ${{ github.event.inputs.states }}
-        run: python3 /tmp/sync.py
+          echo "Sync completed successfully"
