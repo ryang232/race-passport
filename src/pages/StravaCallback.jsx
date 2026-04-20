@@ -35,25 +35,25 @@ export default function StravaCallback() {
 
         setStatus('Saving your connection...')
 
-        // Get the current user directly from Supabase — auth context may not
-        // have loaded yet since this is a fresh page load from the OAuth redirect
+        // Get user ID from Supabase session
         const { data: { session } } = await supabase.auth.getSession()
         const userId = session?.user?.id
 
-        if (userId) {
-          const { error: updateError } = await supabase.from('profiles').update({
-            strava_access_token:  data.access_token,
-            strava_refresh_token: data.refresh_token,
-            strava_expires_at:    data.expires_at,
-            strava_athlete_id:    data.athlete?.id?.toString(),
-            strava_connected:     true,
-          }).eq('id', userId)
+        if (!userId) {
+          setError('Could not identify your account. Please try again.')
+          setTimeout(() => navigate('/home'), 3000)
+          return
+        }
 
-          if (updateError) {
-            console.error('Supabase update error:', updateError)
-          }
-        } else {
-          console.error('No user session found when trying to save Strava tokens')
+        // Save tokens server-side via API (bypasses RLS issues)
+        const saveRes = await fetch(
+          `/api/strava?action=save_tokens&user_id=${userId}&access_token=${encodeURIComponent(data.access_token)}&refresh_token=${encodeURIComponent(data.refresh_token)}&expires_at=${data.expires_at}&athlete_id=${data.athlete?.id}`
+        )
+        const saveData = await saveRes.json()
+
+        if (!saveData.success) {
+          console.error('Token save failed:', saveData.error)
+          // Don't block the user — still redirect, they can retry
         }
 
         setStatus('Connected! Redirecting...')
