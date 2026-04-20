@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
+import Landing from './pages/Landing'
 import Login from './pages/Login'
 import SignUp from './pages/SignUp'
 import CreateAccount from './pages/CreateAccount'
@@ -26,7 +27,7 @@ export default function App() {
       <AuthProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/"                    element={<Login />} />
+            <Route path="/"                    element={<Landing />} />
             <Route path="/login"               element={<Login />} />
             <Route path="/signup"              element={<SignUp />} />
             <Route path="/create-account"      element={<CreateAccount />} />
