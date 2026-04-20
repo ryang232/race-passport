@@ -35,15 +35,25 @@ export default function StravaCallback() {
 
         setStatus('Saving your connection...')
 
-        // Persist tokens + athlete info to Supabase profiles
-        if (user) {
-          await supabase.from('profiles').update({
+        // Get the current user directly from Supabase — auth context may not
+        // have loaded yet since this is a fresh page load from the OAuth redirect
+        const { data: { session } } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+
+        if (userId) {
+          const { error: updateError } = await supabase.from('profiles').update({
             strava_access_token:  data.access_token,
             strava_refresh_token: data.refresh_token,
             strava_expires_at:    data.expires_at,
             strava_athlete_id:    data.athlete?.id?.toString(),
             strava_connected:     true,
-          }).eq('id', user.id)
+          }).eq('id', userId)
+
+          if (updateError) {
+            console.error('Supabase update error:', updateError)
+          }
+        } else {
+          console.error('No user session found when trying to save Strava tokens')
         }
 
         setStatus('Connected! Redirecting...')
