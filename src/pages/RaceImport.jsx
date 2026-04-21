@@ -497,47 +497,39 @@ export default function RaceImport() {
         </div>
 
         {/* Combined Missing Race + Strava banner */}
-        <div style={{ background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', borderRadius:'14px', padding:'22px 24px', marginBottom: stravaCandidates.length > 0 ? '0' : '24px', display:'flex', alignItems:'center', gap:'20px', animation:'stravaSlide 0.5s ease 0.3s both', borderBottomLeftRadius: stravaCandidates.length > 0 ? 0 : '14px', borderBottomRightRadius: stravaCandidates.length > 0 ? 0 : '14px' }}>
-          <div style={{ width:44, height:44, borderRadius:'10px', background:'rgba(252,76,2,0.15)', border:'1px solid rgba(252,76,2,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-          </div>
-          <div style={{ flex:1 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, color:'#fff', letterSpacing:'0.5px', marginBottom:'4px' }}>Missing a Race?</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>
-              {stravaScanned && stravaCandidates.length > 0
-                ? `Found ${stravaCandidates.length} possible race${stravaCandidates.length !== 1 ? 's' : ''} in your Strava history — review below.`
-                : stravaScanned
-                ? 'No additional races found in your Strava history.'
-                : 'Connect Strava to scan your activities for races you may have missed.'}
+        <div style={{ background:'#fff', borderRadius:'14px', padding:'22px 24px', marginBottom: stravaCandidates.length > 0 ? '0' : '24px', display:'flex', alignItems:'center', gap:'20px', animation:'stravaSlide 0.5s ease 0.3s both', border:'1.5px solid #e2e6ed', borderBottomLeftRadius: stravaCandidates.length > 0 && showStravaCandidates ? 0 : '14px', borderBottomRightRadius: stravaCandidates.length > 0 && showStravaCandidates ? 0 : '14px' }}>
+          {/* Left — icon + text */}
+          <div style={{ display:'flex', alignItems:'center', gap:'16px', flex:1 }}>
+            <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            </div>
+            <div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#1B2A4A', letterSpacing:'1px', lineHeight:1, marginBottom:'4px' }}>
+                {stravaScanned && stravaCandidates.length > 0 ? `${stravaCandidates.length} Possible Races Found` : 'Missing a Race?'}
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#6b7a8d', lineHeight:1.5 }}>
+                {stravaScanned && stravaCandidates.length > 0
+                  ? 'Review your Strava activities below and tap any to add to your Passport.'
+                  : stravaScanned
+                  ? 'No additional races found in your Strava history.'
+                  : 'Connect Strava to scan for races you may have missed — or add one manually.'}
+              </div>
             </div>
           </div>
-          <div style={{ display:'flex', flexDirection:'column', gap:'8px', flexShrink:0 }}>
+
+          {/* Right — CTAs */}
+          <div style={{ display:'flex', alignItems:'center', gap:'10px', flexShrink:0 }}>
             {stravaConnected ? (
               stravaScanning ? (
-                <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'9px 16px', border:'1.5px solid rgba(252,76,2,0.3)', borderRadius:'8px', background:'rgba(252,76,2,0.05)' }}>
                   <div style={{ width:10, height:10, borderRadius:'50%', border:'2px solid #FC4C02', borderTopColor:'transparent', animation:'spin 0.8s linear infinite', flexShrink:0 }} />
                   <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Scanning...</span>
                 </div>
-              ) : stravaScanned ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
-                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Scanned</span>
-                  </div>
-                  {stravaCandidates.length > 0 && (
-                    <button onClick={() => setShowStravaCandidates(v => !v)}
-                      style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.3)', borderRadius:'8px', background:'rgba(255,255,255,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.8)', cursor:'pointer', textTransform:'uppercase' }}>
-                      {showStravaCandidates ? 'Hide Results' : `Review ${stravaCandidates.length} Found`}
-                    </button>
-                  )}
-                </div>
               ) : (
-                <button onClick={scanStrava}
-                  style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-                  onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.22)'}
-                  onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.1)'}>
-                  Scan Strava
-                </button>
+                <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'9px 14px', border:'1.5px solid rgba(252,76,2,0.25)', borderRadius:'8px', background:'rgba(252,76,2,0.05)' }}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Connected</span>
+                </div>
               )
             ) : (
               <button onClick={async () => {
@@ -548,16 +540,26 @@ export default function RaceImport() {
                   const d = await r.json()
                   if (d.url) window.location.href = d.url
                 }}
-                style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-                onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)'; e.currentTarget.style.borderColor='#FC4C02' }}
-                onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
+                style={{ padding:'9px 18px', border:'none', borderRadius:'8px', background:'#FC4C02', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'opacity 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.opacity='0.85'}
+                onMouseLeave={e => e.currentTarget.style.opacity='1'}>
                 Connect Strava
               </button>
             )}
+
+            {stravaScanned && stravaCandidates.length > 0 && (
+              <button onClick={() => setShowStravaCandidates(v => !v)}
+                style={{ padding:'9px 18px', border:'1.5px solid #1B2A4A', borderRadius:'8px', background: showStravaCandidates ? '#1B2A4A' : 'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color: showStravaCandidates ? '#fff' : '#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                onMouseEnter={e => { if (!showStravaCandidates) { e.currentTarget.style.background='rgba(27,42,74,0.06)' } }}
+                onMouseLeave={e => { if (!showStravaCandidates) { e.currentTarget.style.background='transparent' } }}>
+                {showStravaCandidates ? 'Hide Results' : `Review ${stravaCandidates.length} Found →`}
+              </button>
+            )}
+
             <button onClick={() => setShowAddManual(true)}
-              style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'rgba(255,255,255,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
-              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.06)'}>
+              style={{ padding:'9px 18px', border:'1.5px solid #e2e6ed', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#6b7a8d', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#6b7a8d' }}>
               Add Manually
             </button>
           </div>
