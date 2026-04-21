@@ -154,7 +154,7 @@ function handleCardClick(race, navigate) {
   navigate(`/race-detail/${race.id}`)
 }
 
-function NearbyCard({ race, t }) {
+function NearbyCard({ race, t, compact }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
@@ -172,37 +172,42 @@ function NearbyCard({ race, t }) {
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
   }, [race.id])
+
+  const imgH = compact ? 130 : 220
+
   return (
     <div ref={cardRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
-      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ position:'relative', height:220, overflow:'hidden', background:'#1B2A4A' }}>
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width: compact ? 'clamp(200px,60vw,280px)' : 'clamp(260px,26vw,380px)' }}>
+      <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
-            {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
-              <div key={s.label} style={{ textAlign:'center' }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{s.value}</div>
-              </div>
-            ))}
+        {!compact && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
+              {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
+                <div key={s.label} style={{ textAlign:'center' }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{s.value}</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
+            <div style={{ textAlign:'center' }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
+            </div>
           </div>
-          <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
-          <div style={{ textAlign:'center' }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
-          </div>
-        </div>
-        <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <CardStamp distance={race.distance} size={48} />
+        )}
+        <div style={{ position:'absolute', bottom:8, left:8, opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>
+          <CardStamp distance={race.distance} size={compact ? 36 : 48} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'19px', color:t.text, letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{race.date}</div>
+      <div style={{ padding: compact ? '10px 12px' : '14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact ? '15px' : '19px', color:t.text, letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '13px', color:t.textMuted, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.city || race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '14px', fontWeight:600, color:t.text, flexShrink:0 }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -224,12 +229,12 @@ function useCountdown(dateStr) {
   return countdown
 }
 
-function UpcomingCard({ race, t }) {
+function UpcomingCard({ race, t, compact }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
   const navigate = useNavigate()
-  const countdown = useCountdown(race.date)
+  const countdown = useCountdown(race.date_sort || race.date)
   const cardRef = useRef(null)
 
   useEffect(() => {
@@ -244,38 +249,47 @@ function UpcomingCard({ race, t }) {
     return () => observer.disconnect()
   }, [race.id])
 
+  const imgH = compact ? 120 : 200
+
   return (
     <div ref={cardRef} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
       onClick={() => handleCardClick(race, navigate)}
-      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width:'clamp(260px,26vw,380px)' }}>
-      <div style={{ position:'relative', height:200, overflow:'hidden', background:'#1B2A4A' }}>
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width: compact ? 'clamp(200px,60vw,280px)' : 'clamp(260px,26vw,380px)' }}>
+      <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
-          {countdown.past ? (
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px' }}>GO TIME!</div>
-          ) : (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', width:'100%' }}>
-              {[{ val:String(countdown.days).padStart(2,'0'), label:'Days' },{ val:String(countdown.hours).padStart(2,'0'), label:'Hrs' },{ val:String(countdown.mins).padStart(2,'0'), label:'Min' },{ val:String(countdown.secs).padStart(2,'0'), label:'Sec' }].map(u => (
-                <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:'1px solid rgba(201,168,76,0.2)' }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginTop:'4px' }}>{u.label}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-        <div style={{ position:'absolute', top:12, right:12, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'3px 10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
-        <div style={{ position:'absolute', bottom:12, left:12, opacity: hovered ? 0 : 1, transition:'opacity 0.2s' }}>
-          <CardStamp distance={race.distance} size={46} />
+        {!compact && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
+            {countdown.past ? (
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px' }}>GO TIME!</div>
+            ) : (
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'8px', width:'100%' }}>
+                {[{ val:String(countdown.days).padStart(2,'0'), label:'Days' },{ val:String(countdown.hours).padStart(2,'0'), label:'Hrs' },{ val:String(countdown.mins).padStart(2,'0'), label:'Min' },{ val:String(countdown.secs).padStart(2,'0'), label:'Sec' }].map(u => (
+                  <div key={u.label} style={{ textAlign:'center', background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'10px 4px', border:'1px solid rgba(201,168,76,0.2)' }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>{u.val}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.4)', textTransform:'uppercase', marginTop:'4px' }}>{u.label}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {compact && !countdown.past && (
+          <div style={{ position:'absolute', bottom:6, left:8, background:'rgba(0,0,0,0.6)', borderRadius:'6px', padding:'2px 8px' }}>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:'#C9A84C', letterSpacing:'1px' }}>{countdown.days}d {countdown.hours}h</span>
+          </div>
+        )}
+        <div style={{ position:'absolute', top:8, right:8, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
+        <div style={{ position:'absolute', bottom: compact ? 'auto' : 12, top: compact ? 8 : 'auto', left:8, opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>
+          <CardStamp distance={race.distance} size={compact ? 32 : 46} />
         </div>
       </div>
-      <div style={{ padding:'14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'0.5px', marginBottom:'6px', lineHeight:1.2 }}>{race.name}</div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>{race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{race.date}</div>
+      <div style={{ padding: compact ? '8px 12px' : '14px 16px', borderTop:`1px solid ${t.borderLight}` }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact ? '14px' : '18px', color:t.text, letterSpacing:'0.5px', marginBottom:'3px', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'8px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '13px', color:t.textMuted, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.city || race.location}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '14px', fontWeight:600, color:t.text, flexShrink:0 }}>{race.date}</div>
         </div>
       </div>
     </div>
@@ -718,19 +732,15 @@ export default function Home() {
             <button onClick={() => navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
           </div>
           {nearbyLoading ? (
-            <div style={{ display:'flex', gap:'24px', overflow:'hidden' }}>
-              {[1,2,3,4].map(i => (
-                <div key={i} style={{ flexShrink:0, width:'clamp(260px,22vw,320px)', borderRadius:'16px', overflow:'hidden', background:t.surface, height:'340px', animation:'pulse 1.5s ease infinite' }}>
-                  <div style={{ height:'200px', background:t.surfaceAlt }} />
-                  <div style={{ padding:'16px' }}>
-                    <div style={{ height:'14px', background:t.border, borderRadius:'4px', marginBottom:'8px', width:'70%' }} />
-                    <div style={{ height:'11px', background:t.borderLight, borderRadius:'4px', width:'50%' }} />
-                  </div>
+            <div style={{ display:'flex', gap:'16px', overflow:'hidden' }}>
+              {[1,2,3].map(i => (
+                <div key={i} style={{ flexShrink:0, width: isMobile ? 'clamp(200px,60vw,280px)' : 'clamp(260px,22vw,320px)', borderRadius:'16px', overflow:'hidden', background:t.surface, height: isMobile ? '190px' : '300px', animation:'pulse 1.5s ease infinite' }}>
+                  <div style={{ height: isMobile ? '130px' : '200px', background:t.surfaceAlt }} />
                 </div>
               ))}
             </div>
           ) : nearbyRaces.length > 0 ? (
-            <ScrollRow>{nearbyRaces.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
+            <ScrollRow>{nearbyRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
           ) : (
             <div style={{ padding:'32px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>No races found nearby</div>
@@ -758,7 +768,7 @@ export default function Home() {
                 See More →
               </button>
             </div>
-            <ScrollRow>{suggestedRaces.map(race => <NearbyCard key={race.id} race={race} t={t} />)}</ScrollRow>
+            <ScrollRow>{suggestedRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
           </div>
         )}
 
@@ -804,7 +814,7 @@ export default function Home() {
                 </button>
               </div>
             )
-            return <ScrollRow>{allUpcoming.map(race => <UpcomingCard key={race.id} race={race} t={t} />)}</ScrollRow>
+            return <ScrollRow>{allUpcoming.map(race => <UpcomingCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
           })()}
         </div>
 
