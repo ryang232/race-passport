@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { isDemo } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { loadRacePhoto, PHOTO_PLACEHOLDER } from '../lib/photos'
-import { useStrava } from '../lib/useStrava'
+import { useStrava, looksLikeRace } from '../lib/useStrava'
 
 // Confidence score 1-3: 3 = very confident, 1 = less certain
 // Higher confidence races appear first
@@ -208,7 +208,9 @@ export default function RaceImport() {
   const [undoRace, setUndoRace]             = useState(null)
   const [undoSelected, setUndoSelected]     = useState(null)
 
-  const { connected: stravaConnected, connectStrava } = useStrava(profile, user?.id)
+  const { connected: stravaConnected, connectStrava, getActivities } = useStrava(profile, user?.id)
+  const [stravaScanning, setStravaScanning] = useState(false)
+  const [stravaScanned, setStravaScanned]   = useState(false)
 
   useEffect(() => {
     const run = async () => {
@@ -305,6 +307,84 @@ export default function RaceImport() {
   const allSelected   = races.length > 0 && selectedCount === races.length
   const toggleAll     = () => { const n = {}; races.forEach(r => { n[r.id] = !allSelected }); setSelected(n) }
   const filteredRaces = activeSource === 'ALL' ? races : races.filter(r => r.source === activeSource)
+
+  // Scan Strava for race-like activities and add as new cards
+  const scanStrava = async () => {
+    if (stravaScanning || stravaScanned) return
+    setStravaScanning(true)
+    try {
+      // Fetch last 2 years of activities
+      const twoYearsAgo = Math.floor((Date.now() - 2 * 365 * 24 * 3600 * 1000) / 1000)
+      const page1 = await getActivities({ per_page: 60, page: 1, after: twoYearsAgo })
+      const page2 = await getActivities({ per_page: 60, page: 2, after: twoYearsAgo })
+      const allActs = [...page1, ...page2]
+
+      // Filter to race-like activities
+      const raceActs = allActs.filter(a => looksLikeRace(a))
+
+      // Deduplicate against existing races by date proximity
+      const existingDates = races.map(r => r.date ? new Date(r.date).getMonth() + '-' + new Date(r.date).getFullYear() : '')
+
+      const newRaces = raceActs
+        .filter(a => {
+          const d = new Date(a.start_date_local)
+          const key = `${d.getMonth()}-${d.getFullYear()}`
+          return !existingDates.includes(key)
+        })
+        .map(a => {
+          const d    = new Date(a.start_date_local)
+          const distM = a.distance || 0
+          const distMi = distM / 1609.34
+          // Classify distance
+          let distance = 'OTHER'
+          if (Math.abs(distMi - 3.1)  < 0.3) distance = '5K'
+          else if (Math.abs(distMi - 6.2)  < 0.4) distance = '10K'
+          else if (Math.abs(distMi - 13.1) < 0.5) distance = '13.1'
+          else if (Math.abs(distMi - 26.2) < 0.8) distance = '26.2'
+          else if (Math.abs(distMi - 70.3) < 2)   distance = '70.3'
+          else if (Math.abs(distMi - 140.6)< 4)   distance = '140.6'
+          else distance = `${distMi.toFixed(1)} mi`
+
+          // Format time
+          const secs = a.moving_time || 0
+          const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60
+          const time = h > 0
+            ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+            : `${m}:${String(s).padStart(2,'0')}`
+
+          const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+          return {
+            id:         `strava_${a.id}`,
+            name:       a.name || 'Strava Race',
+            date:       `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
+            location:   '',
+            city:       '',
+            state:      '',
+            distance,
+            time,
+            source:     'STRAVA',
+            confidence: 2,
+          }
+        })
+
+      if (newRaces.length > 0) {
+        setRaces(prev => [...newRaces, ...prev])
+        const newSel = {}
+        newRaces.forEach(r => { newSel[r.id] = true })
+        setSelected(prev => ({ ...newSel, ...prev }))
+      }
+      setStravaScanned(true)
+    } catch(e) {}
+    setStravaScanning(false)
+  }
+
+  // Auto-scan when Strava becomes connected
+  useEffect(() => {
+    if (stravaConnected && !stravaScanned && !loading) {
+      scanStrava()
+    }
+  }, [stravaConnected, loading])
 
   const handleConfirm = async () => {
     setSaving(true)
@@ -415,12 +495,33 @@ export default function RaceImport() {
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px', flexShrink:0 }}>
             {stravaConnected ? (
-              <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
-                <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Connected</span>
-              </div>
+              stravaScanning ? (
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
+                  <div style={{ width:10, height:10, borderRadius:'50%', border:'2px solid #FC4C02', borderTopColor:'transparent', animation:'spin 0.8s linear infinite', flexShrink:0 }} />
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Scanning...</span>
+                </div>
+              ) : stravaScanned ? (
+                <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Scanned</span>
+                </div>
+              ) : (
+                <button onClick={scanStrava}
+                  style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
+                  onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)' }}
+                  onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)' }}>
+                  Scan Strava
+                </button>
+              )
             ) : (
-              <button onClick={() => { sessionStorage.setItem('strava_return_to', '/race-import'); connectStrava('/race-import') }}
+              <button onClick={async () => {
+                  const uid = user?.id || profile?.id
+                  sessionStorage.setItem('strava_return_to', '/race-import')
+                  if (uid) sessionStorage.setItem('strava_user_id', uid)
+                  const r = await fetch(`/api/strava?action=auth_url${uid ? `&user_id=${uid}` : ''}`)
+                  const d = await r.json()
+                  if (d.url) window.location.href = d.url
+                }}
                 style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
                 onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)'; e.currentTarget.style.borderColor='#FC4C02' }}
                 onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)'; e.currentTarget.style.borderColor='rgba(252,76,2,0.5)' }}>
