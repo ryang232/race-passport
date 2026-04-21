@@ -40,7 +40,100 @@ function SignupBanner({ race, onYes, onNo }) {
   )
 }
 
-// ── Signup confirmation modal ─────────────────────────────────────────────────
+// ── Suggested Gear ────────────────────────────────────────────────────────────
+function SuggestedGear({ race, t }) {
+  const distance = race?.distance || ''
+
+  // Gear suggestions tailored by distance
+  const getGear = () => {
+    const isTri  = distance.includes('70.3') || distance.includes('140.6') || distance.toLowerCase().includes('tri')
+    const isUltra = distance.toLowerCase().includes('ultra') || distance.includes('50') || distance.includes('100')
+    const isMarathon = distance === '26.2'
+    const isHalf = distance === '13.1'
+
+    const base = [
+      { emoji:'👟', name:'Race Day Shoes', note:'Lightweight, responsive for race pace', tag:'Essential' },
+      { emoji:'🧢', name:'Running Cap', note:'Moisture-wicking, UV protection', tag:'Recommended' },
+      { emoji:'🧴', name:'Body Glide', note:'Prevent chafing on long efforts', tag:'Essential' },
+    ]
+
+    if (isTri) return [
+      { emoji:'🏊', name:'Tri Suit', note:'Swim-to-run without changing', tag:'Essential' },
+      { emoji:'🚴', name:'Aero Helmet', note:'Time savings on the bike leg', tag:'Recommended' },
+      { emoji:'👟', name:'Race Day Shoes', note:'Quick laces for T2', tag:'Essential' },
+      { emoji:'🧴', name:'Body Glide', note:'Chafe prevention for all three legs', tag:'Essential' },
+      { emoji:'🥤', name:'Nutrition Belt', note:'Gels and hydration on the run', tag:'Recommended' },
+    ]
+
+    if (isUltra) return [
+      { emoji:'🎒', name:'Running Vest', note:'Mandatory for most ultras', tag:'Essential' },
+      { emoji:'👟', name:'Trail Shoes', note:'Grip and protection on rough terrain', tag:'Essential' },
+      { emoji:'🏃', name:'Poles', note:'Knee relief on steep descents', tag:'Recommended' },
+      { emoji:'🧴', name:'Body Glide', note:'Multi-day chafe prevention', tag:'Essential' },
+      { emoji:'🥤', name:'Soft Flasks', note:'Easy hydration on the go', tag:'Essential' },
+    ]
+
+    if (isMarathon) return [
+      ...base,
+      { emoji:'🥤', name:'Race Belt & Gels', note:'Fuel every 45 mins after mile 6', tag:'Essential' },
+      { emoji:'🧦', name:'Compression Socks', note:'Reduce fatigue in the final miles', tag:'Recommended' },
+    ]
+
+    if (isHalf) return [
+      ...base,
+      { emoji:'🥤', name:'2–3 Energy Gels', note:'Take one at miles 5 and 9', tag:'Recommended' },
+    ]
+
+    return base
+  }
+
+  const gear = getGear()
+  const TAG_COLORS = {
+    Essential:    { bg:'rgba(201,168,76,0.1)',  border:'rgba(201,168,76,0.3)',  text:'#C9A84C' },
+    Recommended:  { bg:'rgba(27,42,74,0.06)',   border:'rgba(27,42,74,0.15)',   text:'#1B2A4A' },
+  }
+
+  return (
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', border:`1px solid ${t.border}`, marginTop:'24px', transition:'background 0.25s', animation:'fadeIn 0.4s ease both' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Suggested Gear</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'4px' }}>Recommended for a {distance} race</div>
+        </div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', background:t.surfaceAlt, padding:'4px 10px', borderRadius:'6px', border:`1px solid ${t.border}` }}>
+          Powered by Race Passport
+        </div>
+      </div>
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'12px' }}>
+        {gear.map((item, i) => {
+          const tc = TAG_COLORS[item.tag] || TAG_COLORS.Recommended
+          return (
+            <div key={i} style={{ background:t.surfaceAlt, borderRadius:'12px', padding:'16px', border:`1px solid ${t.border}`, display:'flex', flexDirection:'column', gap:'10px', transition:'box-shadow 0.15s' }}
+              onMouseEnter={e => e.currentTarget.style.boxShadow=`0 4px 16px rgba(27,42,74,0.08)`}
+              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <span style={{ fontSize:'28px', lineHeight:1 }}>{item.emoji}</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'3px 8px', borderRadius:'6px', background:tc.bg, border:`1px solid ${tc.border}`, color:tc.text }}>{item.tag}</span>
+              </div>
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:700, color:t.text, marginBottom:'3px', letterSpacing:'0.5px' }}>{item.name}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>{item.note}</div>
+              </div>
+            </div>
+          )
+        })}
+      </div>
+
+      <div style={{ marginTop:'16px', padding:'12px 16px', background:'rgba(201,168,76,0.06)', borderRadius:'10px', border:'1px solid rgba(201,168,76,0.15)', display:'flex', alignItems:'center', gap:'10px' }}>
+        <span style={{ fontSize:'16px' }}>💡</span>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.5 }}>
+          Gear recommendations are based on your race distance. Sponsor integrations and personalized suggestions coming soon.
+        </div>
+      </div>
+    </div>
+  )
+}
 function SignupModal({ race, onSave, onClose, t }) {
   const [goal, setGoal]           = useState('')
   const [specificTime, setSpecificTime] = useState('')
@@ -374,7 +467,10 @@ export default function RaceDetail() {
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#C9A84C', letterSpacing:'1px', marginBottom:'4px' }}>{race.price_raw || (race.price?`$${race.price}`:'TBD')}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'1px', marginBottom:'20px' }}>Registration fee</div>
                   {signedUp ? (
-                    <div style={{ padding:'13px', borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.3)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase' }}>✓ You're Registered</div>
+                    <>
+                      <div style={{ padding:'13px', borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.3)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', textAlign:'center' }}>✓ You're Registered</div>
+                      <SuggestedGear race={race} t={t} />
+                    </>
                   ) : (
                     <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
                       style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
