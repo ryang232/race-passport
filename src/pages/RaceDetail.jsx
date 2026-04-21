@@ -218,8 +218,26 @@ export default function RaceDetail() {
   const [activeTab, setActiveTab]     = useState('overview')
   const [showSignupBanner, setShowSignupBanner] = useState(false)
   const [showSignupModal, setShowSignupModal]   = useState(false)
-  const [signedUp, setSignedUp]                 = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
+  const [signedUp, setSignedUp]       = useState(() => {
+    // Restore from sessionStorage on load
+    try {
+      const upcoming = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
+      return upcoming.some(r => r.id === parseInt(id) || r.id === id)
+    } catch(e) { return false }
+  })
   const pendingExternalNav = useRef(false)
+
+  const handleCancelRegistration = () => {
+    setSignedUp(false)
+    setShowCancelConfirm(false)
+    try {
+      const existing = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
+      sessionStorage.setItem('rp_upcoming', JSON.stringify(
+        existing.filter(r => r.id !== parseInt(id) && r.id !== id)
+      ))
+    } catch(e) {}
+  }
 
   useEffect(() => {
     const load = async () => {
@@ -270,11 +288,11 @@ export default function RaceDetail() {
     `
     if (!document.getElementById('rp-rd-styles')) document.head.appendChild(style)
 
-    // Detect return from RunSignup tab
+    // Detect return from RunSignup tab — only show banner if not already registered
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && pendingExternalNav.current) {
         pendingExternalNav.current = false
-        setTimeout(() => setShowSignupBanner(true), 800)
+        if (!signedUp) setTimeout(() => setShowSignupBanner(true), 800)
       }
     }
     document.addEventListener('visibilitychange', handleVisibility)
@@ -469,6 +487,28 @@ export default function RaceDetail() {
                   {signedUp ? (
                     <>
                       <div style={{ padding:'13px', borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.3)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', textAlign:'center' }}>✓ You're Registered</div>
+                      {!showCancelConfirm ? (
+                        <button onClick={() => setShowCancelConfirm(true)}
+                          style={{ width:'100%', padding:'8px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, cursor:'pointer', letterSpacing:'0.5px', marginTop:'-4px' }}
+                          onMouseEnter={e => e.currentTarget.style.color='#c53030'}
+                          onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
+                          Cancel registration
+                        </button>
+                      ) : (
+                        <div style={{ background:'rgba(197,48,48,0.06)', border:'1px solid rgba(197,48,48,0.2)', borderRadius:'10px', padding:'12px', textAlign:'center' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.text, marginBottom:'10px', lineHeight:1.5 }}>Remove this race from your upcoming races?</div>
+                          <div style={{ display:'flex', gap:'8px' }}>
+                            <button onClick={() => setShowCancelConfirm(false)}
+                              style={{ flex:1, padding:'8px', border:`1px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
+                              Keep
+                            </button>
+                            <button onClick={handleCancelRegistration}
+                              style={{ flex:1, padding:'8px', border:'1px solid rgba(197,48,48,0.4)', borderRadius:'8px', background:'rgba(197,48,48,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#c53030', cursor:'pointer', textTransform:'uppercase' }}>
+                              Remove
+                            </button>
+                          </div>
+                        </div>
+                      )}
                       <SuggestedGear race={race} t={t} />
                     </>
                   ) : (
