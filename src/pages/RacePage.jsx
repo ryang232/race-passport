@@ -241,45 +241,73 @@ function StravaActivitySection({ race, t }) {
       setLoading(true)
       try {
         const raceDate = new Date(race.date)
-        const afterTs  = Math.floor(raceDate.getTime() / 1000) - 3 * 86400
-        const acts     = await getActivities({ per_page: 30, after: afterTs })
+        if (isNaN(raceDate)) { setLoading(false); return }
 
-        // All activities on race day
-        const sameDay = acts.filter(a =>
-          new Date(a.start_date_local).toDateString() === raceDate.toDateString()
-        )
+        // Detect if date is month-only (no specific day) — "Oct 2023" parses to Oct 1
+        // In that case search the full month; otherwise search ±3 days
+        const isMonthOnly = !race.date.match(/\d{1,2}[,\s]\s*\d{4}/) && !race.date.match(/^\w+ \d{1,2},/)
+        let afterTs, beforeTs
+
+        if (isMonthOnly) {
+          // Search the entire month
+          const startOfMonth = new Date(raceDate.getFullYear(), raceDate.getMonth(), 1)
+          const endOfMonth   = new Date(raceDate.getFullYear(), raceDate.getMonth() + 1, 0, 23, 59, 59)
+          afterTs  = Math.floor(startOfMonth.getTime() / 1000)
+          beforeTs = Math.floor(endOfMonth.getTime() / 1000)
+        } else {
+          afterTs  = Math.floor(raceDate.getTime() / 1000) - 3 * 86400
+          beforeTs = Math.floor(raceDate.getTime() / 1000) + 86400
+        }
+
+        const acts = await getActivities({ per_page: 60, after: afterTs })
+
+        // Filter to within our window
+        const inWindow = acts.filter(a => {
+          const ts = Math.floor(new Date(a.start_date_local).getTime() / 1000)
+          return ts >= afterTs && ts <= beforeTs
+        })
+
+        // For non-month-only dates, also filter to same day
+        const sameDay = isMonthOnly
+          ? inWindow
+          : inWindow.filter(a =>
+              new Date(a.start_date_local).toDateString() === raceDate.toDateString()
+            )
+
+        // Use inWindow as fallback for candidates if sameDay is empty
+        const candidatePool = sameDay.length > 0 ? sameDay : inWindow
 
         if (isTri) {
-          // For triathlons — find swim, bike, run segments separately
           const SWIM_TYPES = ['swim']
           const BIKE_TYPES = ['ride', 'virtualride', 'ebikeride', 'mountainbikeride']
           const RUN_TYPES  = ['run', 'virtualrun']
 
-          const swim = sameDay.find(a => SWIM_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
-          const bike = sameDay.find(a => BIKE_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
-          const run  = sameDay.find(a => RUN_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+          const swim = candidatePool.find(a => SWIM_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+          const bike = candidatePool.find(a => BIKE_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+          const run  = candidatePool.find(a => RUN_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
 
           const segments = [swim, bike, run].filter(Boolean)
 
           if (segments.length > 0) {
             setTriActivities(segments)
-            // Use the bike (longest) as the primary activity for stats display
             setActivity(bike || run || swim)
           } else {
-            // Fallback — show all same-day activities as candidates
-            setCandidates(sameDay.slice(0, 10))
+            setCandidates(inWindow.filter(a => {
+              const type = (a.type || a.sport_type || '').toLowerCase()
+              return ['run','virtualrun','swim','ride'].includes(type)
+            }).slice(0, 10))
           }
         } else {
-          // Standard race — single activity match
-          const match = sameDay.find(a => looksLikeRace(a)) || sameDay[0]
+          // Standard race — prefer exact distance match, then looksLikeRace, then any in window
+          const match = candidatePool.find(a => looksLikeRace(a)) || candidatePool[0]
           if (match) {
             setActivity(match)
           } else {
-            const nearby = acts.filter(a => {
+            // Show all activities in the window as manual candidates
+            setCandidates(inWindow.filter(a => {
               const type = (a.type || a.sport_type || '').toLowerCase()
               return ['run','virtualrun','walk','ride'].includes(type)
-            }).slice(0, 10)
-            setCandidates(nearby)
+            }).slice(0, 10))
           }
         }
       } catch(e) {}
@@ -580,11 +608,11 @@ export default function RacePage() {
             setAllPassportRaces(praces)
             setCurrentIdx(idx >= 0 ? idx : 0)
 
-            // Map to race page format
+            // Map to race page format — use date_sort for Strava matching if available
             const mapped = {
               id:        raceData.id,
               name:      raceData.name,
-              date:      raceData.date,
+              date:      raceData.date_sort || raceData.date, // prefer date_sort (exact) for Strava matching
               location:  raceData.location || `${raceData.city || ''}${raceData.city && raceData.state ? ', ' : ''}${raceData.state || ''}`,
               distance:  raceData.distance,
               time:      raceData.time,
