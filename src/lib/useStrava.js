@@ -16,15 +16,17 @@ async function getValidToken(profile, userId) {
     return profile.strava_access_token
   }
 
+  // Token expired — refresh via API
   try {
     const r    = await fetch(`${API}?action=refresh&refresh_token=${encodeURIComponent(profile.strava_refresh_token)}`)
     const data = await r.json()
     if (data.error) return null
-    await supabase.from('profiles').update({
-      strava_access_token:  data.access_token,
-      strava_refresh_token: data.refresh_token,
-      strava_expires_at:    data.expires_at,
-    }).eq('id', userId)
+
+    // Save new tokens server-side (bypasses RLS)
+    if (userId) {
+      await fetch(`${API}?action=save_tokens&user_id=${userId}&access_token=${encodeURIComponent(data.access_token)}&refresh_token=${encodeURIComponent(data.refresh_token)}&expires_at=${data.expires_at}&athlete_id=${profile.strava_athlete_id || ''}`)
+    }
+
     return data.access_token
   } catch(e) { return null }
 }
