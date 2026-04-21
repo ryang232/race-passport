@@ -7,6 +7,7 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useStrava, stravaStatsToItems } from '../lib/useStrava'
+import { useIsMobile } from '../lib/useIsMobile'
 
 // Race PR stats — from passport data (hardcoded for now, Strava supplements)
 const RACE_STAT_ITEMS = [
@@ -70,22 +71,22 @@ function StatsTicker({ t, items }) {
   const displayItems = [...(items||[]), ...(items||[]), ...(items||[])]
   return (
     <div style={{ background:'#1B2A4A', overflow:'hidden', position:'relative', borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
-      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:120, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:120, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:10, left:32, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
+      <div style={{ position:'absolute', left:0, top:0, bottom:0, width:60, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+      <div style={{ position:'absolute', right:0, top:0, bottom:0, width:60, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
+      <div style={{ position:'absolute', bottom:8, left:16, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
         <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'1px' }}>Synced via Strava</span>
       </div>
-      <div style={{ display:'flex', alignItems:'center', padding:'26px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
+      <div style={{ display:'flex', alignItems:'center', padding:'20px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
         {displayItems.map((item, i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
-            <div style={{ textAlign:'center', padding:'0 48px' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(44px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'6px', whiteSpace:'nowrap' }}>{item.label}</div>
+            <div style={{ textAlign:'center', padding:'0 28px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', marginTop:'4px', whiteSpace:'nowrap' }}>{item.label}</div>
             </div>
-            <div style={{ width:5, height:5, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
+            <div style={{ width:4, height:4, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
           </div>
         ))}
       </div>
@@ -502,6 +503,7 @@ export default function Home() {
   const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
   const initials  = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
+  const isMobile = useIsMobile()
 
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
@@ -516,25 +518,27 @@ export default function Home() {
 
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, transition:'background 0.25s, border-color 0.25s' }}>
-        <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
-            <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
-          </div>
-          <div style={{ display:'flex', alignItems:'stretch' }}>
+        <div style={{ width:'100%', padding: isMobile ? '0 12px' : '0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
+          {/* Logo — hidden on mobile to save space */}
+          {!isMobile && (
+            <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
+              <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
+            </div>
+          )}
+          {/* Nav tabs — centered on mobile, right-aligned on desktop */}
+          <div style={{ display:'flex', alignItems:'stretch', flex: isMobile ? 1 : 'none' }}>
             {NAV_TABS.map(tab => (
               <button key={tab.path} className="rp-nav-tab"
-                style={{ color: location.pathname === tab.path ? t.text : t.textMuted, borderBottomColor: location.pathname === tab.path ? '#C9A84C' : 'transparent' }}
+                style={{ color: location.pathname === tab.path ? t.text : t.textMuted, borderBottomColor: location.pathname === tab.path ? '#C9A84C' : 'transparent', flex: isMobile ? 1 : 'none', padding: isMobile ? '0 8px' : '0 24px' }}
                 onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
             ))}
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+          <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '8px' : '14px' }}>
             <div ref={dropdownRef} style={{ position:'relative' }}>
               <div onClick={() => setShowDropdown(!showDropdown)}
-                style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
-                onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
+                style={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '11px' : '14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
               </div>
               {showDropdown && (
                 <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:100, transition:'background 0.25s' }}>
@@ -565,7 +569,7 @@ export default function Home() {
       </div>
 
       {showImportBanner && (
-        <div style={{ position:'relative', zIndex:10, background:'#1B2A4A', borderBottom:'3px solid #C9A84C', padding:'14px 40px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div style={{ position:'relative', zIndex:10, background:'#1B2A4A', borderBottom:'3px solid #C9A84C', padding: isMobile ? '12px 16px' : '14px 40px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
             <div style={{ width:'6px', height:'6px', borderRadius:'50%', background:'#C9A84C' }} />
             <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1px', color:'#fff' }}>{importedCount} races added to your Race Passport!</span>
@@ -578,20 +582,22 @@ export default function Home() {
       )}
 
       {/* GREETING + SPONSOR SLOT */}
-      <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
+      <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding: isMobile ? '24px 16px 20px' : '40px 40px 34px', transition:'background 0.25s' }}>
         <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
           <div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(28px,8vw,40px)' : 'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(28px,8vw,40px)' : 'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
           </div>
-          {/* Sponsor slot — reserved for brand partnerships */}
-          <div style={{ flexShrink:0, alignSelf:'center', opacity:0.35, border:`1px dashed ${t.border}`, borderRadius:'10px', padding:'10px 18px', display:'flex', alignItems:'center', gap:'8px', minWidth:'160px' }}>
-            <div style={{ width:28, height:28, borderRadius:'6px', background:t.border }} />
-            <div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Sponsored by</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.textMuted, letterSpacing:'1px' }}>Partner Name</div>
+          {/* Sponsor slot — hidden on mobile */}
+          {!isMobile && (
+            <div style={{ flexShrink:0, alignSelf:'center', opacity:0.35, border:`1px dashed ${t.border}`, borderRadius:'10px', padding:'10px 18px', display:'flex', alignItems:'center', gap:'8px', minWidth:'160px' }}>
+              <div style={{ width:28, height:28, borderRadius:'6px', background:t.border }} />
+              <div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Sponsored by</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.textMuted, letterSpacing:'1px' }}>Partner Name</div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -617,7 +623,7 @@ export default function Home() {
       </div>
 
       {/* PAGE CONTENT */}
-      <div style={{ position:'relative', zIndex:10, width:'100%', padding:'36px 40px 80px' }}>
+      <div style={{ position:'relative', zIndex:10, width:'100%', padding: isMobile ? '24px 16px 80px' : '36px 40px 80px' }}>
 
         {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
