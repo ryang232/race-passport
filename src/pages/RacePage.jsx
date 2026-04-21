@@ -569,7 +569,7 @@ export default function RacePage() {
   const { id }    = useParams()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
-  const numId = parseInt(id) || 1
+  const numId = parseInt(id) || 1  // legacy fallback for old numeric links
 
   const [editMode, setEditMode]         = useState(false)
   const [race, setRace]                 = useState(null)
@@ -625,8 +625,11 @@ export default function RacePage() {
             .order('date_sort', { ascending: false })
 
           if (praces && praces.length > 0) {
-            // Find the specific race by index or id
-            const raceData = praces.find(r => r.id === id) || praces[numId - 1] || praces[0]
+            // Match by UUID first (new links), fall back to numeric index (old links)
+            const isUUID = id && id.includes('-')
+            const raceData = isUUID
+              ? (praces.find(r => r.id === id) || praces[0])
+              : (praces[numId - 1] || praces[0])
             const idx = praces.findIndex(r => r.id === raceData.id)
             setAllPassportRaces(praces)
             setCurrentIdx(idx >= 0 ? idx : 0)
