@@ -134,16 +134,45 @@ export default function Passport() {
   const location   = useLocation()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
-  const [profile, setProfile]       = useState(null)
+  const [profile, setProfile]           = useState(null)
+  const [passportRaces, setPassportRaces] = useState(RYAN_RACES) // fallback to hardcoded
   const [showDropdown, setShowDropdown] = useState(false)
-  const [filter, setFilter]         = useState('ALL')
+  const [filter, setFilter]             = useState('ALL')
   const dropdownRef = useRef(null)
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }
+      if (!user || isDemo(user?.email)) {
+        setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` })
+        return
+      }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
       setProfile(data)
+
+      // Load real passport races
+      const { data: praces } = await supabase
+        .from('passport_races')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_sort', { ascending: false })
+
+      if (praces && praces.length > 0) {
+        // Map to passport card format
+        const mapped = praces.map(r => {
+          const dateParts = (r.date || '').split(' ')
+          return {
+            id:       r.id, // UUID — used for navigation
+            distance: r.distance || '',
+            name:     r.name,
+            location: r.location || `${r.city||''}${r.city&&r.state?', ':''}${r.state||''}`,
+            month:    dateParts[0] || '',
+            year:     dateParts[dateParts.length-1] || '',
+            time:     r.time || '',
+            pr:       r.is_pr || false,
+          }
+        })
+        setPassportRaces(mapped)
+      }
     }
     loadProfile()
     const style = document.createElement('style')
@@ -165,7 +194,7 @@ export default function Passport() {
   const initials  = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
   const FILTERS = ['ALL','5K','10K','13.1','26.2','TRI']
-  const filteredRaces = filter==='ALL' ? RYAN_RACES : RYAN_RACES.filter(r => filter==='TRI' ? ['70.3','140.6'].includes(r.distance) : r.distance===filter)
+  const filteredRaces = filter==='ALL' ? passportRaces : passportRaces.filter(r => filter==='TRI' ? ['70.3','140.6'].includes(r.distance) : r.distance===filter)
 
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
@@ -241,7 +270,11 @@ export default function Passport() {
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.45)', letterSpacing:'1px' }}>Endurance Athlete · Highland, MD · Est. 2021</div>
             </div>
             <div style={{ display:'flex', gap:'32px' }}>
-              {[{value:STATS.races,label:'Races'},{value:STATS.miles,label:'Race Miles'},{value:STATS.prs,label:'PRs'},{value:STATS.states,label:'States'}].map(s => (
+              {[
+                { value: passportRaces.length, label:'Races' },
+                { value: passportRaces.filter(r=>r.pr).length, label:'PRs' },
+                { value: new Set(passportRaces.map(r=>r.location?.split(',')[1]?.trim()).filter(Boolean)).size, label:'States' },
+              ].map(s => (
                 <div key={s.label} style={{ textAlign:'center' }}>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#fff', lineHeight:1, letterSpacing:'1px' }}>{s.value}</div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
