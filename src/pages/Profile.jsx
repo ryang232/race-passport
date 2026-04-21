@@ -395,6 +395,24 @@ export default function Profile() {
           <SaveButton section="background" updates={{ experience_level:experience, favorite_distance:favoriteDistance, done_marathon:doneMarathon, done_ironman:doneIronman }} />
         </Section>
 
+        {/* RACE HISTORY */}
+        <Section title="Race History">
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'20px', padding:'16px', background:t.surfaceAlt, border:`1.5px solid ${t.border}`, borderRadius:'10px' }}>
+            <div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>Re-import Races</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.5 }}>
+                Run the import again to add missing races, recover accidentally removed ones, or pull in new results.
+              </div>
+            </div>
+            <button onClick={() => navigate('/race-import')}
+              style={{ padding:'9px 20px', border:'1.5px solid #1B2A4A', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap', flexShrink:0 }}
+              onMouseEnter={e => { e.currentTarget.style.background='#1B2A4A'; e.currentTarget.style.color='#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background='transparent'; e.currentTarget.style.color='#1B2A4A' }}>
+              Re-import →
+            </button>
+          </div>
+        </Section>
+
         {/* CONNECTED ACCOUNTS */}
         <Section title="Connected Accounts">
           <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
