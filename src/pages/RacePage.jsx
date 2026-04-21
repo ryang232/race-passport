@@ -451,7 +451,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Not connected ──
   if (!loading && !connected) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
       <div style={{ display:'flex', alignItems:'center', gap:'16px', padding:'16px', background:t.surfaceAlt, borderRadius:'10px', border:`1px solid ${t.border}` }}>
         <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.1)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -485,7 +485,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Loading ──
   if (loading) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
       <div style={{ height:'220px', background:t.surfaceAlt, borderRadius:'10px', animation:'pulse 1.5s ease infinite' }} />
     </div>
@@ -493,7 +493,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── No match found — manual picker ──
   if (!activity) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
@@ -552,7 +552,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Activity matched — show map + stats ──
   return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both' }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
@@ -968,7 +968,7 @@ export default function RacePage() {
         </div>
 
         {/* STORY */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.1s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.1s both', transition:'background 0.25s' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'18px' }}>My Story</div>
           {editMode ? (
             <textarea value={story} onChange={e => setStory(e.target.value)} placeholder="What was race day like? What kept you going?"
@@ -986,7 +986,7 @@ export default function RacePage() {
         </div>
 
         {/* GEAR */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.15s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.15s both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px' }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Gear</div>
@@ -1046,7 +1046,7 @@ export default function RacePage() {
         <StravaActivitySection race={race} t={t} />
 
         {/* MUSIC */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Music</div>
