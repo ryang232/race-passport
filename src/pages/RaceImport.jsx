@@ -13,7 +13,6 @@ const RYAN_IMPORT_RACES = [
   { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',   city:'Cambridge',   state:'MD', distance:'70.3', time:'6:32:08',source:'ATHLINKS',  confidence:3 },
   { id:'r8',  name:'Austin Half Marathon',            date:'Feb 2025', location:'Austin, TX',      city:'Austin',      state:'TX', distance:'13.1', time:'1:57:40',source:'RUNSIGNUP', confidence:3 },
   { id:'r7',  name:'Downtown Columbia Turkey Trot',   date:'Nov 2024', location:'Columbia, MD',    city:'Columbia',    state:'MD', distance:'5K',   time:'28:16',  source:'RUNSIGNUP', confidence:3 },
-  { id:'r5',  name:'Marine Corps Marathon',           date:'Oct 2023', location:'Washington, DC',  city:'Washington',  state:'DC', distance:'26.2', time:'4:45:42',source:'RUNSIGNUP', confidence:3 },
   { id:'r6',  name:'LA Marathon',                     date:'Mar 2022', location:'Los Angeles, CA', city:'Los Angeles', state:'CA', distance:'26.2', time:'4:44:47',source:'RUNSIGNUP', confidence:3 },
   { id:'r1',  name:'Sole of the City 10K',            date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',   state:'MD', distance:'10K',  time:'47:49',  source:'RUNSIGNUP', confidence:3 },
   { id:'r2',  name:'Bay Bridge Run',                  date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',   state:'MD', distance:'10K',  time:'50:57',  source:'RUNSIGNUP', confidence:2 },
