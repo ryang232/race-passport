@@ -73,11 +73,17 @@ function StravaActivitySection({ race, t }) {
   const { user }                        = useAuth()
   const [profile, setProfile]           = useState(null)
   const [activity, setActivity]         = useState(null)
-  const [candidates, setCandidates]     = useState([]) // nearby activities for manual pick
+  const [triActivities, setTriActivities] = useState([]) // swim+bike+run for triathlons
+  const [candidates, setCandidates]     = useState([])
   const [loading, setLoading]           = useState(true)
   const [showPicker, setShowPicker]     = useState(false)
   const [mapRendered, setMapRendered]   = useState(false)
   const mapRef = useRef(null)
+
+  // Is this a triathlon race?
+  const isTri = ['70.3','140.6','tri','triathlon'].some(k =>
+    (race.distance || '').toLowerCase().includes(k)
+  )
 
   // Load profile fresh from Supabase
   useEffect(() => {
@@ -103,26 +109,47 @@ function StravaActivitySection({ race, t }) {
     const find = async () => {
       setLoading(true)
       try {
-        const raceDate  = new Date(race.date)
-        const afterTs   = Math.floor(raceDate.getTime() / 1000) - 3 * 86400
-        const acts      = await getActivities({ per_page: 30, after: afterTs })
+        const raceDate = new Date(race.date)
+        const afterTs  = Math.floor(raceDate.getTime() / 1000) - 3 * 86400
+        const acts     = await getActivities({ per_page: 30, after: afterTs })
 
-        // Best match: same day + looks like a race
-        const sameDay = acts.filter(a => {
-          const d = new Date(a.start_date_local)
-          return d.toDateString() === raceDate.toDateString()
-        })
-        const match = sameDay.find(a => looksLikeRace(a)) || sameDay[0]
+        // All activities on race day
+        const sameDay = acts.filter(a =>
+          new Date(a.start_date_local).toDateString() === raceDate.toDateString()
+        )
 
-        if (match) {
-          setActivity(match)
+        if (isTri) {
+          // For triathlons — find swim, bike, run segments separately
+          const SWIM_TYPES = ['swim']
+          const BIKE_TYPES = ['ride', 'virtualride', 'ebikeride', 'mountainbikeride']
+          const RUN_TYPES  = ['run', 'virtualrun']
+
+          const swim = sameDay.find(a => SWIM_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+          const bike = sameDay.find(a => BIKE_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+          const run  = sameDay.find(a => RUN_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
+
+          const segments = [swim, bike, run].filter(Boolean)
+
+          if (segments.length > 0) {
+            setTriActivities(segments)
+            // Use the bike (longest) as the primary activity for stats display
+            setActivity(bike || run || swim)
+          } else {
+            // Fallback — show all same-day activities as candidates
+            setCandidates(sameDay.slice(0, 10))
+          }
         } else {
-          // No match — offer nearby activities for manual selection
-          const nearby = acts.filter(a => {
-            const type = (a.type || a.sport_type || '').toLowerCase()
-            return ['run','virtualrun','walk','ride'].includes(type)
-          }).slice(0, 10)
-          setCandidates(nearby)
+          // Standard race — single activity match
+          const match = sameDay.find(a => looksLikeRace(a)) || sameDay[0]
+          if (match) {
+            setActivity(match)
+          } else {
+            const nearby = acts.filter(a => {
+              const type = (a.type || a.sport_type || '').toLowerCase()
+              return ['run','virtualrun','walk','ride'].includes(type)
+            }).slice(0, 10)
+            setCandidates(nearby)
+          }
         }
       } catch(e) {}
       setLoading(false)
@@ -130,9 +157,11 @@ function StravaActivitySection({ race, t }) {
     find()
   }, [connected, race.date, profile])
 
-  // Draw Leaflet map
+  // Draw Leaflet map — handles both single activity and triathlon multi-segment
   useEffect(() => {
-    if (!activity?.map?.summary_polyline || !mapRef.current || mapRendered) return
+    const hasActivity = isTri ? triActivities.length > 0 : !!activity?.map?.summary_polyline
+    if (!hasActivity || !mapRef.current || mapRendered) return
+
     const draw = async () => {
       try {
         if (!window.L) {
@@ -142,20 +171,52 @@ function StravaActivitySection({ race, t }) {
         if (!window.polyline) {
           await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js'; s.onload=resolve; document.head.appendChild(s) })
         }
-        const L = window.L
+        const L    = window.L
         const poly = window.polyline || window.Polyline
         if (!poly || !L) return
-        const latlngs = poly.decode(activity.map.summary_polyline)
-        if (!latlngs.length) return
+
         const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
-        const line = L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
-        map.fitBounds(line.getBounds(), { padding:[16,16] })
+
+        const allBounds = []
+
+        if (isTri && triActivities.length > 0) {
+          // Color-coded segments: swim=blue, bike=orange, run=red
+          const SEGMENT_COLORS = {
+            swim:           '#0EA5E9', // sky blue
+            ride:           '#F97316', // orange
+            virtualride:    '#F97316',
+            mountainbikeride:'#F97316',
+            run:            '#FC4C02', // strava orange-red
+            virtualrun:     '#FC4C02',
+          }
+
+          triActivities.forEach(seg => {
+            if (!seg?.map?.summary_polyline) return
+            const type   = (seg.type || seg.sport_type || '').toLowerCase()
+            const color  = SEGMENT_COLORS[type] || '#1B2A4A'
+            const latlngs = poly.decode(seg.map.summary_polyline)
+            if (!latlngs.length) return
+            const line = L.polyline(latlngs, { color, weight:3, opacity:0.9 }).addTo(map)
+            allBounds.push(...latlngs)
+          })
+        } else if (activity?.map?.summary_polyline) {
+          const latlngs = poly.decode(activity.map.summary_polyline)
+          if (latlngs.length) {
+            L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
+            allBounds.push(...latlngs)
+          }
+        }
+
+        if (allBounds.length) {
+          map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16] })
+        }
+
         setMapRendered(true)
       } catch(e) {}
     }
     draw()
-  }, [activity])
+  }, [activity, triActivities])
 
   const fmt     = m  => m ? `${(m/1609.34).toFixed(2)} mi` : '—'
   const fmtTime = s  => { if (!s) return '—'; const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60; return h>0?`${h}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`:`${m}:${String(sec).padStart(2,'0')}` }
@@ -263,7 +324,7 @@ function StravaActivitySection({ race, t }) {
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-          <button onClick={() => { setActivity(null); setShowPicker(true); setMapRendered(false) }}
+          <button onClick={() => { setActivity(null); setTriActivities([]); setShowPicker(true); setMapRendered(false) }}
             style={{ padding:'6px 12px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}
             onMouseEnter={e => e.currentTarget.style.borderColor=t.text}
             onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
@@ -278,27 +339,79 @@ function StravaActivitySection({ race, t }) {
         </div>
       </div>
 
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'14px' }}>{activity.name} · {fmtDate(activity.start_date_local)}</div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'14px' }}>
+        {isTri && triActivities.length > 0
+          ? `${triActivities.length} segments · ${fmtDate(triActivities[0].start_date_local)}`
+          : `${activity.name} · ${fmtDate(activity.start_date_local)}`}
+      </div>
 
       {/* Map */}
-      {activity.map?.summary_polyline && (
-        <div ref={mapRef} style={{ height:'220px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt, marginBottom:'16px' }} />
+      <div ref={mapRef} style={{ height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt, marginBottom: isTri && triActivities.length > 0 ? '10px' : '16px' }} />
+
+      {/* Tri segment legend */}
+      {isTri && triActivities.length > 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px', flexWrap:'wrap' }}>
+          {triActivities.map(seg => {
+            const type  = (seg.type || seg.sport_type || '').toLowerCase()
+            const COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
+            const LABELS = { swim:'Swim', ride:'Bike', virtualride:'Bike', run:'Run', virtualrun:'Run' }
+            const color = COLORS[type] || '#1B2A4A'
+            const label = LABELS[type] || type
+            return (
+              <div key={seg.id} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+                <div style={{ width:24, height:3, borderRadius:'2px', background:color }} />
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, textTransform:'uppercase' }}>{label}</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
+                  {fmt(seg.distance)} · {fmtTime(seg.moving_time)}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       )}
 
-      {/* Stats */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
-        {[
-          { label:'Distance',  value: fmt(activity.distance) },
-          { label:'Time',      value: fmtTime(activity.moving_time) },
-          { label:'Avg Pace',  value: fmtPace(activity.moving_time, activity.distance) },
-          { label:'Elevation', value: activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—' },
-        ].map(s => (
-          <div key={s.label} style={{ background:t.surfaceAlt, borderRadius:'10px', padding:'14px', textAlign:'center', borderTop:'3px solid #FC4C02' }}>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
-          </div>
-        ))}
-      </div>
+      {/* Stats — tri shows per-segment rows, standard shows 4-column grid */}
+      {isTri && triActivities.length > 0 ? (
+        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+          {triActivities.map(seg => {
+            const type  = (seg.type || seg.sport_type || '').toLowerCase()
+            const COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
+            const LABELS = { swim:'🏊 Swim', ride:'🚴 Bike', virtualride:'🚴 Bike', run:'🏃 Run', virtualrun:'🏃 Run' }
+            const color = COLORS[type] || '#1B2A4A'
+            const label = LABELS[type] || type
+            return (
+              <div key={seg.id} style={{ display:'grid', gridTemplateColumns:'80px 1fr 1fr 1fr 1fr', gap:'8px', alignItems:'center', background:t.surfaceAlt, borderRadius:'10px', padding:'12px 16px', borderLeft:`3px solid ${color}` }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, color:t.text, letterSpacing:'0.5px' }}>{label}</div>
+                {[
+                  { label:'Distance', value: fmt(seg.distance) },
+                  { label:'Time',     value: fmtTime(seg.moving_time) },
+                  { label:'Pace',     value: fmtPace(seg.moving_time, seg.distance) },
+                  { label:'Elev',     value: seg.total_elevation_gain ? `${Math.round(seg.total_elevation_gain * 3.281)}ft` : '—' },
+                ].map(s => (
+                  <div key={s.label} style={{ textAlign:'center' }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'2px' }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          {[
+            { label:'Distance',  value: fmt(activity.distance) },
+            { label:'Time',      value: fmtTime(activity.moving_time) },
+            { label:'Avg Pace',  value: fmtPace(activity.moving_time, activity.distance) },
+            { label:'Elevation', value: activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—' },
+          ].map(s => (
+            <div key={s.label} style={{ background:t.surfaceAlt, borderRadius:'10px', padding:'14px', textAlign:'center', borderTop:'3px solid #FC4C02' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
