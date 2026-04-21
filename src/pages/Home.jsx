@@ -72,7 +72,7 @@ function StatsTicker({ t, items }) {
     <div style={{ background:'#1B2A4A', overflow:'hidden', position:'relative', borderTop:`1px solid rgba(201,168,76,0.12)`, borderBottom:`1px solid rgba(201,168,76,0.12)` }}>
       <div style={{ position:'absolute', left:0, top:0, bottom:0, width:120, background:'linear-gradient(to right,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
       <div style={{ position:'absolute', right:0, top:0, bottom:0, width:120, background:'linear-gradient(to left,#1B2A4A,transparent)', zIndex:2, pointerEvents:'none' }} />
-      <div style={{ position:'absolute', bottom:10, right:32, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
+      <div style={{ position:'absolute', bottom:10, left:32, display:'flex', alignItems:'center', gap:'6px', zIndex:3 }}>
         <div style={{ width:14, height:14, borderRadius:'3px', background:'#FC4C02', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
           <svg width="8" height="8" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
