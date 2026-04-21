@@ -201,55 +201,98 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
 
 // ── Strava Activity Section ───────────────────────────────────────────────────
 function StravaActivitySection({ race, t }) {
-  const { user }                        = useAuth()
-  const [profile, setProfile]           = useState(null)
-  const [activity, setActivity]         = useState(null)
-  const [triActivities, setTriActivities] = useState([]) // swim+bike+run for triathlons
-  const [candidates, setCandidates]     = useState([])
-  const [loading, setLoading]           = useState(true)
-  const [showPicker, setShowPicker]     = useState(false)
-  const [mapRendered, setMapRendered]   = useState(false)
+  const { user }                          = useAuth()
+  const [profile, setProfile]             = useState(null)
+  const [userId, setUserId]               = useState(null)
+  const [activity, setActivity]           = useState(null)
+  const [triActivities, setTriActivities] = useState([])
+  const [candidates, setCandidates]       = useState([])
+  const [loading, setLoading]             = useState(true)
+  const [showPicker, setShowPicker]       = useState(false)
+  const [mapRendered, setMapRendered]     = useState(false)
+  const [locked, setLocked]               = useState(false)
   const mapRef = useRef(null)
 
-  // Is this a triathlon race?
   const isTri = ['70.3','140.6','tri','triathlon'].some(k =>
     (race.distance || '').toLowerCase().includes(k)
   )
 
-  // Load profile fresh from Supabase
+  // Save matched activity to passport_races permanently
+  const saveActivity = async (act, triActs) => {
+    if (!userId || !race.id) return
+    try {
+      const dataToSave = triActs?.length > 0
+        ? { segments: triActs.map(a => ({ id:a.id, type:a.type||a.sport_type, name:a.name, distance:a.distance, moving_time:a.moving_time, total_elevation_gain:a.total_elevation_gain, map:a.map, start_date_local:a.start_date_local })) }
+        : { id:act?.id, type:act?.type||act?.sport_type, name:act?.name, distance:act?.distance, moving_time:act?.moving_time, total_elevation_gain:act?.total_elevation_gain, map:act?.map, start_date_local:act?.start_date_local }
+      await supabase.from('passport_races').update({
+        strava_activity_id:   triActs?.length > 0 ? triActs[0]?.id : act?.id,
+        strava_activity_data: dataToSave,
+      }).eq('id', race.id)
+      setLocked(true)
+    } catch(e) {}
+  }
+
+  // Remove locked activity
+  const removeActivity = async () => {
+    if (!userId || !race.id) return
+    try {
+      await supabase.from('passport_races').update({ strava_activity_id: null, strava_activity_data: null }).eq('id', race.id)
+      setActivity(null); setTriActivities([]); setLocked(false); setMapRendered(false); setCandidates([])
+    } catch(e) {}
+  }
+
+  // Load profile + check for saved activity first
   useEffect(() => {
     const load = async () => {
       if (!user) { setLoading(false); return }
       try {
         const { data: { session } } = await supabase.auth.getSession()
         const uid = session?.user?.id || user.id
-        const { data } = await supabase.from('profiles')
+        setUserId(uid)
+
+        const { data: prof } = await supabase.from('profiles')
           .select('strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
           .eq('id', uid).single()
-        setProfile(data)
-      } catch(e) { setLoading(false) }
+        setProfile(prof)
+
+        // Check for saved/locked activity
+        if (race.id) {
+          const { data: prace } = await supabase.from('passport_races')
+            .select('strava_activity_id,strava_activity_data')
+            .eq('id', race.id).single()
+          if (prace?.strava_activity_data) {
+            const saved = prace.strava_activity_data
+            if (saved.segments) {
+              setTriActivities(saved.segments)
+              setActivity(saved.segments.find(s => ['ride','virtualride'].includes((s.type||'').toLowerCase())) || saved.segments[0])
+            } else if (saved.id) {
+              setActivity(saved)
+            }
+            setLocked(true)
+            setLoading(false)
+            return // Already saved — no need to hit Strava API
+          }
+        }
+      } catch(e) {}
+      setLoading(false)
     }
     load()
-  }, [user])
+  }, [user, race.id])
 
-  const { connected, getActivities, connectStrava } = useStrava(profile, user?.id)
+  const { connected, getActivities } = useStrava(profile, userId)
 
-  // Auto-match Strava activity to this race
+  // Auto-match from Strava — only runs if not already locked
   useEffect(() => {
-    if (!connected || !race.date || !profile) return
+    if (!connected || !race.date || !profile || locked || activity) return
     const find = async () => {
       setLoading(true)
       try {
         const raceDate = new Date(race.date)
         if (isNaN(raceDate)) { setLoading(false); return }
 
-        // Detect if date is month-only (no specific day) — "Oct 2023" parses to Oct 1
-        // In that case search the full month; otherwise search ±3 days
         const isMonthOnly = !race.date.match(/\d{1,2}[,\s]\s*\d{4}/) && !race.date.match(/^\w+ \d{1,2},/)
         let afterTs, beforeTs
-
         if (isMonthOnly) {
-          // Search the entire month
           const startOfMonth = new Date(raceDate.getFullYear(), raceDate.getMonth(), 1)
           const endOfMonth   = new Date(raceDate.getFullYear(), raceDate.getMonth() + 1, 0, 23, 59, 59)
           afterTs  = Math.floor(startOfMonth.getTime() / 1000)
@@ -260,61 +303,41 @@ function StravaActivitySection({ race, t }) {
         }
 
         const acts = await getActivities({ per_page: 60, after: afterTs })
-
-        // Filter to within our window
         const inWindow = acts.filter(a => {
           const ts = Math.floor(new Date(a.start_date_local).getTime() / 1000)
           return ts >= afterTs && ts <= beforeTs
         })
-
-        // For non-month-only dates, also filter to same day
-        const sameDay = isMonthOnly
-          ? inWindow
-          : inWindow.filter(a =>
-              new Date(a.start_date_local).toDateString() === raceDate.toDateString()
-            )
-
-        // Use inWindow as fallback for candidates if sameDay is empty
-        const candidatePool = sameDay.length > 0 ? sameDay : inWindow
+        const sameDay = isMonthOnly ? inWindow : inWindow.filter(a =>
+          new Date(a.start_date_local).toDateString() === raceDate.toDateString()
+        )
+        const pool = sameDay.length > 0 ? sameDay : inWindow
 
         if (isTri) {
-          const SWIM_TYPES = ['swim']
-          const BIKE_TYPES = ['ride', 'virtualride', 'ebikeride', 'mountainbikeride']
-          const RUN_TYPES  = ['run', 'virtualrun']
-
-          const swim = candidatePool.find(a => SWIM_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
-          const bike = candidatePool.find(a => BIKE_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
-          const run  = candidatePool.find(a => RUN_TYPES.includes((a.type||a.sport_type||'').toLowerCase()))
-
-          const segments = [swim, bike, run].filter(Boolean)
-
-          if (segments.length > 0) {
-            setTriActivities(segments)
-            setActivity(bike || run || swim)
+          const SWIM = ['swim'], BIKE = ['ride','virtualride','ebikeride','mountainbikeride'], RUN = ['run','virtualrun']
+          const swim = pool.find(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
+          const bike = pool.find(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
+          const run  = pool.find(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
+          const segs = [swim, bike, run].filter(Boolean)
+          if (segs.length > 0) {
+            setTriActivities(segs); setActivity(bike || run || swim)
+            await saveActivity(null, segs)
           } else {
-            setCandidates(inWindow.filter(a => {
-              const type = (a.type || a.sport_type || '').toLowerCase()
-              return ['run','virtualrun','swim','ride'].includes(type)
-            }).slice(0, 10))
+            setCandidates(inWindow.filter(a => ['run','virtualrun','swim','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
           }
         } else {
-          // Standard race — prefer exact distance match, then looksLikeRace, then any in window
-          const match = candidatePool.find(a => looksLikeRace(a)) || candidatePool[0]
+          const match = pool.find(a => looksLikeRace(a)) || pool[0]
           if (match) {
             setActivity(match)
+            await saveActivity(match, null)
           } else {
-            // Show all activities in the window as manual candidates
-            setCandidates(inWindow.filter(a => {
-              const type = (a.type || a.sport_type || '').toLowerCase()
-              return ['run','virtualrun','walk','ride'].includes(type)
-            }).slice(0, 10))
+            setCandidates(inWindow.filter(a => ['run','virtualrun','walk','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
           }
         }
       } catch(e) {}
       setLoading(false)
     }
     find()
-  }, [connected, race.date, profile])
+  }, [connected, race.date, profile, locked])
 
   // Draw Leaflet map — handles both single activity and triathlon multi-segment
   useEffect(() => {
@@ -462,7 +485,7 @@ function StravaActivitySection({ race, t }) {
         <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginBottom:'4px' }}>Select the Strava activity that matches this race:</div>
           {candidates.map(a => (
-            <div key={a.id} onClick={() => { setActivity(a); setShowPicker(false) }}
+            <div key={a.id} onClick={() => { setActivity(a); setShowPicker(false); saveActivity(a, null) }}
               style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px 14px', background:t.surfaceAlt, borderRadius:'10px', border:`1.5px solid ${t.border}`, cursor:'pointer', transition:'all 0.15s' }}
               onMouseEnter={e => { e.currentTarget.style.borderColor='#FC4C02'; e.currentTarget.style.background='rgba(252,76,2,0.04)' }}
               onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.background=t.surfaceAlt }}>
@@ -495,7 +518,7 @@ function StravaActivitySection({ race, t }) {
           </div>
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-          <button onClick={() => { setActivity(null); setTriActivities([]); setShowPicker(true); setMapRendered(false) }}
+          <button onClick={() => { removeActivity(); setShowPicker(false) }}
             style={{ padding:'6px 12px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}
             onMouseEnter={e => e.currentTarget.style.borderColor=t.text}
             onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
