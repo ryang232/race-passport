@@ -321,9 +321,32 @@ export default function RacePage() {
   const [showAddGear, setShowAddGear] = useState(false)
   const [saving, setSaving]         = useState(false)
   const [activePhoto, setActivePhoto] = useState(null)
+  const [localPhotos, setLocalPhotos] = useState([]) // uploaded photos as object URLs
   const [showDropdown, setShowDropdown] = useState(false)
   const fileInputRef = useRef(null)
   const dropdownRef  = useRef(null)
+
+  const handlePhotoUpload = (e) => {
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const newPhotos = files.map(f => ({
+      id:      `local_${Date.now()}_${Math.random()}`,
+      url:     URL.createObjectURL(f),
+      caption: f.name.replace(/\.[^.]+$/, ''),
+      name:    f.name,
+    }))
+    setLocalPhotos(prev => [...prev, ...newPhotos])
+    // Reset input so same file can be re-selected
+    e.target.value = ''
+  }
+
+  const removePhoto = (id) => {
+    setLocalPhotos(prev => {
+      const photo = prev.find(p => p.id === id)
+      if (photo?.url?.startsWith('blob:')) URL.revokeObjectURL(photo.url)
+      return prev.filter(p => p.id !== id)
+    })
+  }
 
   useEffect(() => {
     const data = RYAN_RACE_DATA[numId] || RYAN_RACE_DATA[1]
@@ -529,34 +552,73 @@ export default function RacePage() {
         {/* PHOTOS */}
         <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Race Photos</div>
-            {editMode && (
-              <button onClick={() => fileInputRef.current?.click()} style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 16px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>+ Upload</button>
-            )}
-          </div>
-          <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:'none' }} />
-          {race.photos?.length > 0 ? (
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(220px,1fr))', gap:'14px' }}>
-              {race.photos.map(photo => (
-                <div key={photo.id} className="rp-photo-slot" onClick={() => setActivePhoto(photo)}>
-                  <img src={photo.url} alt={photo.caption} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'12px', padding:'40px', textAlign:'center', background:t.surfaceAlt }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>NO PHOTOS YET</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'16px' }}>Add photos to bring this race page to life.</div>
-              {!editMode && (
-                <button onClick={() => setEditMode(true)} style={{ padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>Add Photos</button>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Race Photos</div>
+              {localPhotos.length > 0 && (
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, background:t.surfaceAlt, padding:'3px 10px', borderRadius:'10px' }}>{localPhotos.length}</div>
               )}
             </div>
-          )}
-          {editMode && (
+            <button onClick={() => fileInputRef.current?.click()}
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 18px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+              onMouseEnter={e => { e.currentTarget.style.background='rgba(201,168,76,0.16)' }}
+              onMouseLeave={e => { e.currentTarget.style.background='rgba(201,168,76,0.08)' }}>
+              + Add Photos
+            </button>
+          </div>
+
+          {/* Hidden file input — wired up */}
+          <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:'none' }} onChange={handlePhotoUpload} />
+
+          {localPhotos.length > 0 ? (
+            <div style={{ columns:'3 220px', gap:'12px' }}>
+              {localPhotos.map((photo, i) => (
+                <div key={photo.id}
+                  style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', overflow:'hidden', position:'relative', cursor:'pointer', display:'block' }}
+                  onClick={() => setActivePhoto(photo)}
+                  onMouseEnter={e => { e.currentTarget.querySelector('.photo-overlay').style.opacity='1' }}
+                  onMouseLeave={e => { e.currentTarget.querySelector('.photo-overlay').style.opacity='0' }}>
+                  <img src={photo.url} alt={photo.caption}
+                    style={{ width:'100%', display:'block', borderRadius:'12px', objectFit:'cover', transition:'transform 0.3s' }}
+                    onMouseEnter={e => e.currentTarget.style.transform='scale(1.02)'}
+                    onMouseLeave={e => e.currentTarget.style.transform='scale(1)'} />
+                  {/* Hover overlay */}
+                  <div className="photo-overlay" style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.45)', borderRadius:'12px', opacity:0, transition:'opacity 0.2s', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px' }}>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.8)', fontWeight:600 }}>View</span>
+                    <button onClick={e => { e.stopPropagation(); removePhoto(photo.id) }}
+                      style={{ width:28, height:28, borderRadius:'50%', background:'rgba(197,48,48,0.8)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', lineHeight:1 }}>
+                      ✕
+                    </button>
+                  </div>
+                </div>
+              ))}
+              {/* Add more tile */}
+              <div onClick={() => fileInputRef.current?.click()}
+                style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', border:`2px dashed rgba(201,168,76,0.35)`, aspectRatio:'4/3', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:t.surfaceAlt, transition:'border-color 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
+                onMouseLeave={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'}>
+                <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(201,168,76,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v12M1 7h12" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </div>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>Add More</span>
+              </div>
+            </div>
+          ) : (
+            /* Empty state — big inviting drop zone */
             <div onClick={() => fileInputRef.current?.click()}
-              style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'10px', aspectRatio:'4/3', maxWidth:'220px', marginTop:'14px', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:t.surfaceAlt }}
-              onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'} onMouseLeave={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'}>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase' }}>+ Add Photo</span>
+              style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'16px', padding:'56px 40px', textAlign:'center', background:t.surfaceAlt, cursor:'pointer', transition:'all 0.2s' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.background=t.isDark?'rgba(201,168,76,0.05)':'rgba(201,168,76,0.04)' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'; e.currentTarget.style.background=t.surfaceAlt }}>
+              <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 16l4-4 4 4 4-6 4 6" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#C9A84C" strokeWidth="1.5"/></svg>
+              </div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'8px' }}>Add Your Race Photos</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.6 }}>
+                Bring this race page to life — finish line moments, pre-race photos, anything that captures the day.
+              </div>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'10px 24px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)' }}>
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3-4 3 4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 10h10" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>Upload Photos</span>
+              </div>
             </div>
           )}
         </div>
@@ -714,16 +776,53 @@ export default function RacePage() {
       </div>
 
       {/* PHOTO LIGHTBOX */}
-      {activePhoto && (
-        <div onClick={() => setActivePhoto(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
-          <div onClick={e => e.stopPropagation()} style={{ maxWidth:'900px', width:'100%', borderRadius:'16px', overflow:'hidden' }}>
-            <img src={activePhoto.url} alt={activePhoto.caption} style={{ width:'100%', display:'block' }} />
+      {activePhoto && (() => {
+        const idx  = localPhotos.findIndex(p => p.id === activePhoto.id)
+        const prev = idx > 0 ? localPhotos[idx-1] : null
+        const next = idx < localPhotos.length-1 ? localPhotos[idx+1] : null
+        return (
+          <div onClick={() => setActivePhoto(null)}
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.94)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+
+            {/* Close */}
+            <button onClick={() => setActivePhoto(null)}
+              style={{ position:'fixed', top:24, right:24, width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10 }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </button>
+
+            {/* Prev */}
+            {prev && (
+              <button onClick={e => { e.stopPropagation(); setActivePhoto(prev) }}
+                style={{ position:'fixed', left:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}
+                onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
+
+            {/* Image */}
+            <div onClick={e => e.stopPropagation()} style={{ maxWidth:'900px', width:'100%', display:'flex', flexDirection:'column', gap:'12px' }}>
+              <img src={activePhoto.url} alt={activePhoto.caption}
+                style={{ width:'100%', display:'block', borderRadius:'12px', maxHeight:'80vh', objectFit:'contain' }} />
+              {activePhoto.caption && (
+                <div style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.5)', letterSpacing:'0.5px' }}>
+                  {activePhoto.caption} · {idx+1} of {localPhotos.length}
+                </div>
+              )}
+            </div>
+
+            {/* Next */}
+            {next && (
+              <button onClick={e => { e.stopPropagation(); setActivePhoto(next) }}
+                style={{ position:'fixed', right:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}
+                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}
+                onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </button>
+            )}
           </div>
-          <button onClick={() => setActivePhoto(null)} style={{ position:'fixed', top:24, right:24, width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-          </button>
-        </div>
-      )}
+        )
+      })()}
     </div>
   )
 }
