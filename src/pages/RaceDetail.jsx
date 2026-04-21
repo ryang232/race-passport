@@ -175,30 +175,58 @@ function ShareButton({ race, t }) {
   )
 }
 
-// ── Apple Maps embed ──────────────────────────────────────────────────────────
+// ── Apple Maps card with Leaflet embed ───────────────────────────────────────
 function AppleMapCard({ race, t }) {
+  const mapRef = useRef(null)
+  const rendered = useRef(false)
+
+  useEffect(() => {
+    if (!mapRef.current || rendered.current || !race.lat || !race.lng) return
+    rendered.current = true
+
+    const init = async () => {
+      if (!window.L) {
+        const link = document.createElement('link')
+        link.rel = 'stylesheet'
+        link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'
+        document.head.appendChild(link)
+        await new Promise(resolve => {
+          const s = document.createElement('script')
+          s.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'
+          s.onload = resolve
+          document.head.appendChild(s)
+        })
+      }
+      const L = window.L
+      const map = L.map(mapRef.current, {
+        center: [race.lat, race.lng],
+        zoom: 14,
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        attributionControl: false,
+      })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 18 }).addTo(map)
+      L.circleMarker([race.lat, race.lng], {
+        radius: 10, fillColor: '#C9A84C', color: '#1B2A4A', weight: 2, fillOpacity: 1
+      }).addTo(map)
+    }
+    init()
+  }, [race.lat, race.lng])
+
   if (!race.lat || !race.lng) return null
+
   const appleMapsUrl = `https://maps.apple.com/?q=${encodeURIComponent(race.name)}&ll=${race.lat},${race.lng}&z=14`
-  const staticMapUrl = `https://maps.geoapify.com/v1/staticmap?style=osm-carto&width=400&height=200&center=lonlat:${race.lng},${race.lat}&zoom=13&marker=lonlat:${race.lng},${race.lat};color:%23C9A84C;size:medium&apiKey=YOUR_KEY`
-  // Use OpenStreetMap static tile as free alternative
-  const osmUrl = `https://staticmap.openstreetmap.de/staticmap.php?center=${race.lat},${race.lng}&zoom=13&size=400x200&markers=${race.lat},${race.lng},red`
 
   return (
     <a href={appleMapsUrl} target="_blank" rel="noreferrer"
       style={{ display:'block', borderRadius:'14px', overflow:'hidden', border:`1px solid ${t.border}`, textDecoration:'none', position:'relative', cursor:'pointer' }}>
-      {/* OSM static map */}
-      <div style={{ height:'140px', background:t.surfaceAlt, position:'relative', overflow:'hidden' }}>
-        <img
-          src={`https://staticmap.openstreetmap.de/staticmap.php?center=${race.lat},${race.lng}&zoom=13&size=600x280&markers=${race.lat},${race.lng},red`}
-          alt="Race location map"
-          style={{ width:'100%', height:'100%', objectFit:'cover' }}
-          onError={e => e.target.style.display='none'}
-        />
-        {/* Apple Maps badge overlay */}
-        <div style={{ position:'absolute', bottom:8, right:8, background:'rgba(255,255,255,0.95)', borderRadius:'8px', padding:'4px 10px', display:'flex', alignItems:'center', gap:'5px' }}>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#FC4C02"/><circle cx="12" cy="9" r="2.5" fill="white"/></svg>
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'0.5px', color:'#1B2A4A' }}>Open in Maps</span>
-        </div>
+      <div ref={mapRef} style={{ height:'160px', background:t.surfaceAlt }} />
+      {/* Apple Maps badge */}
+      <div style={{ position:'absolute', bottom:48, right:12, background:'rgba(255,255,255,0.95)', borderRadius:'8px', padding:'4px 10px', display:'flex', alignItems:'center', gap:'5px', zIndex:400 }}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#FC4C02"/><circle cx="12" cy="9" r="2.5" fill="white"/></svg>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'0.5px', color:'#1B2A4A' }}>Open in Maps</span>
       </div>
       <div style={{ padding:'10px 14px', background:t.surface, display:'flex', alignItems:'center', gap:'8px' }}>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="#C9A84C" strokeWidth="1.5"/><circle cx="12" cy="9" r="2.5" stroke="#C9A84C" strokeWidth="1.5"/></svg>
@@ -475,10 +503,18 @@ export default function RaceDetail() {
     }
     load()
 
+    // Inject font as a proper <link> tag — @import in dynamic style tags is unreliable
+    if (!document.getElementById('rp-font-link')) {
+      const link = document.createElement('link')
+      link.id   = 'rp-font-link'
+      link.rel  = 'stylesheet'
+      link.href = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap'
+      document.head.appendChild(link)
+    }
+
     const style = document.createElement('style')
     style.id = 'rp-rd-styles'
     style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       * { box-sizing:border-box; }
       @keyframes fadeIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
       @keyframes spin { to{transform:rotate(360deg);} }
