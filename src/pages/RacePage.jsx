@@ -290,7 +290,14 @@ function StravaActivitySection({ race, t }) {
         const raceDate = new Date(race.date)
         if (isNaN(raceDate)) { setLoading(false); return }
 
-        const isMonthOnly = !race.date.match(/\d{1,2}[,\s]\s*\d{4}/) && !race.date.match(/^\w+ \d{1,2},/)
+        // isMonthOnly = true when we only know month+year, not the exact day
+        // ISO format (2023-10-22) and "October 22, 2023" both have a specific day
+        // "Oct 2023" / "2023-10-01" from a month-only date_sort do not
+        const isISO = /^\d{4}-\d{2}-\d{2}$/.test(race.date)
+        const hasSpecificDay = isISO
+          ? raceDate.getDate() !== 1  // ISO: not the 1st means it's a real day
+          : race.date.match(/\w+ \d{1,2},/) // "October 22, 2023" style
+        const isMonthOnly = !hasSpecificDay
         let afterTs, beforeTs
         if (isMonthOnly) {
           const startOfMonth = new Date(raceDate.getFullYear(), raceDate.getMonth(), 1)
@@ -298,8 +305,9 @@ function StravaActivitySection({ race, t }) {
           afterTs  = Math.floor(startOfMonth.getTime() / 1000)
           beforeTs = Math.floor(endOfMonth.getTime() / 1000)
         } else {
-          afterTs  = Math.floor(raceDate.getTime() / 1000) - 3 * 86400
-          beforeTs = Math.floor(raceDate.getTime() / 1000) + 86400
+          // For standard races, search ±14 days so distance matching can find the right activity
+          afterTs  = Math.floor(raceDate.getTime() / 1000) - 14 * 86400
+          beforeTs = Math.floor(raceDate.getTime() / 1000) + 14 * 86400
         }
 
         const acts = await getActivities({ per_page: 60, after: afterTs })
@@ -314,9 +322,20 @@ function StravaActivitySection({ race, t }) {
 
         if (isTri) {
           const SWIM = ['swim'], BIKE = ['ride','virtualride','ebikeride','mountainbikeride'], RUN = ['run','virtualrun']
-          const swim = pool.find(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
-          const bike = pool.find(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
-          const run  = pool.find(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
+          // For tri matching, require reasonable distances to avoid warmups/cooldowns
+          // 70.3: swim ~1.2mi, bike ~56mi, run ~13.1mi
+          // 140.6: swim ~2.4mi, bike ~112mi, run ~26.2mi
+          const is140 = (race.distance||'').includes('140')
+          const swimPool = pool.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
+            .filter(a => (a.distance||0) > 500) // must be > 500m to be a race swim
+            .sort((a,b) => b.distance - a.distance) // longest first
+          const bikePool = pool.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
+            .filter(a => (a.distance||0)/1609.34 > (is140 ? 80 : 40)) // must be a real ride
+            .sort((a,b) => b.distance - a.distance)
+          const runPool = pool.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
+            .filter(a => (a.distance||0)/1609.34 > (is140 ? 20 : 8)) // must be a real run
+            .sort((a,b) => b.distance - a.distance)
+          const swim = swimPool[0], bike = bikePool[0], run = runPool[0]
           const segs = [swim, bike, run].filter(Boolean)
           if (segs.length > 0) {
             setTriActivities(segs); setActivity(bike || run || swim)
@@ -325,7 +344,31 @@ function StravaActivitySection({ race, t }) {
             setCandidates(inWindow.filter(a => ['run','virtualrun','swim','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
           }
         } else {
-          const match = pool.find(a => looksLikeRace(a)) || pool[0]
+          // Standard race — match by distance first (most reliable), then date
+          const distMi = {
+            '5K': 3.1, '10K': 6.2, '10 mi': 10, '13.1': 13.1,
+            '26.2': 26.2, '50K': 31, '50 mi': 50, '100K': 62, '100 mi': 100,
+          }[race.distance] || null
+
+          let match = null
+
+          if (distMi) {
+            // Find activity within 2% of expected distance, prefer closest to race date
+            const byDist = acts.filter(a => {
+              const aMi = (a.distance || 0) / 1609.34
+              const type = (a.type || a.sport_type || '').toLowerCase()
+              return ['run','virtualrun','walk'].includes(type) && Math.abs(aMi - distMi) / distMi <= 0.02
+            }).sort((a, b) => {
+              // Sort by proximity to race date
+              const raceTs = raceDate.getTime()
+              return Math.abs(new Date(a.start_date_local) - raceTs) - Math.abs(new Date(b.start_date_local) - raceTs)
+            })
+            match = byDist[0]
+          }
+
+          // Fallback: same-day or window match
+          if (!match) match = pool.find(a => looksLikeRace(a)) || pool[0]
+
           if (match) {
             setActivity(match)
             await saveActivity(match, null)
