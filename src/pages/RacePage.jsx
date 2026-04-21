@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { getDistanceColor } from '../lib/colors'
 import { useStrava, looksLikeRace } from '../lib/useStrava'
+import { useIsMobile } from '../lib/useIsMobile'
 
 const RYAN_RACE_DATA = {
   1:  { id:1,  distance:'10K',  name:'Sole of the City 10K',          location:'Baltimore, MD',   date:'October 16, 2021',   time:'47:49',   pace:'7:42/mi',  place:null, elevation:'190ft', weather:'64°F, Cloudy',       pr:true,  story:'', photos:[], gear:[], splits:[] },
@@ -31,7 +32,7 @@ function AddGearForm({ onAdd, onCancel, t }) {
   return (
     <div style={{ background:t.surfaceAlt, border:`1.5px solid ${t.border}`, borderRadius:'12px', padding:'20px', marginTop:'12px' }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'1px', marginBottom:'14px' }}>Add Gear</div>
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:'10px', marginBottom:'10px' }}>
         <div>
           <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'4px' }}>Category</label>
           <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...inp, appearance:'none', cursor:'pointer' }} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor=t.border}>
@@ -173,7 +174,7 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
           const isActive  = i === activeIdx
           return (
             <div key={seg.id} onClick={() => setActiveIdx(i)}
-              style={{ display:'grid', gridTemplateColumns:'80px 1fr 1fr 1fr 1fr', gap:'8px', alignItems:'center', borderRadius:'10px', padding:'12px 16px', borderLeft:`3px solid ${color}`, cursor:'pointer', transition:'all 0.2s',
+              style={{ display:'grid', gridTemplateColumns:'70px 1fr 1fr 1fr 1fr', gap:'6px', alignItems:'center', borderRadius:'10px', padding:'10px 12px', borderLeft:`3px solid ${color}`, cursor:'pointer', transition:'all 0.2s',
                 background: isActive ? (color === '#0EA5E9' ? 'rgba(14,165,233,0.08)' : color === '#F97316' ? 'rgba(249,115,22,0.08)' : 'rgba(252,76,2,0.08)') : t.surfaceAlt,
                 boxShadow: isActive ? `0 0 0 1.5px ${color}33` : 'none',
               }}>
@@ -450,7 +451,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Not connected ──
   if (!loading && !connected) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
       <div style={{ display:'flex', alignItems:'center', gap:'16px', padding:'16px', background:t.surfaceAlt, borderRadius:'10px', border:`1px solid ${t.border}` }}>
         <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.1)', border:'1px solid rgba(252,76,2,0.25)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
@@ -484,7 +485,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Loading ──
   if (loading) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
       <div style={{ height:'220px', background:t.surfaceAlt, borderRadius:'10px', animation:'pulse 1.5s ease infinite' }} />
     </div>
@@ -492,7 +493,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── No match found — manual picker ──
   if (!activity) return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}` }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
@@ -551,7 +552,7 @@ function StravaActivitySection({ race, t }) {
 
   // ── Activity matched — show map + stats ──
   return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both' }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Strava Activity</div>
@@ -588,7 +589,7 @@ function StravaActivitySection({ race, t }) {
       ) : (
         <>
           <div ref={mapRef} style={{ height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt, marginBottom:'16px' }} />
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(100px, 1fr))', gap:'10px' }}>
             {[
               { label:'Distance',  value: fmt(activity.distance) },
               { label:'Time',      value: fmtTime(activity.moving_time) },
@@ -612,6 +613,7 @@ export default function RacePage() {
   const { id }    = useParams()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
+  const isMobile = useIsMobile()
   const numId = parseInt(id) || 1  // legacy fallback for old numeric links
 
   const [editMode, setEditMode]         = useState(false)
@@ -763,81 +765,66 @@ export default function RacePage() {
     <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s' }}>
 
       {/* TOP NAV */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(8px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 40px', height:'56px', transition:'background 0.25s' }}>
+      <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(8px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'center', justifyContent:'space-between', padding: isMobile ? '0 12px' : '0 40px', height:'52px' }}>
         {/* Back to passport */}
         <button onClick={() => navigate('/passport')}
-          style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0, transition:'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color=t.text} onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Passport
+          style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0, flexShrink:0 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          {isMobile ? '' : 'Passport'}
         </button>
 
         {/* Page navigation */}
-        <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '8px' : '16px' }}>
           <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:prevRace?'pointer':'default', color:prevRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'color 0.15s' }}
-            onMouseEnter={e => prevRace && (e.currentTarget.style.color=t.text)}
-            onMouseLeave={e => e.currentTarget.style.color = prevRace?t.textMuted:t.borderLight}>
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-            {prevRace ? prevRace.name.split(' ').slice(0,2).join(' ') : 'First'}
+            style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:prevRace?'pointer':'default', color:prevRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 6px', borderRadius:'6px' }}>
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            {!isMobile && (prevRace ? prevRace.name.split(' ').slice(0,2).join(' ') : 'First')}
           </button>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Page {currentIdx+1} / {allPassportRaces.length || ALL_IDS.length}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', whiteSpace:'nowrap' }}>
+            {currentIdx+1} / {allPassportRaces.length || ALL_IDS.length}
+          </div>
           <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
-            style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:nextRace?'pointer':'default', color:nextRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'color 0.15s' }}
-            onMouseEnter={e => nextRace && (e.currentTarget.style.color=t.text)}
-            onMouseLeave={e => e.currentTarget.style.color = nextRace?t.textMuted:t.borderLight}>
-            {nextRace ? nextRace.name.split(' ').slice(0,2).join(' ') : 'Last'}
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:nextRace?'pointer':'default', color:nextRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 6px', borderRadius:'6px' }}>
+            {!isMobile && (nextRace ? nextRace.name.split(' ').slice(0,2).join(' ') : 'Last')}
+            <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
           </button>
         </div>
 
         {/* Right: edit + avatar dropdown */}
-        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
           {!editMode ? (
             <>
-              <button style={{ padding:'6px 16px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor=t.text; e.currentTarget.style.color=t.text }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>Share</button>
+              {!isMobile && <button style={{ padding:'5px 14px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>Share</button>}
               <button onClick={() => setEditMode(true)}
-                style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Edit Page</button>
+                style={{ padding:'5px 14px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+                onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Edit</button>
             </>
           ) : (
             <>
-              <button onClick={() => { setEditMode(false); setShowAddGear(false) }} style={{ padding:'6px 16px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
-              <button onClick={handleSave} disabled={saving} style={{ padding:'6px 18px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>{saving?'Saving...':'Save Page'}</button>
+              <button onClick={() => { setEditMode(false); setShowAddGear(false) }} style={{ padding:'5px 12px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>Cancel</button>
+              <button onClick={handleSave} disabled={saving} style={{ padding:'5px 14px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>{saving?'Saving...':'Save'}</button>
             </>
           )}
           {/* Avatar dropdown */}
           <div ref={dropdownRef} style={{ position:'relative' }}>
             <div onClick={() => setShowDropdown(!showDropdown)}
-              style={{ width:34, height:34, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
-              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', color:'#C9A84C' }}>{initials}</span>
+              style={{ width:30, height:30, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}` }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'11px', color:'#C9A84C' }}>{initials}</span>
             </div>
             {showDropdown && (
-              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:100 }}>
-                <div style={{ padding:'12px 16px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:t.text }}>{fullName}</div>
+              <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'180px', overflow:'hidden', zIndex:100 }}>
+                <div style={{ padding:'12px 16px 8px', borderBottom:`1px solid ${t.borderLight}` }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.text }}>{fullName}</div>
                 </div>
-                <button style={{ display:'block', width:'100%', padding:'10px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text, cursor:'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
-                <button style={{ display:'block', width:'100%', padding:'10px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text, cursor:'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  onClick={() => { navigate('/profile'); setShowDropdown(false) }}>Settings</button>
-                {/* Dark mode toggle */}
-                <div style={{ padding:'10px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:`1px solid ${t.borderLight}` }}>
-                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text }}>Dark Mode</span>
-                  <button onClick={toggleTheme}
-                    style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background:isDark?'#C9A84C':'#d0d7e0', padding:0, flexShrink:0 }}>
-                    <div style={{ position:'absolute', top:3, left:isDark?'calc(100% - 19px)':'3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+                <button style={{ display:'block', width:'100%', padding:'9px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.text, cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
+                <button style={{ display:'block', width:'100%', padding:'9px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.text, cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={() => { navigate('/profile'); setShowDropdown(false) }}>Settings</button>
+                <div style={{ padding:'9px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:`1px solid ${t.borderLight}` }}>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.text }}>Dark Mode</span>
+                  <button onClick={toggleTheme} style={{ width:36, height:20, borderRadius:'10px', border:'none', cursor:'pointer', position:'relative', background:isDark?'#C9A84C':'#d0d7e0', padding:0 }}>
+                    <div style={{ position:'absolute', top:2, left:isDark?'calc(100% - 18px)':'2px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s' }} />
                   </button>
                 </div>
-                <div style={{ height:'1px', background:t.borderLight }} />
-                <button style={{ display:'block', width:'100%', padding:'10px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#c53030', cursor:'pointer' }}
-                  onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}
-                  onClick={handleSignOut}>Log Out</button>
+                <button style={{ display:'block', width:'100%', padding:'9px 16px', background:'none', border:'none', textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#c53030', cursor:'pointer' }} onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'} onClick={handleSignOut}>Log Out</button>
               </div>
             )}
           </div>
@@ -852,43 +839,43 @@ export default function RacePage() {
             {stickers.map(s => <div key={s.id} style={{ position:'absolute', left:`${s.x}%`, top:`${s.y}%`, fontSize:'32px', lineHeight:1, userSelect:'none' }}>{s.emoji}</div>)}
           </div>
         )}
-        <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'40px 40px 0', position:'relative', zIndex:1 }}>
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'40px', marginBottom:'32px' }}>
-            <div style={{ flex:1 }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'10px' }}>Race Passport · Page {currentIdx+1} of {ALL_IDS.length}</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(40px,6vw,72px)', color:'#fff', letterSpacing:'2px', lineHeight:0.95, marginBottom:'10px' }}>{race.name}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'16px' }}>{race.date} · {race.location}</div>
+        <div style={{ maxWidth:'1200px', margin:'0 auto', padding: isMobile ? '20px 16px 0' : '40px 40px 0', position:'relative', zIndex:1 }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap: isMobile ? '16px' : '40px', marginBottom: isMobile ? '16px' : '32px' }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'8px' }}>Race Passport · Page {currentIdx+1}</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(26px,7vw,42px)' : 'clamp(40px,6vw,72px)', color:'#fff', letterSpacing:'2px', lineHeight:0.95, marginBottom:'8px' }}>{race.name}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile ? '13px' : '16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'12px' }}>{race.date} · {race.location}</div>
               {race.pr && (
-                <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:'8px', padding:'6px 16px' }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
+                <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:'8px', padding:'5px 12px' }}>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:'#C9A84C' }} />
                   <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase' }}>Personal Best</span>
                 </div>
               )}
             </div>
-            <div style={{ width:140, height:140, borderRadius:'50%', border:`3px solid ${colors.stampBorder}`, background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-              <div style={{ position:'absolute', inset:10, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:colors.stampText, textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{colors.label}</div>
+            <div style={{ width: isMobile ? 80 : 140, height: isMobile ? 80 : 140, borderRadius:'50%', border:`3px solid ${colors.stampBorder}`, background:'#fff', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+              <div style={{ position:'absolute', inset: isMobile ? 6 : 10, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? Math.round(fs*0.65) : fs, color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1, textAlign:'center' }}>{cleaned}</div>
+              {!isMobile && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:colors.stampText, textTransform:'uppercase', marginTop:'4px', position:'relative', zIndex:1, opacity:0.55 }}>{colors.label}</div>}
             </div>
           </div>
         </div>
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', position:'relative', zIndex:1 }}>
-          <div style={{ maxWidth:'1200px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(4,1fr)', padding:'0 40px' }}>
+          <div style={{ maxWidth:'1200px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', padding: isMobile ? '0 16px' : '0 40px' }}>
             {[{ label:'Finish Time', value:race.time },{ label:'Avg Pace', value:race.pace||'Multi-sport' },{ label:'Overall Place', value:race.place||'—' },{ label:'Elevation', value:race.elevation }].map((s,i) => (
-              <div key={i} style={{ padding:'20px 0', textAlign:'center', borderRight:i<3?'1px solid rgba(255,255,255,0.08)':'none' }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+              <div key={i} style={{ padding: isMobile ? '14px 0' : '20px 0', textAlign:'center', borderRight: isMobile ? (i%2===0?'1px solid rgba(255,255,255,0.08)':'none') : (i<3?'1px solid rgba(255,255,255,0.08)':'none'), borderBottom: isMobile && i<2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '20px' : '26px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.35)', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
         {race.weather && (
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding:'10px 40px', position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto' }}>
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 16px' : '10px 40px', position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto' }}>
             <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)' }}>Race day: {race.weather}</span>
           </div>
         )}
         {editMode && (
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', padding:'8px 40px', display:'flex', alignItems:'center', gap:'4px', background:'rgba(0,0,0,0.2)', position:'relative', zIndex:6 }}>
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', padding: isMobile ? '8px 16px' : '8px 40px', display:'flex', alignItems:'center', gap:'4px', background:'rgba(0,0,0,0.2)', position:'relative', zIndex:6 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.3)', textTransform:'uppercase', marginRight:'8px' }}>Edit:</div>
             <button className="edit-toolbar-btn" onClick={() => setShowStickerPicker(!showStickerPicker)}><span style={{ fontSize:'16px' }}>🏅</span><span>Sticker</span></button>
             <button className="edit-toolbar-btn" onClick={() => setStickers([])}><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4l8 8M12 4l-8 8" stroke="rgba(255,255,255,0.6)" strokeWidth="1.2" strokeLinecap="round"/></svg><span>Clear</span></button>
@@ -904,10 +891,10 @@ export default function RacePage() {
       </div>
 
       {/* CONTENT */}
-      <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'32px 40px 80px' }}>
+      <div style={{ maxWidth:'1200px', margin:'0 auto', padding: isMobile ? '16px 16px 80px' : '32px 40px 80px' }}>
 
         {/* PHOTOS */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile ? '16px' : '28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Race Photos</div>
@@ -981,7 +968,7 @@ export default function RacePage() {
         </div>
 
         {/* STORY */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.1s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.1s both', transition:'background 0.25s' }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'18px' }}>My Story</div>
           {editMode ? (
             <textarea value={story} onChange={e => setStory(e.target.value)} placeholder="What was race day like? What kept you going?"
@@ -999,7 +986,7 @@ export default function RacePage() {
         </div>
 
         {/* GEAR */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.15s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.15s both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px' }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Gear</div>
@@ -1059,14 +1046,14 @@ export default function RacePage() {
         <StravaActivitySection race={race} t={t} />
 
         {/* MUSIC */}
-        <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', marginBottom:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
+        <div style={{ background:t.surface, borderRadius:'16px', padding:isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Music</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'3px' }}>What were you listening to?</div>
             </div>
           </div>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'14px' }}>
+          <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'14px' }}>
             {/* Spotify */}
             <div style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center', transition:'border-color 0.15s' }}
               onMouseEnter={e => e.currentTarget.style.borderColor='#1DB954'}
@@ -1105,7 +1092,7 @@ export default function RacePage() {
         </div>
 
         {/* BOTTOM NAV */}
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'24px' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'16px' }}>
           <div style={{ background:t.surface, borderRadius:'16px', padding:'20px 24px', border:`1px solid ${t.border}` }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>Privacy</div>
             <div style={{ display:'flex', gap:'8px' }}>
