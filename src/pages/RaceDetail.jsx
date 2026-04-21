@@ -512,10 +512,20 @@ export default function RaceDetail() {
                       <SuggestedGear race={race} t={t} />
                     </>
                   ) : (
-                    <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
-                      style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
-                      Register on RunSignup →
-                    </button>
+                    <>
+                      <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
+                        style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
+                        Register on RunSignup →
+                      </button>
+                      {!showSignupBanner && (
+                        <button onClick={() => setShowSignupBanner(true)}
+                          style={{ width:'100%', padding:'8px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, cursor:'pointer', letterSpacing:'0.5px' }}
+                          onMouseEnter={e => e.currentTarget.style.color=t.text}
+                          onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
+                          Already registered? Tap here →
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
                 <div style={{ background:card.bg, borderRadius:'12px', padding:'20px', border:`1px solid ${card.border}`, borderTop:'3px solid #C9A84C', marginBottom:'18px', transition:'background 0.25s' }}>
