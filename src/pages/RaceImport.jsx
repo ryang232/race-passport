@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase'
 import { isDemo } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { loadRacePhoto, PHOTO_PLACEHOLDER } from '../lib/photos'
-import { useStrava, looksLikeRace } from '../lib/useStrava'
+import { useStrava } from '../lib/useStrava'
 
 // Confidence score 1-3: 3 = very confident, 1 = less certain
 // Higher confidence races appear first
@@ -13,6 +13,7 @@ const RYAN_IMPORT_RACES = [
   { id:'r9',  name:'IRONMAN 70.3 Eagleman',          date:'Jun 2025', location:'Cambridge, MD',   city:'Cambridge',   state:'MD', distance:'70.3', time:'6:32:08',source:'ATHLINKS',  confidence:3 },
   { id:'r8',  name:'Austin Half Marathon',            date:'Feb 2025', location:'Austin, TX',      city:'Austin',      state:'TX', distance:'13.1', time:'1:57:40',source:'RUNSIGNUP', confidence:3 },
   { id:'r7',  name:'Downtown Columbia Turkey Trot',   date:'Nov 2024', location:'Columbia, MD',    city:'Columbia',    state:'MD', distance:'5K',   time:'28:16',  source:'RUNSIGNUP', confidence:3 },
+  { id:'r5',  name:'Marine Corps Marathon',           date:'Oct 2023', location:'Washington, DC',  city:'Washington',  state:'DC', distance:'26.2', time:'4:45:42',source:'RUNSIGNUP', confidence:3 },
   { id:'r6',  name:'LA Marathon',                     date:'Mar 2022', location:'Los Angeles, CA', city:'Los Angeles', state:'CA', distance:'26.2', time:'4:44:47',source:'RUNSIGNUP', confidence:3 },
   { id:'r1',  name:'Sole of the City 10K',            date:'Oct 2021', location:'Baltimore, MD',   city:'Baltimore',   state:'MD', distance:'10K',  time:'47:49',  source:'RUNSIGNUP', confidence:3 },
   { id:'r2',  name:'Bay Bridge Run',                  date:'Nov 2021', location:'Annapolis, MD',   city:'Annapolis',   state:'MD', distance:'10K',  time:'50:57',  source:'RUNSIGNUP', confidence:2 },
@@ -208,8 +209,10 @@ export default function RaceImport() {
   const [undoSelected, setUndoSelected]     = useState(null)
 
   const { connected: stravaConnected, connectStrava, getActivities } = useStrava(profile, user?.id)
-  const [stravaScanning, setStravaScanning] = useState(false)
-  const [stravaScanned, setStravaScanned]   = useState(false)
+  const [stravaScanning, setStravaScanning]   = useState(false)
+  const [stravaScanned, setStravaScanned]     = useState(false)
+  const [stravaCandidates, setStravaCandidates] = useState([])
+  const [showStravaCandidates, setShowStravaCandidates] = useState(false)
 
   useEffect(() => {
     const run = async () => {
@@ -307,55 +310,74 @@ export default function RaceImport() {
   const toggleAll     = () => { const n = {}; races.forEach(r => { n[r.id] = !allSelected }); setSelected(n) }
   const filteredRaces = activeSource === 'ALL' ? races : races.filter(r => r.source === activeSource)
 
-  // Scan Strava for race-like activities and add as new cards
+  // Strict race detection for import scanning — much tighter than looksLikeRace
+  const isLikelyRace = (a) => {
+    const type = (a.type || a.sport_type || '').toLowerCase()
+    if (!['run', 'virtualrun'].includes(type)) return false
+
+    const distMi = (a.distance || 0) / 1609.34
+    const name   = (a.name || '').toLowerCase()
+
+    // Must match a known race distance within 1% tolerance
+    const RACE_DISTANCES = [3.1, 6.2, 9.3, 10, 13.1, 26.2, 31, 50, 70.3, 140.6]
+    const exactDist = RACE_DISTANCES.some(d => Math.abs(distMi - d) / d <= 0.01)
+
+    // OR name strongly suggests a race
+    const RACE_WORDS = ['race', '5k', '10k', 'half marathon', 'marathon', 'trot', 'triathlon', 'ironman', '70.3', '140.6', 'mile run', 'miler']
+    const hasRaceName = RACE_WORDS.some(w => name.includes(w))
+
+    return exactDist || hasRaceName
+  }
+
+  // Scan Strava — surfaces candidates for manual review, doesn't auto-add
   const scanStrava = async () => {
     if (stravaScanning || stravaScanned) return
     setStravaScanning(true)
     try {
-      // Fetch last 2 years of activities
-      const twoYearsAgo = Math.floor((Date.now() - 2 * 365 * 24 * 3600 * 1000) / 1000)
-      const page1 = await getActivities({ per_page: 60, page: 1, after: twoYearsAgo })
-      const page2 = await getActivities({ per_page: 60, page: 2, after: twoYearsAgo })
-      const allActs = [...page1, ...page2]
+      // Fetch up to 3 years back
+      const threeYearsAgo = Math.floor((Date.now() - 3 * 365 * 24 * 3600 * 1000) / 1000)
+      const [page1, page2, page3] = await Promise.all([
+        getActivities({ per_page: 60, page: 1, after: threeYearsAgo }),
+        getActivities({ per_page: 60, page: 2, after: threeYearsAgo }),
+        getActivities({ per_page: 60, page: 3, after: threeYearsAgo }),
+      ])
+      const allActs = [...page1, ...page2, ...page3]
 
-      // Filter to race-like activities
-      const raceActs = allActs.filter(a => looksLikeRace(a))
+      // Strict filter
+      const raceActs = allActs.filter(isLikelyRace)
 
-      // Deduplicate against existing races by date proximity
-      const existingDates = races.map(r => r.date ? new Date(r.date).getMonth() + '-' + new Date(r.date).getFullYear() : '')
+      // Deduplicate against existing races by month+year
+      const existingKeys = new Set(races.map(r => {
+        if (!r.date) return ''
+        const d = new Date(r.date)
+        return isNaN(d) ? r.date : `${d.getMonth()}-${d.getFullYear()}`
+      }))
 
-      const newRaces = raceActs
+      const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+
+      const candidates = raceActs
         .filter(a => {
           const d = new Date(a.start_date_local)
-          const key = `${d.getMonth()}-${d.getFullYear()}`
-          return !existingDates.includes(key)
+          return !existingKeys.has(`${d.getMonth()}-${d.getFullYear()}`)
         })
         .map(a => {
-          const d    = new Date(a.start_date_local)
-          const distM = a.distance || 0
-          const distMi = distM / 1609.34
-          // Classify distance
-          let distance = 'OTHER'
-          if (Math.abs(distMi - 3.1)  < 0.3) distance = '5K'
-          else if (Math.abs(distMi - 6.2)  < 0.4) distance = '10K'
-          else if (Math.abs(distMi - 13.1) < 0.5) distance = '13.1'
-          else if (Math.abs(distMi - 26.2) < 0.8) distance = '26.2'
-          else if (Math.abs(distMi - 70.3) < 2)   distance = '70.3'
-          else if (Math.abs(distMi - 140.6)< 4)   distance = '140.6'
-          else distance = `${distMi.toFixed(1)} mi`
+          const d     = new Date(a.start_date_local)
+          const distMi = (a.distance || 0) / 1609.34
+          let distance = `${distMi.toFixed(1)} mi`
+          if (Math.abs(distMi - 3.1)   <= 0.1)  distance = '5K'
+          else if (Math.abs(distMi - 6.2)  <= 0.15) distance = '10K'
+          else if (Math.abs(distMi - 13.1) <= 0.2)  distance = '13.1'
+          else if (Math.abs(distMi - 26.2) <= 0.3)  distance = '26.2'
+          else if (Math.abs(distMi - 70.3) <= 1)    distance = '70.3'
+          else if (Math.abs(distMi - 140.6)<= 2)    distance = '140.6'
 
-          // Format time
           const secs = a.moving_time || 0
           const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60
-          const time = h > 0
-            ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
-            : `${m}:${String(s).padStart(2,'0')}`
-
-          const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+          const time = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`
 
           return {
             id:         `strava_${a.id}`,
-            name:       a.name || 'Strava Race',
+            name:       a.name || 'Strava Activity',
             date:       `${monthNames[d.getMonth()]} ${d.getFullYear()}`,
             location:   '',
             city:       '',
@@ -367,22 +389,15 @@ export default function RaceImport() {
           }
         })
 
-      if (newRaces.length > 0) {
-        setRaces(prev => [...newRaces, ...prev])
-        const newSel = {}
-        newRaces.forEach(r => { newSel[r.id] = true })
-        setSelected(prev => ({ ...newSel, ...prev }))
-      }
+      setStravaCandidates(candidates)
       setStravaScanned(true)
     } catch(e) {}
     setStravaScanning(false)
   }
 
-  // Auto-scan when Strava becomes connected
+  // Auto-scan when Strava connected and main load is done
   useEffect(() => {
-    if (stravaConnected && !stravaScanned && !loading) {
-      scanStrava()
-    }
+    if (stravaConnected && !stravaScanned && !loading) scanStrava()
   }, [stravaConnected, loading])
 
   const handleConfirm = async () => {
@@ -482,14 +497,18 @@ export default function RaceImport() {
         </div>
 
         {/* Combined Missing Race + Strava banner */}
-        <div style={{ background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', borderRadius:'14px', padding:'22px 24px', marginBottom:'24px', display:'flex', alignItems:'center', gap:'20px', animation:'stravaSlide 0.5s ease 0.3s both' }}>
+        <div style={{ background:'linear-gradient(135deg,#1B2A4A,#2a3f6a)', borderRadius:'14px', padding:'22px 24px', marginBottom: stravaCandidates.length > 0 ? '0' : '24px', display:'flex', alignItems:'center', gap:'20px', animation:'stravaSlide 0.5s ease 0.3s both', borderBottomLeftRadius: stravaCandidates.length > 0 ? 0 : '14px', borderBottomRightRadius: stravaCandidates.length > 0 ? 0 : '14px' }}>
           <div style={{ width:44, height:44, borderRadius:'10px', background:'rgba(252,76,2,0.15)', border:'1px solid rgba(252,76,2,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
           </div>
           <div style={{ flex:1 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, color:'#fff', letterSpacing:'0.5px', marginBottom:'4px' }}>Missing a Race?</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.55)', lineHeight:1.5 }}>
-              Connect Strava to scan your activities that look like races and unlock more insights — or add a race manually.
+              {stravaScanned && stravaCandidates.length > 0
+                ? `Found ${stravaCandidates.length} possible race${stravaCandidates.length !== 1 ? 's' : ''} in your Strava history — review below.`
+                : stravaScanned
+                ? 'No additional races found in your Strava history.'
+                : 'Connect Strava to scan your activities for races you may have missed.'}
             </div>
           </div>
           <div style={{ display:'flex', flexDirection:'column', gap:'8px', flexShrink:0 }}>
@@ -500,15 +519,23 @@ export default function RaceImport() {
                   <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Scanning...</span>
                 </div>
               ) : stravaScanned ? (
-                <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Scanned</span>
+                <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.4)', borderRadius:'8px', background:'rgba(252,76,2,0.08)' }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2" stroke="#FC4C02" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textTransform:'uppercase' }}>Strava Scanned</span>
+                  </div>
+                  {stravaCandidates.length > 0 && (
+                    <button onClick={() => setShowStravaCandidates(v => !v)}
+                      style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.3)', borderRadius:'8px', background:'rgba(255,255,255,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.8)', cursor:'pointer', textTransform:'uppercase' }}>
+                      {showStravaCandidates ? 'Hide Results' : `Review ${stravaCandidates.length} Found`}
+                    </button>
+                  )}
                 </div>
               ) : (
                 <button onClick={scanStrava}
                   style={{ padding:'8px 16px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.1)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-                  onMouseEnter={e => { e.currentTarget.style.background='rgba(252,76,2,0.22)' }}
-                  onMouseLeave={e => { e.currentTarget.style.background='rgba(252,76,2,0.1)' }}>
+                  onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.22)'}
+                  onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.1)'}>
                   Scan Strava
                 </button>
               )
@@ -529,12 +556,43 @@ export default function RaceImport() {
             )}
             <button onClick={() => setShowAddManual(true)}
               style={{ padding:'8px 16px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'rgba(255,255,255,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.7)', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s', whiteSpace:'nowrap' }}
-              onMouseEnter={e => { e.currentTarget.style.background='rgba(255,255,255,0.12)' }}
-              onMouseLeave={e => { e.currentTarget.style.background='rgba(255,255,255,0.06)' }}>
+              onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.12)'}
+              onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.06)'}>
               Add Manually
             </button>
           </div>
         </div>
+
+        {/* Strava candidates — collapsible review section */}
+        {stravaCandidates.length > 0 && showStravaCandidates && (
+          <div style={{ background:'rgba(27,42,74,0.04)', border:'1px solid rgba(27,42,74,0.1)', borderTop:'none', borderRadius:'0 0 14px 14px', padding:'16px', marginBottom:'24px' }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'12px' }}>
+              Tap any activity to add it to your list
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+              {stravaCandidates.map(r => (
+                <div key={r.id} onClick={() => {
+                    setRaces(prev => [r, ...prev])
+                    setSelected(prev => ({ ...prev, [r.id]: true }))
+                    setStravaCandidates(prev => prev.filter(c => c.id !== r.id))
+                  }}
+                  style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px 14px', background:'#fff', borderRadius:'10px', border:'1.5px solid #e2e6ed', cursor:'pointer', transition:'all 0.15s' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='#FC4C02'; e.currentTarget.style.background='rgba(252,76,2,0.02)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.background='#fff' }}>
+                  <div style={{ width:36, height:36, borderRadius:'8px', background:'rgba(252,76,2,0.08)', border:'1px solid rgba(252,76,2,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#1B2A4A', letterSpacing:'0.5px', marginBottom:'2px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{r.name}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#6b7a8d' }}>{r.date} · {r.distance} · {r.time}</div>
+                  </div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#FC4C02', whiteSpace:'nowrap' }}>+ Add →</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {stravaCandidates.length > 0 && !showStravaCandidates && <div style={{ marginBottom:'24px' }} />}
 
         {/* Confirm CTA */}
         <button className="rp-primary" onClick={handleConfirm} disabled={saving || selectedCount === 0}>
