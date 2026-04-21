@@ -16,6 +16,40 @@ export default async function handler(req, res) {
   const SUPABASE_URL = process.env.SUPABASE_URL
   const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY
 
+  // ── Shared price extractor ─────────────────────────────────────────────────
+  // Looks in registration_periods first (most accurate — finds current active fee),
+  // then falls back to registration_opens, then top-level fee fields.
+  function extractBestPrice(info) {
+    const now = new Date()
+    let best = null
+
+    // Priority 1: events[].registration_periods[].race_fee
+    for (const ev of (info.events || [])) {
+      for (const p of (ev.registration_periods || ev.registrationPeriods || [])) {
+        const end   = p.end   ? new Date(p.end)   : null
+        const start = p.start ? new Date(p.start) : null
+        const fee   = parseFloat(String(p.race_fee || p.fee || '').replace(/[^0-9.]/g, '')) || null
+        if (fee && (!end || end > now) && (!start || start <= now)) {
+          if (!best || fee < best) best = fee
+        }
+      }
+    }
+    if (best) return { price: best, price_raw: `$${best}` }
+
+    // Priority 2: registration_opens[].fee (early bird — less accurate but common)
+    for (const o of (info.registration_opens || [])) {
+      const fee = parseFloat(String(o.fee || '').replace(/[^0-9.]/g, '')) || null
+      if (fee && (!best || fee < best)) best = fee
+    }
+    if (best) return { price: best, price_raw: `$${best}` }
+
+    // Priority 3: top-level fee / price fields
+    const topFee = parseFloat(String(info.fee || info.price || '').replace(/[^0-9.]/g, '')) || null
+    if (topFee) return { price: topFee, price_raw: `$${topFee}` }
+
+    return { price: null, price_raw: null }
+  }
+
   // ── Debug ──────────────────────────────────────────────────────────────────
   if (action === 'debug') {
     return res.status(200).json({
@@ -49,13 +83,12 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── enrich_race — fetch RunSignup detail, extract hero image, save to Supabase ──
+  // ── enrich_race ────────────────────────────────────────────────────────────
   if (action === 'enrich_race') {
     const raceId = params.race_id
     if (!raceId) return res.status(400).json({ error: 'race_id required' })
 
     try {
-      // Fetch full detail from RunSignup
       const url = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
       const resp = await fetch(url)
       if (!resp.ok) throw new Error(`RunSignup API error: ${resp.status}`)
@@ -64,38 +97,31 @@ export default async function handler(req, res) {
 
       if (!race) return res.status(404).json({ error: 'Race not found', hero_image: null })
 
-      // Extract image — RunSignup returns logo_url and sometimes a race_image or photo
-      // Priority: race_logo → logo_url → race.profile_image_url
       const heroImage =
         race.race_logo ||
-        race.logo_url ||
+        race.logo_url  ||
         race.profile_image_url ||
-        race.race_hero_image ||
+        race.race_hero_image   ||
         null
 
-      // Extract additional enrichment fields
-      const description   = race.description || null
-      const websiteUrl    = race.url || null
-      const courseMapUrl  = race.course_map || null
-      const charityName   = race.beneficiary_name || null
-      const cutoffTime    = race.time_limit || null
+      const { price, price_raw } = extractBestPrice(race)
 
-      // Save back to Supabase
+      const update = {
+        hero_image:     heroImage,
+        description:    race.description        || null,
+        website_url:    race.url                || null,
+        course_map_url: race.course_map         || null,
+        detail_fetched: true,
+        last_updated:   new Date().toISOString(),
+      }
+      // Only overwrite price if we found a better one
+      if (price) { update.price = price; update.price_raw = price_raw }
+
+      // Remove nulls to avoid overwriting good existing data
+      Object.keys(update).forEach(k => update[k] === null && delete update[k])
+      update.detail_fetched = true
+
       if (SUPABASE_URL && SUPABASE_KEY) {
-        const update = {
-          hero_image:    heroImage,
-          description:   description,
-          website_url:   websiteUrl,
-          course_map_url:courseMapUrl,
-          charity:       charityName,
-          cutoff_time:   cutoffTime,
-          detail_fetched:true,
-          last_updated:  new Date().toISOString(),
-        }
-        // Remove null fields to avoid overwriting existing data
-        Object.keys(update).forEach(k => update[k] === null && delete update[k])
-        update.detail_fetched = true // always mark as fetched even if no image
-
         await fetch(`${SUPABASE_URL}/rest/v1/races?id=eq.${raceId}`, {
           method: 'PATCH',
           headers: {
@@ -109,9 +135,11 @@ export default async function handler(req, res) {
       }
 
       return res.status(200).json({
-        race_id:    raceId,
-        hero_image: heroImage,
-        website_url:websiteUrl,
+        race_id:        raceId,
+        hero_image:     heroImage,
+        website_url:    race.url || null,
+        price,
+        price_raw,
         detail_fetched: true,
       })
     } catch (e) {
@@ -119,7 +147,7 @@ export default async function handler(req, res) {
     }
   }
 
-  // ── get_race_detail — raw detail pass-through for RaceDetail.jsx ───────────
+  // ── get_race_detail ────────────────────────────────────────────────────────
   if (action === 'get_race_detail') {
     const raceId = params.race_id
     if (!raceId) return res.status(400).json({ error: 'race_id required' })
@@ -204,32 +232,32 @@ export default async function handler(req, res) {
             const dateDisp = parseDate(dateSort)
             const lat      = parseFloat(info.address?.lat) || null
             const lng      = parseFloat(info.address?.lng) || null
-            const priceRaw = info.registration_opens?.[0]?.fee
-            const price    = priceRaw ? parseFloat(String(priceRaw).replace(/[^0-9.]/g,'')) || null : null
+
+            // Use shared price extractor — finds best current registration period fee
+            const { price, price_raw } = extractBestPrice(info)
 
             rows.push({
-              id: String(info.race_id),
-              source: 'runsignup',
-              name: info.name || '',
-              location: [info.address?.city, info.address?.state].filter(Boolean).join(', '),
-              city: info.address?.city || null,
-              state: info.address?.state || null,
+              id:            String(info.race_id),
+              source:        'runsignup',
+              name:          info.name || '',
+              location:      [info.address?.city, info.address?.state].filter(Boolean).join(', '),
+              city:          info.address?.city  || null,
+              state:         info.address?.state || null,
               lat, lng,
-              distance: dist,
-              distance_raw: event?.distance || null,
-              date: dateDisp,
-              date_sort: dateSort,
+              distance:      dist,
+              distance_raw:  event?.distance || null,
+              date:          dateDisp,
+              date_sort:     dateSort,
               price,
-              price_raw: priceRaw ? String(priceRaw) : null,
-              terrain: null,
-              elevation: null,
+              price_raw,
+              terrain:       null,
+              elevation:     null,
               est_finishers: null,
               registration_url: info.url || null,
-              // Extract logo/hero image during sync if available
-              hero_image: info.race_logo || info.logo_url || null,
-              sport: dist === '70.3' || dist === '140.6' ? 'Triathlon' : 'Running',
-              is_past: false,
-              last_updated: new Date().toISOString(),
+              hero_image:    info.race_logo || info.logo_url || null,
+              sport:         dist === '70.3' || dist === '140.6' ? 'Triathlon' : 'Running',
+              is_past:       false,
+              last_updated:  new Date().toISOString(),
               detail_fetched: false,
             })
           }
@@ -247,7 +275,7 @@ export default async function handler(req, res) {
             })
             if (!upsertResp.ok) {
               const err = await upsertResp.json().catch(() => ({}))
-              errors.push(`${state} p${page}: ${JSON.stringify(err).substring(0,100)}`)
+              errors.push(`${state} p${page}: ${JSON.stringify(err).substring(0, 100)}`)
             }
           }
 
@@ -264,9 +292,9 @@ export default async function handler(req, res) {
     return res.status(200).json({
       success: true,
       dry_run: dryRun,
-      states: STATES.length,
-      synced: totalSynced,
-      errors: errors.length > 0 ? errors : undefined,
+      states:  STATES.length,
+      synced:  totalSynced,
+      errors:  errors.length > 0 ? errors : undefined,
     })
   }
 
