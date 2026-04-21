@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -324,6 +324,7 @@ export default function Home() {
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
   const [profile, setProfile]             = useState(null)
+  const [passportRaces, setPassportRaces] = useState([])
   const [showDropdown, setShowDropdown]   = useState(false)
   const [greeting, setGreeting]           = useState('GOOD MORNING')
   const [showImportBanner, setShowImportBanner] = useState(!!location.state?.imported)
@@ -341,6 +342,7 @@ export default function Home() {
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) {
         setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}`, state:'MD', favorite_distance:'13.1' })
+        setPassportRaces(RYAN_STAMPS.map(s => ({ ...s, distance: s.distance, name: s.name, date: `${s.month} ${s.year}`, location: s.location })))
         loadNearbyAndSuggested('MD', '13.1')
         return
       }
@@ -349,6 +351,13 @@ export default function Home() {
         setProfile(data)
         loadNearbyAndSuggested(data?.state, data?.favorite_distance)
       }
+      // Load passport races
+      const { data: praces } = await supabase
+        .from('passport_races')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date_sort', { ascending: false })
+      if (praces) setPassportRaces(praces)
     }
 
     const loadNearbyAndSuggested = async (userState, favDistance) => {
@@ -419,10 +428,56 @@ export default function Home() {
 
   const { connected: stravaConnected, stats: stravaStats, monthMiles, todayMiles, connectStrava } = useStrava(profile, user?.id)
 
+  // Build PR stats from real passport races
+  const raceStatItems = useMemo(() => {
+    if (!passportRaces.length) return RACE_STAT_ITEMS
+    const PR_DISTANCES = {
+      '5K':   { label:'5K PR',       dists:['5K','5k'] },
+      '10K':  { label:'10K PR',      dists:['10K','10k'] },
+      '13.1': { label:'Half PR',     dists:['13.1','Half Marathon','half marathon'] },
+      '26.2': { label:'Marathon PR', dists:['26.2','Marathon','marathon'] },
+      '70.3': { label:'70.3 PR',     dists:['70.3'] },
+      '140.6':{ label:'140.6 PR',    dists:['140.6'] },
+    }
+    const prs = []
+    Object.values(PR_DISTANCES).forEach(({ label, dists }) => {
+      const matches = passportRaces.filter(r => dists.some(d => (r.distance||'').toLowerCase() === d.toLowerCase()) && r.time)
+      if (matches.length) {
+        // Find best (shortest) time
+        const best = matches.reduce((a, b) => {
+          const toSecs = t => { if (!t) return Infinity; const p = t.split(':').map(Number); return p.length===3 ? p[0]*3600+p[1]*60+p[2] : p[0]*60+(p[1]||0) }
+          return toSecs(a.time) <= toSecs(b.time) ? a : b
+        })
+        prs.push({ label, value: best.time })
+      }
+    })
+    const totalRaces = passportRaces.length
+    return [
+      { label:'Total Races', value: `${totalRaces}` },
+      ...prs,
+    ]
+  }, [passportRaces])
+
   // Build stat items — Strava activity stats + race PRs
   const statItems = stravaConnected && stravaStats
-    ? stravaStatsToItems(stravaStats, monthMiles, todayMiles, RACE_STAT_ITEMS)
-    : RACE_STAT_ITEMS
+    ? stravaStatsToItems(stravaStats, monthMiles, todayMiles, raceStatItems)
+    : raceStatItems
+
+  // Build stamps from passport races (most recent first, max 20)
+  const stamps = useMemo(() => {
+    if (!passportRaces.length) return RYAN_STAMPS
+    return passportRaces.slice(0, 20).map(r => {
+      const dateParts = (r.date || '').split(' ')
+      return {
+        id:       r.id,
+        distance: r.distance,
+        name:     r.name,
+        location: r.location || `${r.city || ''}${r.city && r.state ? ', ' : ''}${r.state || ''}`,
+        month:    dateParts[0] || '',
+        year:     dateParts[1] || dateParts[0] || '',
+      }
+    })
+  }, [passportRaces])
 
   const stravaJustConnected = location.state?.stravaConnected
 
@@ -626,7 +681,7 @@ export default function Home() {
             <button onClick={() => navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
           </div>
           <ScrollRow>
-            {RYAN_STAMPS.map(stamp => (
+            {stamps.map(stamp => (
               <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} t={t} onClick={() => navigate(`/race/${stamp.id}`)} />
             ))}
             <div onClick={() => navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
