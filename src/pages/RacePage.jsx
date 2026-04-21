@@ -363,14 +363,26 @@ function StravaActivitySection({ race, t }) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px' }}>Connect Strava to see your activity</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>We'll match this race to your Strava activity and show your map and stats.</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px' }}>
+            {profile?.strava_connected ? 'Strava session expired' : 'Connect Strava to see your activity'}
+          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
+            {profile?.strava_connected ? 'Your Strava token expired — reconnect to restore your activity data.' : "We'll match this race to your Strava activity and show your map and stats."}
+          </div>
         </div>
-        <button onClick={() => connectStrava('/passport')}
+        <button onClick={async () => {
+            const { data: { session } } = await supabase.auth.getSession()
+            const uid = session?.user?.id || user?.id
+            if (uid) sessionStorage.setItem('strava_user_id', uid)
+            sessionStorage.setItem('strava_return_to', window.location.pathname)
+            const r = await fetch(`/api/strava?action=auth_url${uid ? `&user_id=${uid}` : ''}`)
+            const d = await r.json()
+            if (d.url) window.location.href = d.url
+          }}
           style={{ padding:'8px 18px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', flexShrink:0 }}
           onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.08)'}>
-          Connect Strava
+          {profile?.strava_connected ? 'Reconnect Strava' : 'Connect Strava'}
         </button>
       </div>
     </div>
