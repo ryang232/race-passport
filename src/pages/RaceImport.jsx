@@ -402,7 +402,47 @@ export default function RaceImport() {
 
   const handleConfirm = async () => {
     setSaving(true)
-    await new Promise(r => setTimeout(r, 800))
+    try {
+      // Get user ID
+      const { data: { session } } = await supabase.auth.getSession()
+      const userId = session?.user?.id
+
+      if (userId) {
+        const toInsert = races
+          .filter(r => selected[r.id])
+          .map(r => {
+            // Parse date_sort from "Mon YYYY" or "Mon DD, YYYY"
+            let date_sort = null
+            if (r.date) {
+              const parsed = new Date(r.date)
+              if (!isNaN(parsed)) date_sort = parsed.toISOString().split('T')[0]
+            }
+            return {
+              user_id:    userId,
+              name:       r.name,
+              date:       r.date,
+              date_sort,
+              location:   r.location || '',
+              city:       r.city || '',
+              state:      r.state || '',
+              distance:   r.distance,
+              time:       r.time || '',
+              source:     r.source,
+              confidence: r.confidence || 2,
+            }
+          })
+
+        if (toInsert.length > 0) {
+          // Upsert — avoid duplicates if user re-imports
+          await supabase.from('passport_races').upsert(toInsert, {
+            onConflict: 'user_id,name,date',
+            ignoreDuplicates: true,
+          })
+        }
+      }
+    } catch(e) {
+      console.error('Failed to save races:', e)
+    }
     setSaving(false)
     navigate('/build-passport', { state:{ imported: selectedCount, firstName } })
   }
