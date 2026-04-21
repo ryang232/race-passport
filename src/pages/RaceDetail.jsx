@@ -5,58 +5,43 @@ import { useTheme } from '../context/ThemeContext'
 import { loadRacePhoto, PHOTO_PLACEHOLDER } from '../lib/photos'
 import { getDistanceColor } from '../lib/colors'
 import { supabase } from '../lib/supabase'
+import { useIsMobile } from '../lib/useIsMobile'
 
-// ── "Did you sign up?" banner ─────────────────────────────────────────────────
 function SignupBanner({ race, onYes, onNo }) {
   const [visible, setVisible] = useState(false)
   useEffect(() => { setTimeout(() => setVisible(true), 100) }, [])
   return (
-    <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:200, padding:'0 24px 24px', pointerEvents:'none' }}>
+    <div style={{ position:'fixed', bottom:0, left:0, right:0, zIndex:200, padding:'0 16px 16px', pointerEvents:'none' }}>
       <div style={{ maxWidth:'560px', margin:'0 auto', pointerEvents:'all', transition:'transform 0.4s cubic-bezier(0.34,1.56,0.64,1)', transform:visible?'translateY(0)':'translateY(120%)' }}>
-        <div style={{ background:'#1B2A4A', borderRadius:'16px', padding:'18px 22px', boxShadow:'0 8px 40px rgba(0,0,0,0.35)', border:'1px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', gap:'14px' }}>
-          <div style={{ width:10, height:10, borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
+        <div style={{ background:'#1B2A4A', borderRadius:'16px', padding:'16px 18px', boxShadow:'0 8px 40px rgba(0,0,0,0.35)', border:'1px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', gap:'12px' }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
           <div style={{ flex:1, minWidth:0 }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.55)', letterSpacing:'0.5px' }}>Welcome back!</div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, color:'#fff', lineHeight:1.2 }}>Did you register for <span style={{ color:'#C9A84C' }}>{race.name}</span>?</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.55)' }}>Welcome back!</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:'#fff', lineHeight:1.2 }}>Did you register for <span style={{ color:'#C9A84C' }}>{race.name}</span>?</div>
           </div>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
-            <button onClick={onNo}
-              style={{ padding:'7px 14px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'rgba(255,255,255,0.5)', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.4)'; e.currentTarget.style.color='#fff' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(255,255,255,0.2)'; e.currentTarget.style.color='rgba(255,255,255,0.5)' }}>
-              Not yet
-            </button>
-            <button onClick={onYes}
-              style={{ padding:'7px 18px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.background='#e0c060'}
-              onMouseLeave={e => e.currentTarget.style.background='#C9A84C'}>
-              Yes! 🎉
-            </button>
+          <div style={{ display:'flex', alignItems:'center', gap:'6px', flexShrink:0 }}>
+            <button onClick={onNo} style={{ padding:'6px 12px', border:'1.5px solid rgba(255,255,255,0.2)', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'rgba(255,255,255,0.5)', cursor:'pointer', textTransform:'uppercase' }}>Not yet</button>
+            <button onClick={onYes} style={{ padding:'6px 14px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>Yes! 🎉</button>
           </div>
-          <button onClick={onNo} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.25)', cursor:'pointer', fontSize:'18px', lineHeight:1, padding:0, flexShrink:0 }}>✕</button>
+          <button onClick={onNo} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.25)', cursor:'pointer', fontSize:'16px', lineHeight:1, padding:0, flexShrink:0 }}>✕</button>
         </div>
       </div>
     </div>
   )
 }
 
-// ── Suggested Gear ────────────────────────────────────────────────────────────
 function SuggestedGear({ race, t }) {
   const distance = race?.distance || ''
-
-  // Gear suggestions tailored by distance
   const getGear = () => {
     const isTri  = distance.includes('70.3') || distance.includes('140.6') || distance.toLowerCase().includes('tri')
     const isUltra = distance.toLowerCase().includes('ultra') || distance.includes('50') || distance.includes('100')
     const isMarathon = distance === '26.2'
     const isHalf = distance === '13.1'
-
     const base = [
       { emoji:'👟', name:'Race Day Shoes', note:'Lightweight, responsive for race pace', tag:'Essential' },
       { emoji:'🧢', name:'Running Cap', note:'Moisture-wicking, UV protection', tag:'Recommended' },
       { emoji:'🧴', name:'Body Glide', note:'Prevent chafing on long efforts', tag:'Essential' },
     ]
-
     if (isTri) return [
       { emoji:'🏊', name:'Tri Suit', note:'Swim-to-run without changing', tag:'Essential' },
       { emoji:'🚴', name:'Aero Helmet', note:'Time savings on the bike leg', tag:'Recommended' },
@@ -64,81 +49,50 @@ function SuggestedGear({ race, t }) {
       { emoji:'🧴', name:'Body Glide', note:'Chafe prevention for all three legs', tag:'Essential' },
       { emoji:'🥤', name:'Nutrition Belt', note:'Gels and hydration on the run', tag:'Recommended' },
     ]
-
     if (isUltra) return [
       { emoji:'🎒', name:'Running Vest', note:'Mandatory for most ultras', tag:'Essential' },
       { emoji:'👟', name:'Trail Shoes', note:'Grip and protection on rough terrain', tag:'Essential' },
-      { emoji:'🏃', name:'Poles', note:'Knee relief on steep descents', tag:'Recommended' },
       { emoji:'🧴', name:'Body Glide', note:'Multi-day chafe prevention', tag:'Essential' },
       { emoji:'🥤', name:'Soft Flasks', note:'Easy hydration on the go', tag:'Essential' },
     ]
-
-    if (isMarathon) return [
-      ...base,
-      { emoji:'🥤', name:'Race Belt & Gels', note:'Fuel every 45 mins after mile 6', tag:'Essential' },
-      { emoji:'🧦', name:'Compression Socks', note:'Reduce fatigue in the final miles', tag:'Recommended' },
-    ]
-
-    if (isHalf) return [
-      ...base,
-      { emoji:'🥤', name:'2–3 Energy Gels', note:'Take one at miles 5 and 9', tag:'Recommended' },
-    ]
-
+    if (isMarathon) return [...base, { emoji:'🥤', name:'Race Belt & Gels', note:'Fuel every 45 mins after mile 6', tag:'Essential' }, { emoji:'🧦', name:'Compression Socks', note:'Reduce fatigue in the final miles', tag:'Recommended' }]
+    if (isHalf) return [...base, { emoji:'🥤', name:'2–3 Energy Gels', note:'Take one at miles 5 and 9', tag:'Recommended' }]
     return base
   }
-
   const gear = getGear()
   const TAG_COLORS = {
-    Essential:    { bg:'rgba(201,168,76,0.1)',  border:'rgba(201,168,76,0.3)',  text:'#C9A84C' },
-    Recommended:  { bg:'rgba(27,42,74,0.06)',   border:'rgba(27,42,74,0.15)',   text:'#1B2A4A' },
+    Essential:   { bg:'rgba(201,168,76,0.1)', border:'rgba(201,168,76,0.3)', text:'#C9A84C' },
+    Recommended: { bg:'rgba(27,42,74,0.06)',  border:'rgba(27,42,74,0.15)', text:'#1B2A4A' },
   }
-
   return (
-    <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', border:`1px solid ${t.border}`, marginTop:'24px', transition:'background 0.25s', animation:'fadeIn 0.4s ease both' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
-        <div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Suggested Gear</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'4px' }}>Recommended for a {distance} race</div>
-        </div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', background:t.surfaceAlt, padding:'4px 10px', borderRadius:'6px', border:`1px solid ${t.border}` }}>
-          Powered by Race Passport
-        </div>
-      </div>
-
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(200px, 1fr))', gap:'12px' }}>
+    <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', border:`1px solid ${t.border}`, marginTop:'16px', animation:'fadeIn 0.4s ease both' }}>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', marginBottom:'4px' }}>Suggested Gear</div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginBottom:'14px' }}>Recommended for a {distance} race</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(160px, 1fr))', gap:'10px' }}>
         {gear.map((item, i) => {
           const tc = TAG_COLORS[item.tag] || TAG_COLORS.Recommended
           return (
-            <div key={i} style={{ background:t.surfaceAlt, borderRadius:'12px', padding:'16px', border:`1px solid ${t.border}`, display:'flex', flexDirection:'column', gap:'10px', transition:'box-shadow 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.boxShadow=`0 4px 16px rgba(27,42,74,0.08)`}
-              onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+            <div key={i} style={{ background:t.surfaceAlt, borderRadius:'10px', padding:'12px', border:`1px solid ${t.border}`, display:'flex', flexDirection:'column', gap:'8px' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                <span style={{ fontSize:'28px', lineHeight:1 }}>{item.emoji}</span>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'3px 8px', borderRadius:'6px', background:tc.bg, border:`1px solid ${tc.border}`, color:tc.text }}>{item.tag}</span>
+                <span style={{ fontSize:'22px', lineHeight:1 }}>{item.emoji}</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:700, letterSpacing:'1.5px', textTransform:'uppercase', padding:'2px 6px', borderRadius:'4px', background:tc.bg, border:`1px solid ${tc.border}`, color:tc.text }}>{item.tag}</span>
               </div>
               <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:700, color:t.text, marginBottom:'3px', letterSpacing:'0.5px' }}>{item.name}</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>{item.note}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, color:t.text, marginBottom:'2px' }}>{item.name}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, lineHeight:1.5 }}>{item.note}</div>
               </div>
             </div>
           )
         })}
       </div>
-
-      <div style={{ marginTop:'16px', padding:'12px 16px', background:'rgba(201,168,76,0.06)', borderRadius:'10px', border:'1px solid rgba(201,168,76,0.15)', display:'flex', alignItems:'center', gap:'10px' }}>
-        <span style={{ fontSize:'16px' }}>💡</span>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.5 }}>
-          Gear recommendations are based on your race distance. Sponsor integrations and personalized suggestions coming soon.
-        </div>
-      </div>
     </div>
   )
 }
-function SignupModal({ race, onSave, onClose, t }) {
-  const [goal, setGoal]           = useState('')
-  const [specificTime, setSpecificTime] = useState('')
-  const [saving, setSaving]       = useState(false)
 
+function SignupModal({ race, onSave, onClose, t }) {
+  const [goal, setGoal]         = useState('')
+  const [specificTime, setSpecificTime] = useState('')
+  const [saving, setSaving]     = useState(false)
   const GOALS = [
     { key:'pr',    label:'Go for a PR 🏆' },
     { key:'time',  label:'Hit a specific time 🎯' },
@@ -146,55 +100,43 @@ function SignupModal({ race, onSave, onClose, t }) {
     { key:'finish',label:'Just finish strong 💪' },
     { key:'cause', label:'Support a cause ❤️' },
   ]
-
   const handleSave = async () => {
     setSaving(true)
     await new Promise(r => setTimeout(r, 400))
     onSave({ goal, specificTime })
     setSaving(false)
   }
-
   return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:t.surface, borderRadius:'20px', padding:'32px', width:'100%', maxWidth:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', border:`1px solid ${t.border}` }}>
-        {/* Header */}
-        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'24px' }}>
-          <div style={{ width:44, height:44, borderRadius:'50%', background:'rgba(201,168,76,0.12)', border:'1.5px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'20px' }}>🎉</div>
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'16px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:t.surface, borderRadius:'20px', padding:'24px', width:'100%', maxWidth:'420px', boxShadow:'0 24px 64px rgba(0,0,0,0.35)', border:`1px solid ${t.border}` }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'20px' }}>
+          <div style={{ width:40, height:40, borderRadius:'50%', background:'rgba(201,168,76,0.12)', border:'1.5px solid rgba(201,168,76,0.3)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>🎉</div>
           <div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>You're In!</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>You're In!</div>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>{race.name} · {race.date}</div>
           </div>
         </div>
-
-        {/* Single question */}
-        <div style={{ marginBottom:'24px' }}>
-          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'12px' }}>What's your goal for this race?</label>
-          <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+        <div style={{ marginBottom:'20px' }}>
+          <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>What's your goal for this race?</label>
+          <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
             {GOALS.map(g => (
               <button key={g.key} onClick={() => setGoal(goal===g.key?'':g.key)}
-                style={{ padding:'10px 16px', borderRadius:'10px', border:`1.5px solid ${goal===g.key?'#C9A84C':t.border}`, background:goal===g.key?'rgba(201,168,76,0.1)':t.inputBg, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'0.5px', color:goal===g.key?'#C9A84C':t.textMuted, cursor:'pointer', transition:'all 0.15s', textAlign:'left' }}>
+                style={{ padding:'9px 14px', borderRadius:'10px', border:`1.5px solid ${goal===g.key?'#C9A84C':t.border}`, background:goal===g.key?'rgba(201,168,76,0.1)':t.inputBg, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:goal===g.key?'#C9A84C':t.textMuted, cursor:'pointer', textAlign:'left' }}>
                 {g.label}
               </button>
             ))}
           </div>
-          {/* Specific time input — only shows when "Hit a specific time" is selected */}
           {goal === 'time' && (
-            <div style={{ marginTop:'12px' }}>
+            <div style={{ marginTop:'10px' }}>
               <input value={specificTime} onChange={e => setSpecificTime(e.target.value)} placeholder="e.g. 1:55:00"
-                style={{ width:'100%', padding:'10px 14px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.inputBg, color:t.text, fontFamily:"'Barlow',sans-serif", fontSize:'14px', outline:'none', transition:'border-color 0.15s' }}
+                style={{ width:'100%', padding:'10px 14px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.inputBg, color:t.text, fontFamily:"'Barlow',sans-serif", fontSize:'14px', outline:'none' }}
                 onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor=t.border} />
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, marginTop:'4px' }}>Enter your target finish time (HH:MM:SS)</div>
             </div>
           )}
         </div>
-
         <div style={{ display:'flex', gap:'10px' }}>
-          <button onClick={onClose}
-            style={{ flex:1, padding:'11px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
-            Skip
-          </button>
-          <button onClick={handleSave} disabled={saving}
-            style={{ flex:2, padding:'11px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', opacity:saving?0.7:1 }}
+          <button onClick={onClose} style={{ flex:1, padding:'11px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>Skip</button>
+          <button onClick={handleSave} disabled={saving} style={{ flex:2, padding:'11px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}
             onMouseEnter={e => { if(!saving) e.currentTarget.style.background='#C9A84C' }}
             onMouseLeave={e => { if(!saving) e.currentTarget.style.background='#1B2A4A' }}>
             {saving ? 'Adding...' : 'Add to My Races →'}
@@ -205,11 +147,11 @@ function SignupModal({ race, onSave, onClose, t }) {
   )
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
 export default function RaceDetail() {
   const navigate = useNavigate()
   const { id }   = useParams()
   const { t, isDark } = useTheme()
+  const isMobile = useIsMobile()
 
   const [race, setRace]               = useState(null)
   const [photo, setPhoto]             = useState(PHOTO_PLACEHOLDER)
@@ -220,22 +162,15 @@ export default function RaceDetail() {
   const [showSignupModal, setShowSignupModal]   = useState(false)
   const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [signedUp, setSignedUp]       = useState(() => {
-    // Restore from sessionStorage on load
-    try {
-      const upcoming = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
-      return upcoming.some(r => r.id === parseInt(id) || r.id === id)
-    } catch(e) { return false }
+    try { const u = JSON.parse(sessionStorage.getItem('rp_upcoming')||'[]'); return u.some(r => r.id===parseInt(id)||r.id===id) } catch(e){ return false }
   })
   const pendingExternalNav = useRef(false)
 
   const handleCancelRegistration = () => {
-    setSignedUp(false)
-    setShowCancelConfirm(false)
+    setSignedUp(false); setShowCancelConfirm(false)
     try {
-      const existing = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
-      sessionStorage.setItem('rp_upcoming', JSON.stringify(
-        existing.filter(r => r.id !== parseInt(id) && r.id !== id)
-      ))
+      const existing = JSON.parse(sessionStorage.getItem('rp_upcoming')||'[]')
+      sessionStorage.setItem('rp_upcoming', JSON.stringify(existing.filter(r => r.id!==parseInt(id)&&r.id!==id)))
     } catch(e) {}
   }
 
@@ -253,70 +188,31 @@ export default function RaceDetail() {
             const res  = await fetch(`/api/runsignup?action=get_race_detail&race_id=${id}`)
             const json = await res.json()
             if (json.race) {
-              setRace(prev => ({
-                ...prev,
-                description:   json.race.description        || prev.description,
-                website_url:   json.race.url                || prev.website_url,
-                events_detail: json.race.events             || [],
-                course_map:    json.race.course_map         || prev.course_map,
-                charity:       json.race.beneficiary_name   || prev.charity,
-                cutoff_time:   json.race.time_limit         || prev.cutoff_time,
-                logo:          json.race.race_logo || json.race.logo_url || json.race.profile_image_url || prev.logo,
-                location:      json.race.address            || prev.location,
-              }))
+              setRace(prev => ({ ...prev, description:json.race.description||prev.description, website_url:json.race.url||prev.website_url, events_detail:json.race.events||[], course_map:json.race.course_map||prev.course_map, charity:json.race.beneficiary_name||prev.charity, cutoff_time:json.race.time_limit||prev.cutoff_time, logo:json.race.race_logo||json.race.logo_url||json.race.profile_image_url||prev.logo, location:json.race.address||prev.location }))
             }
           } catch(e) { console.warn('Could not fetch race detail:', e.message) }
           setDetailLoading(false)
         }
-      } catch(e) { console.error('Error loading race:', e); navigate('/discover') }
+      } catch(e) { navigate('/discover') }
       setLoading(false)
     }
     load()
 
     const style = document.createElement('style')
     style.id = 'rp-rd-styles'
-    style.textContent = `
-      @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
-      * { box-sizing:border-box; }
-      @keyframes fadeIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
-      @keyframes spin { to{transform:rotate(360deg);} }
-      @keyframes pulse { 0%,100%{opacity:0.5;}50%{opacity:1;} }
-      .rd-tab { padding:12px 24px;border:none;background:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid transparent;transition:all 0.15s; }
-      .detail-skeleton { height:16px;border-radius:4px;animation:pulse 1.5s ease infinite; }
-      .rd-register-btn { transition:background 0.15s !important; }
-      .rd-register-btn:hover { background:#C9A84C !important; color:#1B2A4A !important; }
-    `
+    style.textContent = `@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');*{box-sizing:border-box;}@keyframes fadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}@keyframes spin{to{transform:rotate(360deg);}}@keyframes pulse{0%,100%{opacity:0.5;}50%{opacity:1;}}.rd-tab{padding:10px 16px;border:none;background:none;cursor:pointer;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;border-bottom:2px solid transparent;transition:all 0.15s;white-space:nowrap;}.detail-skeleton{height:16px;border-radius:4px;animation:pulse 1.5s ease infinite;}.rd-register-btn{transition:background 0.15s !important;}.rd-register-btn:hover{background:#C9A84C !important;color:#1B2A4A !important;}`
     if (!document.getElementById('rp-rd-styles')) document.head.appendChild(style)
-
-    // Detect return from RunSignup tab — only show banner if not already registered
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible' && pendingExternalNav.current) {
-        pendingExternalNav.current = false
-        if (!signedUp) setTimeout(() => setShowSignupBanner(true), 800)
-      }
-    }
+    const handleVisibility = () => { if (document.visibilityState==='visible'&&pendingExternalNav.current) { pendingExternalNav.current=false; if (!signedUp) setTimeout(()=>setShowSignupBanner(true),800) } }
     document.addEventListener('visibilitychange', handleVisibility)
     return () => { document.getElementById('rp-rd-styles')?.remove(); document.removeEventListener('visibilitychange', handleVisibility) }
   }, [id])
 
-  const handleRegisterClick = (url) => {
-    if (!signedUp) pendingExternalNav.current = true
-    window.open(url, '_blank')
-  }
-
+  const handleRegisterClick = (url) => { if (!signedUp) pendingExternalNav.current=true; window.open(url,'_blank') }
   const handleSignupSave = ({ goal, specificTime }) => {
-    setSignedUp(true)
-    setShowSignupModal(false)
+    setSignedUp(true); setShowSignupModal(false)
     try {
-      const existing = JSON.parse(sessionStorage.getItem('rp_upcoming') || '[]')
-      const entry = {
-        id: race.id, name: race.name, location: race.location,
-        date: race.date, date_sort: race.date_sort,
-        distance: race.distance, registration_url: race.registration_url,
-        city: race.city, state: race.state,
-        goal, specificTime, addedAt: Date.now()
-      }
-      sessionStorage.setItem('rp_upcoming', JSON.stringify([entry, ...existing.filter(r => r.id !== race.id)]))
+      const existing = JSON.parse(sessionStorage.getItem('rp_upcoming')||'[]')
+      sessionStorage.setItem('rp_upcoming', JSON.stringify([{ id:race.id, name:race.name, location:race.location, date:race.date, date_sort:race.date_sort, distance:race.distance, registration_url:race.registration_url, city:race.city, state:race.state, goal, specificTime, addedAt:Date.now() }, ...existing.filter(r=>r.id!==race.id)]))
     } catch(e) {}
   }
 
@@ -328,262 +224,267 @@ export default function RaceDetail() {
   if (!race) return null
 
   const colors = getDistanceColor(race.distance)
-  const cleaned = (race.distance || '').replace(' mi','').replace(' miles','')
+  const cleaned = (race.distance||'').replace(' mi','').replace(' miles','')
   const registrationUrl = race.registration_url || race.website_url || `https://runsignup.com/Race/${id}`
-
-  const trainingWeeks = () => {
-    const d = race.distance || ''
-    if (d==='5K') return 4; if (d==='10K') return 6; if (d==='13.1') return 10
-    if (d==='26.2') return 16; if (d==='70.3') return 20
-    if (d.includes('140')||d.toLowerCase().includes('ironman')) return 30
-    if (d.includes('50')||d.toLowerCase().includes('ultra')) return 24
-    return 8
-  }
-
+  const trainingWeeks = () => { const d=race.distance||''; if(d==='5K')return 4;if(d==='10K')return 6;if(d==='13.1')return 10;if(d==='26.2')return 16;if(d==='70.3')return 20;if(d.includes('140')||d.toLowerCase().includes('ironman'))return 30;if(d.includes('50')||d.toLowerCase().includes('ultra'))return 24;return 8 }
   const card   = { bg:t.isDark?t.surface:'#fff', border:t.isDark?t.border:'#e8eaed' }
   const detail = { bg:t.isDark?t.surfaceAlt:'#f8f9fb' }
 
+  const p = isMobile ? '16px' : '40px'
+
+  // The register CTA block — reused in both sidebar and mobile top position
+  const RegisterCTA = () => (
+    <div style={{ background:'#1B2A4A', borderRadius:'16px', padding: isMobile ? '20px' : '28px', marginBottom:'16px', textAlign:'center' }}>
+      <div style={{ width: isMobile ? 64 : 80, height: isMobile ? 64 : 80, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', margin:'0 auto 14px', position:'relative' }}>
+        <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?14:cleaned.length>2?18:24, color:colors.stampText, position:'relative', zIndex:1 }}>{cleaned}</span>
+      </div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '28px' : '32px', color:'#C9A84C', letterSpacing:'1px', marginBottom:'3px' }}>{race.price_raw||(race.price?`$${race.price}`:'TBD')}</div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'1px', marginBottom:'16px' }}>Registration fee</div>
+      {signedUp ? (
+        <>
+          <div style={{ padding:'12px', borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.3)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase' }}>✓ You're Registered</div>
+          {!showCancelConfirm ? (
+            <button onClick={() => setShowCancelConfirm(true)} style={{ width:'100%', padding:'8px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)', cursor:'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.color='#c53030'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>Cancel registration</button>
+          ) : (
+            <div style={{ background:'rgba(197,48,48,0.06)', border:'1px solid rgba(197,48,48,0.2)', borderRadius:'10px', padding:'12px', marginTop:'8px' }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#fff', marginBottom:'10px' }}>Remove this race from your upcoming races?</div>
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button onClick={() => setShowCancelConfirm(false)} style={{ flex:1, padding:'8px', border:`1px solid rgba(255,255,255,0.2)`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'rgba(255,255,255,0.6)', cursor:'pointer', textTransform:'uppercase' }}>Keep</button>
+                <button onClick={handleCancelRegistration} style={{ flex:1, padding:'8px', border:'1px solid rgba(197,48,48,0.4)', borderRadius:'8px', background:'rgba(197,48,48,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#c53030', cursor:'pointer', textTransform:'uppercase' }}>Remove</button>
+              </div>
+            </div>
+          )}
+        </>
+      ) : (
+        <>
+          <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
+            style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
+            Register on RunSignup →
+          </button>
+          {!showSignupBanner && (
+            <button onClick={() => setShowSignupBanner(true)}
+              style={{ width:'100%', padding:'6px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)', cursor:'pointer' }}
+              onMouseEnter={e => e.currentTarget.style.color='rgba(255,255,255,0.6)'} onMouseLeave={e => e.currentTarget.style.color='rgba(255,255,255,0.3)'}>
+              Already registered? Tap here →
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  )
+
   return (
-    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s' }}>
+    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s', overflowX:'hidden' }}>
 
       {/* NAV */}
-      <div style={{ position:'sticky', top:0, zIndex:500, background:t.navBg, backdropFilter:'blur(8px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 40px', height:'56px', transition:'background 0.25s' }}>
-        <button onClick={() => navigate(-1)}
-          style={{ display:'flex', alignItems:'center', gap:'8px', background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0, transition:'color 0.15s' }}
-          onMouseEnter={e => e.currentTarget.style.color=t.text} onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Back
+      <div style={{ position:'sticky', top:0, zIndex:500, background:t.navBg, backdropFilter:'blur(8px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'center', justifyContent:'space-between', padding:`0 ${p}`, height:'52px' }}>
+        <button onClick={() => navigate(-1)} style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0 }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>Back
         </button>
-        <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'5px' }}>
           <div style={{ width:'5px', height:'5px', borderRadius:'50%', background:'#C9A84C' }} />
-          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', letterSpacing:'2.5px', color:t.text }}>RACE PASSPORT</span>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '14px' : '16px', letterSpacing:'2.5px', color:t.text }}>RACE PASSPORT</span>
         </div>
-        <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-          {signedUp && (
-            <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'5px 12px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'20px' }}>
-              <div style={{ width:6, height:6, borderRadius:'50%', background:'#C9A84C' }} />
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C' }}>Registered</span>
+        <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+          {signedUp && !isMobile && (
+            <div style={{ display:'flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'20px' }}>
+              <div style={{ width:5, height:5, borderRadius:'50%', background:'#C9A84C' }} />
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C' }}>Registered</span>
             </div>
           )}
           <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
-            style={{ padding:'7px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}>
-            Register Now
+            style={{ padding: isMobile ? '5px 12px' : '7px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}>
+            Register
           </button>
         </div>
       </div>
 
       {/* HERO */}
-      <div style={{ height:'420px', position:'relative', background:'#1B2A4A', overflow:'hidden' }}>
+      <div style={{ height: isMobile ? '260px' : '420px', position:'relative', background:'#1B2A4A', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'#C9A84C', zIndex:2 }} />
         <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => e.target.style.display='none'} />
         <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.1) 20%,rgba(0,0,0,0.78))' }} />
         {detailLoading && (
-          <div style={{ position:'absolute', top:24, left:'50%', transform:'translateX(-50%)', background:'rgba(0,0,0,0.6)', borderRadius:'8px', padding:'6px 16px', display:'flex', alignItems:'center', gap:'8px', zIndex:3 }}>
-            <div style={{ width:12, height:12, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.7)', letterSpacing:'1px' }}>Loading race details...</span>
+          <div style={{ position:'absolute', top:16, left:'50%', transform:'translateX(-50%)', background:'rgba(0,0,0,0.6)', borderRadius:'8px', padding:'5px 14px', display:'flex', alignItems:'center', gap:'8px', zIndex:3 }}>
+            <div style={{ width:10, height:10, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.7)', letterSpacing:'1px' }}>Loading details...</span>
           </div>
         )}
-        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding:'32px 40px' }}>
-          <div style={{ maxWidth:'1200px', margin:'0 auto', display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:'24px' }}>
-            <div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', marginBottom:'8px' }}>{race.date} · {race.location}</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,5vw,60px)', color:'#fff', letterSpacing:'1.5px', lineHeight:1 }}>{race.name}</div>
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding: isMobile ? '16px' : '32px 40px' }}>
+          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', gap:'12px' }}>
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile ? '10px' : '12px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.55)', textTransform:'uppercase', marginBottom:'6px' }}>{race.date} · {race.location}</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(22px,6vw,36px)' : 'clamp(32px,5vw,60px)', color:'#fff', letterSpacing:'1.5px', lineHeight:1 }}>{race.name}</div>
             </div>
-            <div style={{ width:100, height:100, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'rgba(0,0,0,0.45)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, backdropFilter:'blur(4px)' }}>
-              <div style={{ position:'absolute', inset:7, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?18:cleaned.length>2?22:30, color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
+            <div style={{ width: isMobile ? 64 : 100, height: isMobile ? 64 : 100, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'rgba(0,0,0,0.45)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0, backdropFilter:'blur(4px)' }}>
+              <div style={{ position:'absolute', inset: isMobile ? 5 : 7, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?(isMobile?12:18):cleaned.length>2?(isMobile?15:22):(isMobile?22:30), color:colors.stampText, letterSpacing:'0.04em', lineHeight:1, position:'relative', zIndex:1 }}>{cleaned}</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* QUICK STATS */}
-      <div style={{ background:card.bg, borderBottom:`1px solid ${card.border}`, transition:'background 0.25s' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', display:'grid', gridTemplateColumns:'repeat(5,1fr)', padding:'0 40px' }}>
+      {/* QUICK STATS — horizontal scroll on mobile */}
+      <div style={{ background:card.bg, borderBottom:`1px solid ${card.border}`, overflowX: isMobile ? 'auto' : 'visible' }}>
+        <div style={{ display:'grid', gridTemplateColumns: isMobile ? 'repeat(5, minmax(80px, 1fr))' : 'repeat(5,1fr)', padding:`0 ${p}`, minWidth: isMobile ? '400px' : 'auto' }}>
           {[
-            { label:'Entry Fee',      value:race.price_raw || race.price || 'TBD' },
-            { label:'Terrain',        value:race.terrain   || 'Road'               },
-            { label:'Distance',       value:race.distance  || '—'                  },
-            { label:'Est. Finishers', value:race.est_finishers ? race.est_finishers.toLocaleString() : '—' },
-            { label:'Elevation',      value:race.elevation || '—'                  },
+            { label:'Entry Fee',  value:race.price_raw||race.price||'TBD' },
+            { label:'Terrain',   value:race.terrain||'Road' },
+            { label:'Distance',  value:race.distance||'—' },
+            { label:'Finishers', value:race.est_finishers?race.est_finishers.toLocaleString():'—' },
+            { label:'Elevation', value:race.elevation||'—' },
           ].map((s,i) => (
-            <div key={i} style={{ padding:'20px 0', textAlign:'center', borderRight:i<4?`1px solid ${card.border}`:'none' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
+            <div key={i} style={{ padding: isMobile ? '12px 8px' : '20px 0', textAlign:'center', borderRight:i<4?`1px solid ${card.border}`:'none' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '18px' : '26px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'3px' }}>{s.label}</div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* TABS */}
-      <div style={{ background:card.bg, borderBottom:`1px solid ${card.border}`, position:'sticky', top:'56px', zIndex:40, transition:'background 0.25s' }}>
-        <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'0 40px', display:'flex' }}>
+      {/* TABS — horizontal scroll on mobile */}
+      <div style={{ background:card.bg, borderBottom:`1px solid ${card.border}`, position:'sticky', top:'52px', zIndex:40, overflowX:'auto' }}>
+        <div style={{ padding:`0 ${p}`, display:'flex', minWidth: isMobile ? 'max-content' : 'auto' }}>
           {['overview','events','training','results'].map(tab => (
-            <button key={tab} className="rd-tab"
-              style={{ color:activeTab===tab?t.text:t.textMuted, borderBottomColor:activeTab===tab?'#C9A84C':'transparent' }}
-              onClick={() => setActiveTab(tab)}>
+            <button key={tab} className="rd-tab" style={{ color:activeTab===tab?t.text:t.textMuted, borderBottomColor:activeTab===tab?'#C9A84C':'transparent' }} onClick={() => setActiveTab(tab)}>
               {tab.charAt(0).toUpperCase()+tab.slice(1)}
             </button>
           ))}
         </div>
       </div>
 
-      <div style={{ maxWidth:'1200px', margin:'0 auto', padding:'32px 40px 80px' }}>
+      {/* CONTENT */}
+      <div style={{ maxWidth: isMobile ? '100%' : '1200px', margin:'0 auto', padding: isMobile ? '16px 16px 80px' : '32px 40px 80px' }}>
 
-        {/* OVERVIEW */}
         {activeTab === 'overview' && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:'28px', alignItems:'start' }}>
-              <div>
-                <div style={{ background:card.bg, borderRadius:'16px', padding:'28px', border:`1px solid ${card.border}`, marginBottom:'24px', transition:'background 0.25s' }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>About This Race</div>
-                  {detailLoading ? (
-                    <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-                      {[100,85,92,70].map((w,i) => <div key={i} className="detail-skeleton" style={{ width:`${w}%`, background:t.border }} />)}
-                    </div>
-                  ) : race.description ? (
-                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.isDark?t.text:'#4a5568', lineHeight:1.8, fontWeight:300, margin:0 }}
-                      dangerouslySetInnerHTML={{ __html: race.description.replace(/<[^>]*>/g,'').slice(0,800)+(race.description.length>800?'...':'') }} />
+            {/* On mobile: CTA first, then content. On desktop: 2-col grid */}
+            {isMobile ? (
+              <>
+                <RegisterCTA />
+                {signedUp && <SuggestedGear race={race} t={t} />}
+                {/* About */}
+                <div style={{ background:card.bg, borderRadius:'16px', padding:'20px', border:`1px solid ${card.border}`, marginTop:'16px' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', marginBottom:'12px' }}>About This Race</div>
+                  {race.description ? (
+                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.isDark?t.text:'#4a5568', lineHeight:1.8, fontWeight:300, margin:0 }}
+                      dangerouslySetInnerHTML={{ __html: race.description.replace(/<[^>]*>/g,'').slice(0,600)+(race.description.length>600?'...':'') }} />
                   ) : (
-                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.textMuted, lineHeight:1.8, margin:0 }}>Visit the race website for full details about this event.</p>
+                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.textMuted, lineHeight:1.8, margin:0 }}>Visit the race website for full details.</p>
                   )}
-                  {race.website_url && <a href={race.website_url} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>Visit Race Website →</a>}
-                  {race.course_map  && <a href={race.course_map}  target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'10px', marginLeft:race.website_url?'20px':0, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:t.text, textDecoration:'none', textTransform:'uppercase' }}>View Course Map →</a>}
+                  {race.website_url && <a href={race.website_url} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'5px', marginTop:'12px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>Visit Race Website →</a>}
                 </div>
-                <div style={{ background:card.bg, borderRadius:'16px', padding:'28px', border:`1px solid ${card.border}`, transition:'background 0.25s' }}>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Race Details</div>
-                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+                {/* Race details grid */}
+                <div style={{ background:card.bg, borderRadius:'16px', padding:'20px', border:`1px solid ${card.border}`, marginTop:'12px' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', marginBottom:'12px' }}>Race Details</div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'8px' }}>
                     {[
-                      { label:'Distance',    value:race.distance    || '—'   },
-                      { label:'Date',        value:race.date        || '—'   },
-                      { label:'Location',    value:race.location    || '—'   },
-                      { label:'Entry Fee',   value:race.price_raw || race.price || 'TBD' },
-                      { label:'Terrain',     value:race.terrain     || 'Road' },
-                      { label:'Elevation',   value:race.elevation   || '—'   },
-                      { label:'Cutoff Time', value:race.cutoff_time || '—'   },
-                      { label:'Charity',     value:race.charity     || '—'   },
+                      { label:'Distance',  value:race.distance||'—' },
+                      { label:'Date',      value:race.date||'—' },
+                      { label:'Location',  value:race.location||'—' },
+                      { label:'Entry Fee', value:race.price_raw||race.price||'TBD' },
+                      { label:'Terrain',   value:race.terrain||'Road' },
+                      { label:'Elevation', value:race.elevation||'—' },
                     ].map(item => (
-                      <div key={item.label} style={{ padding:'14px 16px', background:detail.bg, borderRadius:'8px', border:`1px solid ${card.border}`, borderLeft:'3px solid #C9A84C', transition:'background 0.25s' }}>
-                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'5px' }}>{item.label}</div>
-                        {detailLoading && ['Cutoff Time','Charity'].includes(item.label) ? (
-                          <div className="detail-skeleton" style={{ width:'60%', height:'14px', background:t.border }} />
-                        ) : (
-                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{item.value}</div>
-                        )}
+                      <div key={item.label} style={{ padding:'10px 12px', background:detail.bg, borderRadius:'8px', border:`1px solid ${card.border}`, borderLeft:'3px solid #C9A84C' }}>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'3px' }}>{item.label}</div>
+                        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:t.text }}>{item.value}</div>
                       </div>
                     ))}
                   </div>
                 </div>
-              </div>
-
-              {/* Sidebar */}
-              <div>
-                <div style={{ background:'#1B2A4A', borderRadius:'16px', padding:'28px', marginBottom:'18px', textAlign:'center' }}>
-                  <div style={{ width:80, height:80, borderRadius:'50%', border:`2.5px solid ${colors.stampBorder}`, background:'rgba(201,168,76,0.08)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', margin:'0 auto 18px', position:'relative' }}>
-                    <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px dashed ${colors.stampDash}` }} />
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:cleaned.length>3?16:cleaned.length>2?20:28, color:colors.stampText, position:'relative', zIndex:1 }}>{cleaned}</span>
+                {/* Training weeks */}
+                <div style={{ background:card.bg, borderRadius:'12px', padding:'16px', border:`1px solid ${card.border}`, borderTop:'3px solid #C9A84C', marginTop:'12px' }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'4px' }}>Est. Training Time</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{trainingWeeks()} Weeks</div>
+                </div>
+              </>
+            ) : (
+              /* Desktop 2-col layout */
+              <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:'28px', alignItems:'start' }}>
+                <div>
+                  <div style={{ background:card.bg, borderRadius:'16px', padding:'28px', border:`1px solid ${card.border}`, marginBottom:'24px' }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>About This Race</div>
+                    {detailLoading ? (
+                      <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>{[100,85,92,70].map((w,i) => <div key={i} className="detail-skeleton" style={{ width:`${w}%`, background:t.border }} />)}</div>
+                    ) : race.description ? (
+                      <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.isDark?t.text:'#4a5568', lineHeight:1.8, fontWeight:300, margin:0 }}
+                        dangerouslySetInnerHTML={{ __html: race.description.replace(/<[^>]*>/g,'').slice(0,800)+(race.description.length>800?'...':'') }} />
+                    ) : (
+                      <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.textMuted, lineHeight:1.8, margin:0 }}>Visit the race website for full details about this event.</p>
+                    )}
+                    {race.website_url && <a href={race.website_url} target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'16px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>Visit Race Website →</a>}
+                    {race.course_map  && <a href={race.course_map}  target="_blank" rel="noreferrer" style={{ display:'inline-flex', alignItems:'center', gap:'6px', marginTop:'10px', marginLeft:race.website_url?'20px':0, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:t.text, textDecoration:'none', textTransform:'uppercase' }}>View Course Map →</a>}
                   </div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#C9A84C', letterSpacing:'1px', marginBottom:'4px' }}>{race.price_raw || (race.price?`$${race.price}`:'TBD')}</div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.4)', letterSpacing:'1px', marginBottom:'20px' }}>Registration fee</div>
-                  {signedUp ? (
-                    <>
-                      <div style={{ padding:'13px', borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.3)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', textAlign:'center' }}>✓ You're Registered</div>
-                      {!showCancelConfirm ? (
-                        <button onClick={() => setShowCancelConfirm(true)}
-                          style={{ width:'100%', padding:'8px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, cursor:'pointer', letterSpacing:'0.5px', marginTop:'-4px' }}
-                          onMouseEnter={e => e.currentTarget.style.color='#c53030'}
-                          onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
-                          Cancel registration
-                        </button>
-                      ) : (
-                        <div style={{ background:'rgba(197,48,48,0.06)', border:'1px solid rgba(197,48,48,0.2)', borderRadius:'10px', padding:'12px', textAlign:'center' }}>
-                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.text, marginBottom:'10px', lineHeight:1.5 }}>Remove this race from your upcoming races?</div>
-                          <div style={{ display:'flex', gap:'8px' }}>
-                            <button onClick={() => setShowCancelConfirm(false)}
-                              style={{ flex:1, padding:'8px', border:`1px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
-                              Keep
-                            </button>
-                            <button onClick={handleCancelRegistration}
-                              style={{ flex:1, padding:'8px', border:'1px solid rgba(197,48,48,0.4)', borderRadius:'8px', background:'rgba(197,48,48,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#c53030', cursor:'pointer', textTransform:'uppercase' }}>
-                              Remove
-                            </button>
-                          </div>
+                  <div style={{ background:card.bg, borderRadius:'16px', padding:'28px', border:`1px solid ${card.border}` }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Race Details</div>
+                    <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px' }}>
+                      {[
+                        { label:'Distance',    value:race.distance||'—' },
+                        { label:'Date',        value:race.date||'—' },
+                        { label:'Location',    value:race.location||'—' },
+                        { label:'Entry Fee',   value:race.price_raw||race.price||'TBD' },
+                        { label:'Terrain',     value:race.terrain||'Road' },
+                        { label:'Elevation',   value:race.elevation||'—' },
+                        { label:'Cutoff Time', value:race.cutoff_time||'—' },
+                        { label:'Charity',     value:race.charity||'—' },
+                      ].map(item => (
+                        <div key={item.label} style={{ padding:'14px 16px', background:detail.bg, borderRadius:'8px', border:`1px solid ${card.border}`, borderLeft:'3px solid #C9A84C' }}>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'5px' }}>{item.label}</div>
+                          {detailLoading&&['Cutoff Time','Charity'].includes(item.label) ? <div className="detail-skeleton" style={{ width:'60%', height:'14px', background:t.border }} /> : <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>{item.value}</div>}
                         </div>
-                      )}
-                      <SuggestedGear race={race} t={t} />
-                    </>
-                  ) : (
-                    <>
-                      <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
-                        style={{ width:'100%', padding:'13px', border:'none', borderRadius:'10px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'2px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
-                        Register on RunSignup →
-                      </button>
-                      {!showSignupBanner && (
-                        <button onClick={() => setShowSignupBanner(true)}
-                          style={{ width:'100%', padding:'8px', border:'none', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, cursor:'pointer', letterSpacing:'0.5px' }}
-                          onMouseEnter={e => e.currentTarget.style.color=t.text}
-                          onMouseLeave={e => e.currentTarget.style.color=t.textMuted}>
-                          Already registered? Tap here →
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-                <div style={{ background:card.bg, borderRadius:'12px', padding:'20px', border:`1px solid ${card.border}`, borderTop:'3px solid #C9A84C', marginBottom:'18px', transition:'background 0.25s' }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Est. Training Time</div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{trainingWeeks()} Weeks</div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'6px', lineHeight:1.5 }}>Based on distance and typical preparation time</div>
-                </div>
-                <div style={{ background:card.bg, borderRadius:'12px', padding:'14px 16px', border:`1px solid ${card.border}`, display:'flex', alignItems:'center', gap:'10px', transition:'background 0.25s' }}>
-                  <div style={{ width:32, height:32, borderRadius:'8px', background:detail.bg, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'10px', color:'#2563EB', letterSpacing:'0.5px' }}>RS</span>
+                      ))}
+                    </div>
                   </div>
-                  <div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:t.text }}>{race.city || race.location}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>via RunSignup</div>
+                </div>
+                <div>
+                  <RegisterCTA />
+                  {signedUp && <SuggestedGear race={race} t={t} />}
+                  <div style={{ background:card.bg, borderRadius:'12px', padding:'20px', border:`1px solid ${card.border}`, borderTop:'3px solid #C9A84C', marginBottom:'18px' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Est. Training Time</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{trainingWeeks()} Weeks</div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
-        {/* EVENTS */}
         {activeTab === 'events' && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
-            <div style={{ background:card.bg, borderRadius:'16px', padding:'28px', border:`1px solid ${card.border}`, transition:'background 0.25s' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'20px' }}>Race Events</div>
+            <div style={{ background:card.bg, borderRadius:'16px', padding: isMobile ? '20px' : '28px', border:`1px solid ${card.border}` }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Race Events</div>
               {detailLoading ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
-                  {[1,2,3].map(i => <div key={i} className="detail-skeleton" style={{ height:'60px', borderRadius:'8px', background:t.border }} />)}
-                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>{[1,2,3].map(i => <div key={i} className="detail-skeleton" style={{ height:'56px', borderRadius:'8px', background:t.border }} />)}</div>
               ) : race.events_detail && race.events_detail.length > 0 ? (
-                <div style={{ display:'flex', flexDirection:'column', gap:'12px' }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
                   {race.events_detail.map((ev,i) => {
-                    const evc = getDistanceColor(ev.distance || race.distance)
+                    const evc = getDistanceColor(ev.distance||race.distance)
                     const evcl = (ev.distance||'').replace(' mi','').replace(' miles','')
                     return (
-                      <div key={i} style={{ padding:'16px 20px', background:detail.bg, borderRadius:'10px', border:`1px solid ${card.border}`, borderLeft:`3px solid ${evc.stampBorder}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'16px' }}>
-                        <div style={{ display:'flex', alignItems:'center', gap:'16px' }}>
-                          {evcl && <div style={{ width:44, height:44, borderRadius:'50%', border:`2px solid ${evc.stampBorder}`, background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+                      <div key={i} style={{ padding:'14px 16px', background:detail.bg, borderRadius:'10px', border:`1px solid ${card.border}`, borderLeft:`3px solid ${evc.stampBorder}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                          {evcl && <div style={{ width:40, height:40, borderRadius:'50%', border:`2px solid ${evc.stampBorder}`, background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
                             <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${evc.stampDash}` }} />
                             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:evcl.length>3?9:evcl.length>2?11:14, color:evc.stampText, position:'relative', zIndex:1 }}>{evcl}</span>
                           </div>}
                           <div>
-                            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'0.5px' }}>{ev.name || ev.distance || 'Event'}</div>
-                            {ev.distance && ev.name && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'2px' }}>{ev.distance}</div>}
-                            {ev.start_time && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>Start: {ev.start_time}</div>}
+                            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text, letterSpacing:'0.5px' }}>{ev.name||ev.distance||'Event'}</div>
+                            {ev.start_time && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>Start: {ev.start_time}</div>}
                           </div>
                         </div>
-                        {ev.fee && <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:'#C9A84C', letterSpacing:'0.5px', flexShrink:0 }}>${ev.fee}</div>}
+                        {ev.fee && <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#C9A84C', flexShrink:0 }}>${ev.fee}</div>}
                       </div>
                     )
                   })}
                 </div>
               ) : (
-                <div style={{ textAlign:'center', padding:'32px', color:t.textMuted }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px' }}>Event details will appear here once loaded.</div>
+                <div style={{ textAlign:'center', padding:'28px', color:t.textMuted }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', marginBottom:'12px' }}>Event details will appear here once loaded.</div>
                   <button className="rd-register-btn" onClick={() => handleRegisterClick(registrationUrl)}
-                    style={{ marginTop:'16px', padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>
+                    style={{ padding:'8px 20px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}>
                     View on RunSignup →
                   </button>
                 </div>
@@ -592,47 +493,38 @@ export default function RaceDetail() {
           </div>
         )}
 
-        {/* TRAINING */}
         {activeTab === 'training' && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
-            <div style={{ background:card.bg, borderRadius:'16px', padding:'48px', border:`1px solid ${card.border}`, textAlign:'center', transition:'background 0.25s' }}>
-              <div style={{ width:72, height:72, borderRadius:'16px', background:'rgba(201,168,76,0.08)', border:'1.5px solid rgba(201,168,76,0.35)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 18px' }}>
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            <div style={{ background:card.bg, borderRadius:'16px', padding: isMobile ? '32px 20px' : '48px', border:`1px solid ${card.border}`, textAlign:'center' }}>
+              <div style={{ width:64, height:64, borderRadius:'16px', background:'rgba(201,168,76,0.08)', border:'1.5px solid rgba(201,168,76,0.35)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
               </div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:t.text, letterSpacing:'1px', marginBottom:'10px' }}>Personalized Training Plan</div>
-              <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', color:t.textMuted, lineHeight:1.7, maxWidth:'440px', margin:'0 auto 24px' }}>Training plans powered by Runna — personalized to your fitness level, current mileage, and race goal.</p>
-              <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'8px 18px', background:detail.bg, border:`1px solid ${card.border}`, borderRadius:'8px' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C' }} />
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '26px' : '32px', color:t.text, letterSpacing:'1px', marginBottom:'10px' }}>Personalized Training Plan</div>
+              <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:t.textMuted, lineHeight:1.7, maxWidth:'400px', margin:'0 auto 20px' }}>Training plans powered by Runna — personalized to your fitness level and race goal.</p>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'7px 16px', background:detail.bg, border:`1px solid ${card.border}`, borderRadius:'8px' }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Coming Soon — Runna Integration</span>
               </div>
             </div>
           </div>
         )}
 
-        {/* RESULTS */}
         {activeTab === 'results' && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
-            <div style={{ background:card.bg, borderRadius:'16px', padding:'48px', border:`1px solid ${card.border}`, textAlign:'center', transition:'background 0.25s' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:t.text, letterSpacing:'1px', marginBottom:'10px' }}>Past Results</div>
-              <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', color:t.textMuted, lineHeight:1.7, maxWidth:'440px', margin:'0 auto 24px' }}>Historical results will be pulled from RunSignup and Athlinks once your account is connected.</p>
-              <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'8px 18px', background:detail.bg, border:`1px solid ${card.border}`, borderRadius:'8px' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:'#C9A84C' }} />
+            <div style={{ background:card.bg, borderRadius:'16px', padding: isMobile ? '32px 20px' : '48px', border:`1px solid ${card.border}`, textAlign:'center' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '26px' : '32px', color:t.text, letterSpacing:'1px', marginBottom:'10px' }}>Past Results</div>
+              <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', color:t.textMuted, lineHeight:1.7, maxWidth:'400px', margin:'0 auto 20px' }}>Historical results will be pulled from RunSignup and Athlinks once your account is connected.</p>
+              <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'7px 16px', background:detail.bg, border:`1px solid ${card.border}`, borderRadius:'8px' }}>
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Requires RunSignup Connection</span>
               </div>
             </div>
           </div>
         )}
-
       </div>
 
-      {/* BANNERS / MODALS */}
-      {showSignupBanner && !signedUp && (
-        <SignupBanner race={race} onYes={() => { setShowSignupBanner(false); setShowSignupModal(true) }} onNo={() => setShowSignupBanner(false)} />
-      )}
-      {showSignupModal && (
-        <SignupModal race={race} onSave={handleSignupSave} onClose={() => setShowSignupModal(false)} t={t} />
-      )}
-
+      {showSignupBanner && !signedUp && <SignupBanner race={race} onYes={() => { setShowSignupBanner(false); setShowSignupModal(true) }} onNo={() => setShowSignupBanner(false)} />}
+      {showSignupModal && <SignupModal race={race} onSave={handleSignupSave} onClose={() => setShowSignupModal(false)} t={t} />}
     </div>
   )
 }
