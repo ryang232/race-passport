@@ -68,6 +68,137 @@ function AddGearForm({ onAdd, onCancel, t }) {
   )
 }
 
+// ── Triathlon Segment Carousel ────────────────────────────────────────────────
+function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
+  const [activeIdx, setActiveIdx] = useState(0)
+  const mapRefs  = useRef([])
+  const rendered = useRef({})
+
+  const SEG_COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', mountainbikeride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
+  const SEG_LABELS = { swim:'Swim', ride:'Bike', virtualride:'Bike', mountainbikeride:'Bike', run:'Run', virtualrun:'Run' }
+  const SEG_EMOJI  = { swim:'🏊', ride:'🚴', virtualride:'🚴', mountainbikeride:'🚴', run:'🏃', virtualrun:'🏃' }
+
+  const getType  = seg => (seg.type || seg.sport_type || '').toLowerCase()
+  const getColor = seg => SEG_COLORS[getType(seg)] || '#1B2A4A'
+  const getLabel = seg => SEG_LABELS[getType(seg)] || getType(seg)
+  const getEmoji = seg => SEG_EMOJI[getType(seg)] || '🏅'
+
+  // Draw map for a segment when its ref is ready
+  const drawMap = async (seg, el) => {
+    if (!el || rendered.current[seg.id] || !seg?.map?.summary_polyline) return
+    rendered.current[seg.id] = true
+    try {
+      if (!window.L) {
+        const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/leaflet@1.9.4/dist/leaflet.js'; s.onload=resolve; document.head.appendChild(s) })
+      }
+      if (!window.polyline) {
+        await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js'; s.onload=resolve; document.head.appendChild(s) })
+      }
+      const L    = window.L
+      const poly = window.polyline
+      if (!poly || !L) return
+      const latlngs = poly.decode(seg.map.summary_polyline)
+      if (!latlngs.length) return
+      const map = L.map(el, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
+      const line = L.polyline(latlngs, { color: getColor(seg), weight:4, opacity:0.9 }).addTo(map)
+      map.fitBounds(line.getBounds(), { padding:[20,20] })
+    } catch(e) {}
+  }
+
+  // Draw map whenever active segment changes
+  useEffect(() => {
+    const seg = triActivities[activeIdx]
+    const el  = mapRefs.current[activeIdx]
+    if (seg && el) drawMap(seg, el)
+  }, [activeIdx, triActivities])
+
+  const prev = () => setActiveIdx(i => Math.max(0, i-1))
+  const next = () => setActiveIdx(i => Math.min(triActivities.length-1, i+1))
+
+  return (
+    <div>
+      {/* Map carousel */}
+      <div style={{ position:'relative', marginBottom:'12px' }}>
+        {/* Map panels — only active one visible */}
+        <div style={{ position:'relative', height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt }}>
+          {triActivities.map((seg, i) => (
+            <div key={seg.id}
+              ref={el => { mapRefs.current[i] = el; if (el && i === activeIdx) drawMap(seg, el) }}
+              style={{ position:'absolute', inset:0, opacity: i === activeIdx ? 1 : 0, transition:'opacity 0.3s ease', pointerEvents: i === activeIdx ? 'auto' : 'none' }}
+            />
+          ))}
+        </div>
+
+        {/* Prev arrow */}
+        {activeIdx > 0 && (
+          <button onClick={prev}
+            style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}
+            onMouseEnter={e => e.currentTarget.style.background='#fff'}
+            onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.9)'}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        )}
+
+        {/* Next arrow */}
+        {activeIdx < triActivities.length - 1 && (
+          <button onClick={next}
+            style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}
+            onMouseEnter={e => e.currentTarget.style.background='#fff'}
+            onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.9)'}>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          </button>
+        )}
+
+        {/* Dot indicators */}
+        <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:'6px', zIndex:10 }}>
+          {triActivities.map((seg, i) => (
+            <div key={seg.id} onClick={() => setActiveIdx(i)}
+              style={{ width: i === activeIdx ? 20 : 6, height:6, borderRadius:'3px', background: i === activeIdx ? getColor(triActivities[i]) : 'rgba(255,255,255,0.5)', transition:'all 0.25s', cursor:'pointer' }} />
+          ))}
+        </div>
+
+        {/* Active segment label overlay */}
+        <div style={{ position:'absolute', top:12, left:12, display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.92)', borderRadius:'8px', padding:'5px 10px', zIndex:10 }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background: getColor(triActivities[activeIdx]), flexShrink:0 }} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>{getLabel(triActivities[activeIdx])}</span>
+        </div>
+      </div>
+
+      {/* Segment rows — clickable, active one highlighted */}
+      <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
+        {triActivities.map((seg, i) => {
+          const color     = getColor(seg)
+          const isActive  = i === activeIdx
+          return (
+            <div key={seg.id} onClick={() => setActiveIdx(i)}
+              style={{ display:'grid', gridTemplateColumns:'80px 1fr 1fr 1fr 1fr', gap:'8px', alignItems:'center', borderRadius:'10px', padding:'12px 16px', borderLeft:`3px solid ${color}`, cursor:'pointer', transition:'all 0.2s',
+                background: isActive ? (color === '#0EA5E9' ? 'rgba(14,165,233,0.08)' : color === '#F97316' ? 'rgba(249,115,22,0.08)' : 'rgba(252,76,2,0.08)') : t.surfaceAlt,
+                boxShadow: isActive ? `0 0 0 1.5px ${color}33` : 'none',
+              }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, color: isActive ? color : t.text, letterSpacing:'0.5px' }}>
+                {getEmoji(seg)} {getLabel(seg)}
+              </div>
+              {[
+                { label:'Distance', value: fmt(seg.distance) },
+                { label:'Time',     value: fmtTime(seg.moving_time) },
+                { label:'Pace',     value: fmtPace(seg.moving_time, seg.distance) },
+                { label:'Elev',     value: seg.total_elevation_gain ? `${Math.round(seg.total_elevation_gain * 3.281)}ft` : '—' },
+              ].map(s => (
+                <div key={s.label} style={{ textAlign:'center' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color: isActive ? color : t.text, letterSpacing:'1px', lineHeight:1, transition:'color 0.2s' }}>{s.value}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'2px' }}>{s.label}</div>
+                </div>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ── Strava Activity Section ───────────────────────────────────────────────────
 function StravaActivitySection({ race, t }) {
   const { user }                        = useAuth()
@@ -345,72 +476,26 @@ function StravaActivitySection({ race, t }) {
           : `${activity.name} · ${fmtDate(activity.start_date_local)}`}
       </div>
 
-      {/* Map */}
-      <div ref={mapRef} style={{ height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt, marginBottom: isTri && triActivities.length > 0 ? '10px' : '16px' }} />
-
-      {/* Tri segment legend */}
-      {isTri && triActivities.length > 0 && (
-        <div style={{ display:'flex', alignItems:'center', gap:'16px', marginBottom:'16px', flexWrap:'wrap' }}>
-          {triActivities.map(seg => {
-            const type  = (seg.type || seg.sport_type || '').toLowerCase()
-            const COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
-            const LABELS = { swim:'Swim', ride:'Bike', virtualride:'Bike', run:'Run', virtualrun:'Run' }
-            const color = COLORS[type] || '#1B2A4A'
-            const label = LABELS[type] || type
-            return (
-              <div key={seg.id} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                <div style={{ width:24, height:3, borderRadius:'2px', background:color }} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, textTransform:'uppercase' }}>{label}</span>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-                  {fmt(seg.distance)} · {fmtTime(seg.moving_time)}
-                </span>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Stats — tri shows per-segment rows, standard shows 4-column grid */}
+      {/* Tri carousel map + stats */}
       {isTri && triActivities.length > 0 ? (
-        <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
-          {triActivities.map(seg => {
-            const type  = (seg.type || seg.sport_type || '').toLowerCase()
-            const COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
-            const LABELS = { swim:'🏊 Swim', ride:'🚴 Bike', virtualride:'🚴 Bike', run:'🏃 Run', virtualrun:'🏃 Run' }
-            const color = COLORS[type] || '#1B2A4A'
-            const label = LABELS[type] || type
-            return (
-              <div key={seg.id} style={{ display:'grid', gridTemplateColumns:'80px 1fr 1fr 1fr 1fr', gap:'8px', alignItems:'center', background:t.surfaceAlt, borderRadius:'10px', padding:'12px 16px', borderLeft:`3px solid ${color}` }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, color:t.text, letterSpacing:'0.5px' }}>{label}</div>
-                {[
-                  { label:'Distance', value: fmt(seg.distance) },
-                  { label:'Time',     value: fmtTime(seg.moving_time) },
-                  { label:'Pace',     value: fmtPace(seg.moving_time, seg.distance) },
-                  { label:'Elev',     value: seg.total_elevation_gain ? `${Math.round(seg.total_elevation_gain * 3.281)}ft` : '—' },
-                ].map(s => (
-                  <div key={s.label} style={{ textAlign:'center' }}>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'2px' }}>{s.label}</div>
-                  </div>
-                ))}
-              </div>
-            )
-          })}
-        </div>
+        <TriCarousel triActivities={triActivities} t={t} fmt={fmt} fmtTime={fmtTime} fmtPace={fmtPace} mapRendered={mapRendered} setMapRendered={setMapRendered} />
       ) : (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
-          {[
-            { label:'Distance',  value: fmt(activity.distance) },
-            { label:'Time',      value: fmtTime(activity.moving_time) },
-            { label:'Avg Pace',  value: fmtPace(activity.moving_time, activity.distance) },
-            { label:'Elevation', value: activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—' },
-          ].map(s => (
-            <div key={s.label} style={{ background:t.surfaceAlt, borderRadius:'10px', padding:'14px', textAlign:'center', borderTop:'3px solid #FC4C02' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div ref={mapRef} style={{ height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt, marginBottom:'16px' }} />
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'12px' }}>
+            {[
+              { label:'Distance',  value: fmt(activity.distance) },
+              { label:'Time',      value: fmtTime(activity.moving_time) },
+              { label:'Avg Pace',  value: fmtPace(activity.moving_time, activity.distance) },
+              { label:'Elevation', value: activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—' },
+            ].map(s => (
+              <div key={s.label} style={{ background:t.surfaceAlt, borderRadius:'10px', padding:'14px', textAlign:'center', borderTop:'3px solid #FC4C02' }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
