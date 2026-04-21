@@ -508,9 +508,10 @@ export default function RacePage() {
   const { t, isDark, toggleTheme } = useTheme()
   const numId = parseInt(id) || 1
 
-  const [editMode, setEditMode]     = useState(false)
-  const [race, setRace]             = useState(null)
-  const [currentIdx, setCurrentIdx] = useState(0)
+  const [editMode, setEditMode]         = useState(false)
+  const [race, setRace]                 = useState(null)
+  const [allPassportRaces, setAllPassportRaces] = useState([])
+  const [currentIdx, setCurrentIdx]     = useState(0)
   const [story, setStory]           = useState('')
   const [gear, setGear]             = useState([])
   const [stickers, setStickers]     = useState([])
@@ -547,10 +548,61 @@ export default function RacePage() {
   }
 
   useEffect(() => {
-    const data = RYAN_RACE_DATA[numId] || RYAN_RACE_DATA[1]
-    const idx  = ALL_IDS.indexOf(data.id)
-    setCurrentIdx(idx >= 0 ? idx : 0)
-    setRace(data); setStory(data.story||''); setGear(data.gear||[]); setStickers(data.stickers||[])
+    const loadRace = async () => {
+      // Try to load from Supabase passport_races first
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const userId = session?.user?.id
+        if (userId) {
+          // id param is now a UUID from passport_races
+          const { data: praces } = await supabase
+            .from('passport_races')
+            .select('*')
+            .eq('user_id', userId)
+            .order('date_sort', { ascending: false })
+
+          if (praces && praces.length > 0) {
+            // Find the specific race by index or id
+            const raceData = praces.find(r => r.id === id) || praces[numId - 1] || praces[0]
+            const idx = praces.findIndex(r => r.id === raceData.id)
+            setAllPassportRaces(praces)
+            setCurrentIdx(idx >= 0 ? idx : 0)
+
+            // Map to race page format
+            const mapped = {
+              id:        raceData.id,
+              name:      raceData.name,
+              date:      raceData.date,
+              location:  raceData.location || `${raceData.city || ''}${raceData.city && raceData.state ? ', ' : ''}${raceData.state || ''}`,
+              distance:  raceData.distance,
+              time:      raceData.time,
+              pace:      raceData.pace || '',
+              pr:        raceData.is_pr || false,
+              story:     raceData.story || '',
+              photos:    [],
+              gear:      [],
+              stickers:  [],
+              elevation: null,
+              weather:   null,
+              place:     null,
+            }
+            setRace(mapped)
+            setStory(mapped.story)
+            setGear([])
+            setStickers([])
+            return
+          }
+        }
+      } catch(e) {}
+
+      // Fallback to hardcoded data
+      const data = RYAN_RACE_DATA[numId] || RYAN_RACE_DATA[1]
+      const idx  = ALL_IDS.indexOf(data.id)
+      setCurrentIdx(idx >= 0 ? idx : 0)
+      setRace(data); setStory(data.story||''); setGear(data.gear||[]); setStickers(data.stickers||[])
+    }
+
+    loadRace()
 
     const style = document.createElement('style')
     style.id = 'rp-racepage-styles'
@@ -584,10 +636,8 @@ export default function RacePage() {
   const cleaned = race.distance.replace(' mi','').replace(' miles','')
   const fs      = cleaned.length>4 ? 22 : cleaned.length>2 ? 28 : 40
 
-  const prevId   = currentIdx > 0 ? ALL_IDS[currentIdx-1] : null
-  const nextId   = currentIdx < ALL_IDS.length-1 ? ALL_IDS[currentIdx+1] : null
-  const prevRace = prevId ? RYAN_RACE_DATA[prevId] : null
-  const nextRace = nextId ? RYAN_RACE_DATA[nextId] : null
+  const prevRace = currentIdx > 0 ? allPassportRaces[currentIdx-1] : null
+  const nextRace = currentIdx < allPassportRaces.length-1 ? allPassportRaces[currentIdx+1] : null
 
   const handleSave = async () => { setSaving(true); await new Promise(r => setTimeout(r,600)); setSaving(false); setEditMode(false) }
   const addSticker  = s => { setStickers(prev => [...prev, { id:Date.now(), emoji:s, x:20+Math.random()*60, y:20+Math.random()*60 }]); setShowStickerPicker(false) }
@@ -621,7 +671,7 @@ export default function RacePage() {
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             {prevRace ? prevRace.name.split(' ').slice(0,2).join(' ') : 'First'}
           </button>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Page {currentIdx+1} / {ALL_IDS.length}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Page {currentIdx+1} / {allPassportRaces.length || ALL_IDS.length}</div>
           <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
             style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:nextRace?'pointer':'default', color:nextRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 8px', borderRadius:'6px', transition:'color 0.15s' }}
             onMouseEnter={e => nextRace && (e.currentTarget.style.color=t.text)}
