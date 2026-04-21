@@ -504,6 +504,7 @@ export default function Home() {
   const initials  = (profile?.full_name || 'RG').split(' ').map(n => n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
   const isMobile = useIsMobile()
+  const [showMobileMenu, setShowMobileMenu] = useState(false)
 
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
@@ -513,60 +514,142 @@ export default function Home() {
   ]
 
   return (
-    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s' }}>
+    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s', overflowX:'hidden', maxWidth:'100vw', boxSizing:'border-box' }}>
       <ParallaxBackground t={t} />
 
-      {/* NAV */}
-      <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, transition:'background 0.25s, border-color 0.25s' }}>
-        <div style={{ width:'100%', padding: isMobile ? '0 12px' : '0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
-          {/* Logo — hidden on mobile to save space */}
-          {!isMobile && (
+      {/* MOBILE NAV — Strava-style */}
+      {isMobile ? (
+        <>
+          {/* Top bar: Logo + Hamburger */}
+          <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 16px' }}>
+
+              {/* RP Logo — real PNG */}
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <img
+                  src={isDark ? '/icon-dark-1024.png' : '/icon-light-1024.png'}
+                  alt="Race Passport"
+                  style={{ width:36, height:36, borderRadius:'10px', objectFit:'cover', flexShrink:0 }}
+                />
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', letterSpacing:'2.5px', color:t.text, lineHeight:1 }}>RACE PASSPORT</div>
+              </div>
+
+              {/* Hamburger */}
+              <button onClick={() => { setShowMobileMenu(!showMobileMenu); setShowDropdown(false) }}
+                style={{ width:40, height:40, borderRadius:'8px', background:'transparent', border:`1.5px solid ${t.border}`, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'5px', cursor:'pointer', padding:'8px', flexShrink:0 }}>
+                <div style={{ width:18, height:2, background:t.text, borderRadius:'1px', transition:'all 0.2s', transformOrigin:'center', transform: showMobileMenu ? 'rotate(45deg) translateY(7px)' : 'none' }} />
+                <div style={{ width:18, height:2, background:t.text, borderRadius:'1px', opacity: showMobileMenu ? 0 : 1, transition:'opacity 0.15s' }} />
+                <div style={{ width:18, height:2, background:t.text, borderRadius:'1px', transition:'all 0.2s', transformOrigin:'center', transform: showMobileMenu ? 'rotate(-45deg) translateY(-7px)' : 'none' }} />
+              </button>
+            </div>
+
+            {/* Greeting row — like Strava's "Following" bar */}
+            {!showMobileMenu && (
+              <div style={{ padding:'10px 16px 12px', borderTop:`1px solid ${t.navBorder}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1.5px', lineHeight:1 }}>{greeting}, {firstName.toUpperCase()}.</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1.5px', lineHeight:1, marginTop:'2px' }}>THE START LINE IS CALLING.</div>
+                </div>
+                {/* Avatar */}
+                <div onClick={() => setShowDropdown(!showDropdown)}
+                  style={{ width:34, height:34, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, flexShrink:0 }}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Pancake menu — full page dropdown */}
+            {showMobileMenu && (
+              <div style={{ background:t.surface, borderTop:`1px solid ${t.border}` }}>
+                {NAV_TABS.map(tab => (
+                  <button key={tab.path} onClick={() => { navigate(tab.path); setShowMobileMenu(false) }}
+                    style={{ width:'100%', display:'flex', alignItems:'center', gap:'16px', padding:'16px 20px', background: location.pathname === tab.path ? t.surfaceAlt : 'transparent', border:'none', borderLeft: location.pathname === tab.path ? '3px solid #C9A84C' : '3px solid transparent', cursor:'pointer', transition:'all 0.15s' }}>
+                    <span style={{ color: location.pathname === tab.path ? '#C9A84C' : t.textMuted }}>{tab.icon}</span>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', fontWeight:600, letterSpacing:'2px', textTransform:'uppercase', color: location.pathname === tab.path ? t.text : t.textMuted }}>{tab.label}</span>
+                    {location.pathname === tab.path && (
+                      <svg style={{ marginLeft:'auto' }} width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                    )}
+                  </button>
+                ))}
+                {/* Dark mode + profile in menu */}
+                <div style={{ padding:'14px 20px', borderTop:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1px', color:t.text }}>Dark Mode</span>
+                  <button onClick={toggleTheme}
+                    style={{ width:42, height:24, borderRadius:'12px', border:'none', cursor:'pointer', position:'relative', background:isDark?'#C9A84C':'#d0d7e0', padding:0 }}>
+                    <div style={{ position:'absolute', top:3, left:isDark?'calc(100% - 21px)':'3px', width:18, height:18, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+                  </button>
+                </div>
+                <button onClick={handleSignOut}
+                  style={{ width:'100%', padding:'16px 20px', background:'transparent', border:'none', borderTop:`1px solid ${t.border}`, textAlign:'left', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, letterSpacing:'1px', color:'#c53030', cursor:'pointer' }}>
+                  Log Out
+                </button>
+              </div>
+            )}
+
+            {/* Avatar dropdown */}
+            {showDropdown && !showMobileMenu && (
+              <div style={{ position:'absolute', right:16, top:'calc(100% + 4px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:'0 8px 24px rgba(0,0,0,0.12)', minWidth:'200px', overflow:'hidden', zIndex:100 }}>
+                <div style={{ padding:'14px 18px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text }}>{profile?.full_name || 'Ryan Groene'}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>racepassportapp.com</div>
+                </div>
+                <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/passport'); setShowDropdown(false) }}>My Passport</button>
+                <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/profile'); setShowDropdown(false) }}>Settings</button>
+                <button className="rp-dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}>Log Out</button>
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        /* DESKTOP NAV */
+        <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, transition:'background 0.25s, border-color 0.25s' }}>
+          <div style={{ width:'100%', padding:'0 40px', display:'flex', alignItems:'stretch', justifyContent:'space-between' }}>
             <div style={{ display:'flex', alignItems:'center', gap:'8px', padding:'14px 0' }}>
               <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C', flexShrink:0 }} />
               <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', letterSpacing:'2.5px', color:t.text, transition:'color 0.25s' }}>RACE PASSPORT</span>
             </div>
-          )}
-          {/* Nav tabs — centered on mobile, right-aligned on desktop */}
-          <div style={{ display:'flex', alignItems:'stretch', flex: isMobile ? 1 : 'none' }}>
-            {NAV_TABS.map(tab => (
-              <button key={tab.path} className="rp-nav-tab"
-                style={{ color: location.pathname === tab.path ? t.text : t.textMuted, borderBottomColor: location.pathname === tab.path ? '#C9A84C' : 'transparent', flex: isMobile ? 1 : 'none', padding: isMobile ? '0 8px' : '0 24px' }}
-                onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
-            ))}
-          </div>
-          <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '8px' : '14px' }}>
-            <div ref={dropdownRef} style={{ position:'relative' }}>
-              <div onClick={() => setShowDropdown(!showDropdown)}
-                style={{ width: isMobile ? 32 : 40, height: isMobile ? 32 : 40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '11px' : '14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
-              </div>
-              {showDropdown && (
-                <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:100, transition:'background 0.25s' }}>
-                  <div style={{ padding:'14px 18px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text }}>{profile?.full_name || 'Ryan Groene'}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>racepassportapp.com/ryan-groene</div>
-                  </div>
-                  <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/passport'); setShowDropdown(false) }}
-                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>My Passport</button>
-                  <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/profile'); setShowDropdown(false) }}
-                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Settings</button>
-                  {/* Dark mode toggle */}
-                  <div style={{ padding:'10px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:`1px solid ${t.borderLight}` }}>
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text }}>Dark Mode</span>
-                    <button onClick={toggleTheme}
-                      style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background:isDark?'#C9A84C':'#d0d7e0', padding:0, flexShrink:0 }}>
-                      <div style={{ position:'absolute', top:3, left:isDark?'calc(100% - 19px)':'3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
-                    </button>
-                  </div>
-                  <div style={{ height:'1px', background:t.borderLight }} />
-                  <button className="rp-dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}
-                    onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Log Out</button>
+            <div style={{ display:'flex', alignItems:'stretch' }}>
+              {NAV_TABS.map(tab => (
+                <button key={tab.path} className="rp-nav-tab"
+                  style={{ color: location.pathname === tab.path ? t.text : t.textMuted, borderBottomColor: location.pathname === tab.path ? '#C9A84C' : 'transparent' }}
+                  onClick={() => navigate(tab.path)}>{tab.icon}{tab.label}</button>
+              ))}
+            </div>
+            <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+              <div ref={dropdownRef} style={{ position:'relative' }}>
+                <div onClick={() => setShowDropdown(!showDropdown)}
+                  style={{ width:40, height:40, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}`, transition:'border-color 0.15s' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
+                  onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#C9A84C', letterSpacing:'1px' }}>{initials}</span>
                 </div>
-              )}
+                {showDropdown && (
+                  <div style={{ position:'absolute', right:0, top:'calc(100% + 8px)', background:t.surface, border:`1px solid ${t.border}`, borderRadius:'10px', boxShadow:t.cardShadowHover, minWidth:'200px', overflow:'hidden', zIndex:100, transition:'background 0.25s' }}>
+                    <div style={{ padding:'14px 18px 10px', borderBottom:`1px solid ${t.borderLight}` }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text }}>{profile?.full_name || 'Ryan Groene'}</div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>racepassportapp.com/ryan-groene</div>
+                    </div>
+                    <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/passport'); setShowDropdown(false) }}
+                      onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>My Passport</button>
+                    <button className="rp-dropdown-item" style={{ color:t.text }} onClick={() => { navigate('/profile'); setShowDropdown(false) }}
+                      onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Settings</button>
+                    <div style={{ padding:'10px 18px', display:'flex', alignItems:'center', justifyContent:'space-between', borderTop:`1px solid ${t.borderLight}` }}>
+                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:t.text }}>Dark Mode</span>
+                      <button onClick={toggleTheme}
+                        style={{ width:38, height:22, borderRadius:'11px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background:isDark?'#C9A84C':'#d0d7e0', padding:0, flexShrink:0 }}>
+                        <div style={{ position:'absolute', top:3, left:isDark?'calc(100% - 19px)':'3px', width:16, height:16, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+                      </button>
+                    </div>
+                    <div style={{ height:'1px', background:t.borderLight }} />
+                    <button className="rp-dropdown-item" style={{ color:'#c53030' }} onClick={handleSignOut}
+                      onMouseEnter={e => e.currentTarget.style.background=t.surfaceAlt} onMouseLeave={e => e.currentTarget.style.background='transparent'}>Log Out</button>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {showImportBanner && (
         <div style={{ position:'relative', zIndex:10, background:'#1B2A4A', borderBottom:'3px solid #C9A84C', padding: isMobile ? '12px 16px' : '14px 40px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
@@ -581,15 +664,14 @@ export default function Home() {
         </div>
       )}
 
-      {/* GREETING + SPONSOR SLOT */}
-      <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding: isMobile ? '24px 16px 20px' : '40px 40px 34px', transition:'background 0.25s' }}>
-        <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
-          <div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(28px,8vw,40px)' : 'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(28px,8vw,40px)' : 'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
-          </div>
-          {/* Sponsor slot — hidden on mobile */}
-          {!isMobile && (
+      {/* DESKTOP GREETING + SPONSOR SLOT — hidden on mobile (shown above stats bar instead) */}
+      {!isMobile && (
+        <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
+            <div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px', transition:'color 0.25s' }}>{greeting}, {firstName.toUpperCase()}.</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
+            </div>
             <div style={{ flexShrink:0, alignSelf:'center', opacity:0.35, border:`1px dashed ${t.border}`, borderRadius:'10px', padding:'10px 18px', display:'flex', alignItems:'center', gap:'8px', minWidth:'160px' }}>
               <div style={{ width:28, height:28, borderRadius:'6px', background:t.border }} />
               <div>
@@ -597,9 +679,9 @@ export default function Home() {
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.textMuted, letterSpacing:'1px' }}>Partner Name</div>
               </div>
             </div>
-          )}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* STATS BAR */}
       <div style={{ position:'relative', zIndex:10 }}>
