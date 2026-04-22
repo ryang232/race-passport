@@ -415,7 +415,7 @@ export default function Home() {
         if (userState) {
           const { data: nearby } = await supabase
             .from('races')
-            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
             .eq('state', userState.toUpperCase())
             .eq('is_past', false)
             .order('date_sort', { ascending: true })
@@ -431,7 +431,7 @@ export default function Home() {
             const targetDist = distMap[favDistance] || favDistance
             const { data: suggested } = await supabase
               .from('races')
-              .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+              .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
               .eq('is_past', false)
               .ilike('distance', targetDist)
               .neq('state', userState?.toUpperCase() || '')
@@ -442,7 +442,7 @@ export default function Home() {
             } else {
               const { data: fallback } = await supabase
                 .from('races')
-                .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url')
+                .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
                 .eq('is_past', false)
                 .ilike('distance', targetDist)
                 .order('date_sort', { ascending: true })
