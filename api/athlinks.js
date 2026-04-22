@@ -87,32 +87,26 @@ export default async function handler(req, res) {
     if (!name) return res.status(400).json({ error: 'name required', results: [] })
 
     try {
-      // Use the full Search endpoint — returns all results grouped by year
-      const url = `https://alaska.athlinks.com/Search?searchTerm=${encodeURIComponent(name)}`
-      const resp = await fetch(url, {
-        headers: {
-          'Accept': 'application/json, text/plain, */*',
-          'Accept-Language': 'en-US,en;q=0.9',
-          'Accept-Encoding': 'gzip, deflate, br',
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
-          'Referer': 'https://www.athlinks.com/',
-          'Origin': 'https://www.athlinks.com',
-          'Sec-Fetch-Dest': 'empty',
-          'Sec-Fetch-Mode': 'cors',
-          'Sec-Fetch-Site': 'same-site',
-          'sec-ch-ua': '"Google Chrome";v="147", "Not.A/Brand";v="8", "Chromium";v="147"',
-          'sec-ch-ua-mobile': '?0',
-          'sec-ch-ua-platform': '"macOS"',
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-        }
+      // Athlinks blocks datacenter IPs — route through allorigins which fetches from residential IPs
+      const target = `https://alaska.athlinks.com/Search?searchTerm=${encodeURIComponent(name)}`
+      const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(target)}`
+
+      const resp = await fetch(proxyUrl, {
+        headers: { 'Accept': 'application/json' }
       })
 
       if (!resp.ok) {
-        return res.status(resp.status).json({ error: `Athlinks error: ${resp.status}`, results: [] })
+        return res.status(resp.status).json({ error: `Proxy error: ${resp.status}`, results: [] })
       }
 
-      const data = await resp.json()
+      const wrapper = await resp.json()
+      // allorigins wraps the response in { contents: "...", status: {...} }
+      const raw = wrapper.contents
+      if (!raw || raw.trim().startsWith('<')) {
+        return res.status(502).json({ error: 'Athlinks returned HTML — blocked', results: [] })
+      }
+
+      const data = JSON.parse(raw)
 
       if (!data.Success && !data.success) {
         return res.status(500).json({ error: data.ErrorMessage || 'Unknown error', results: [] })
