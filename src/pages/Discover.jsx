@@ -749,7 +749,7 @@ export default function Discover() {
                 {isSearching && <button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear ×</button>}
               </div>
             </div>
-            {loading ? (
+            {(loading || allRaces.length === 0) ? (
               <div style={{ display:'flex', gap:'12px', overflow:'hidden' }}>
                 {[1,2,3].map(i => (
                   <div key={i} style={{ flexShrink:0, width: isMobile ? 'clamp(160px,50vw,220px)' : 'clamp(240px,22vw,320px)', borderRadius:'14px', overflow:'hidden', background:t.surface, height: isMobile ? '175px' : '270px', animation:'pulse 1.5s ease infinite' }}>
