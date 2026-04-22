@@ -350,6 +350,45 @@ function ScrollRow({ children }) {
   )
 }
 
+function LoadMoreButton({ count, onClick, t }) {
+  return (
+    <button onClick={onClick}
+      style={{ marginTop:'12px', padding:'8px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+      + {count} More Races
+    </button>
+  )
+}
+
+function NearbyRacesContent({ races, showAll, setShowAll, t, isMobile }) {
+  const logoRaces    = races.filter(r => r.logo_url)
+  const nonLogoRaces = races.filter(r => !r.logo_url)
+  const visible      = showAll ? races : (logoRaces.length > 0 ? logoRaces : races.slice(0, 8))
+  return (
+    <>
+      <ScrollRow>{visible.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+      {!showAll && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
+        <LoadMoreButton count={nonLogoRaces.length} onClick={() => setShowAll(true)} t={t} />
+      )}
+    </>
+  )
+}
+
+function SuggestedRacesContent({ races, showAll, setShowAll, t, isMobile }) {
+  const logoRaces    = races.filter(r => r.logo_url)
+  const nonLogoRaces = races.filter(r => !r.logo_url)
+  const visible      = showAll ? races : (logoRaces.length > 0 ? logoRaces : races.slice(0, 6))
+  return (
+    <>
+      <ScrollRow>{visible.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+      {!showAll && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
+        <LoadMoreButton count={nonLogoRaces.length} onClick={() => setShowAll(true)} t={t} />
+      )}
+    </>
+  )
+}
+
 function ParallaxBackground({ t }) {
   const [offsetX, setOffsetX] = useState(0)
   useEffect(() => {
@@ -804,24 +843,8 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : nearbyRaces.length > 0 ? (() => {
-            const logoRaces = nearbyRaces.filter(r => r.logo_url)
-            const nonLogoRaces = nearbyRaces.filter(r => !r.logo_url)
-            const visibleRaces = showAllNearby ? nearbyRaces : (logoRaces.length > 0 ? logoRaces : nearbyRaces.slice(0, 8))
-            return (
-              <>
-                <ScrollRow>{visibleRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
-                {!showAllNearby && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
-                  <button onClick={() => setShowAllNearby(true)}
-                    style={{ marginTop:'12px', padding:'8px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
-                    + {nonLogoRaces.length} More Races
-                  </button>
-                )}
-              </>
-            )
-          })()
+          ) : nearbyRaces.length > 0 ? (
+            <NearbyRacesContent races={nearbyRaces} showAll={showAllNearby} setShowAll={setShowAllNearby} t={t} isMobile={isMobile} />
           ) : (
             <div style={{ padding:'32px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>No races found nearby</div>
@@ -849,24 +872,7 @@ export default function Home() {
                 See More →
               </button>
             </div>
-            {(() => {
-              const logoRaces = suggestedRaces.filter(r => r.logo_url)
-              const nonLogoRaces = suggestedRaces.filter(r => !r.logo_url)
-              const visibleRaces = showAllSuggested ? suggestedRaces : (logoRaces.length > 0 ? logoRaces : suggestedRaces.slice(0, 6))
-              return (
-                <>
-                  <ScrollRow>{visibleRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
-                  {!showAllSuggested && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
-                    <button onClick={() => setShowAllSuggested(true)}
-                      style={{ marginTop:'12px', padding:'8px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
-                      + {nonLogoRaces.length} More Races
-                    </button>
-                  )}
-                </>
-              )
-            })()}
+            <SuggestedRacesContent races={suggestedRaces} showAll={showAllSuggested} setShowAll={setShowAllSuggested} t={t} isMobile={isMobile} />
           </div>
         )}
 
