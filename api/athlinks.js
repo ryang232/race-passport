@@ -1,190 +1,173 @@
 // api/athlinks.js
-// Vercel serverless proxy for Athlinks API
-// Actions: search_results | get_athlete_results
+// Proxies Athlinks' internal search API — no key required
+// Discovered by inspecting network calls on athlinks.com
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(200).end()
 
   const params = req.method === 'POST' ? req.body : req.query
-  const action = params.action || 'search_results'
+  const action = params.action || 'search'
 
-  const API_KEY = process.env.ATHLINKS_API_KEY // optional — used as fallback if keyless fails
+  // ── Normalize a RaceList entry into our passport_races format ─────────────
+  function normalizeRace(r) {
+    const raw = r.Name || r.raceTitle || ''
+    const time = r.Time || r.athleteTime || ''
+    const date = r.StartDateTime || r.raceStartDate || ''
+    const state = r.StateProv || r.raceStateProvAbbrev || ''
+    const city  = r.City || r.raceCity || ''
+    const course = r.CourseName || r.courseName || ''
 
-  const BASE = 'https://api.athlinks.com'
-
-  // ── Normalize a raw Athlinks result into our format ──────────────────────
-  function normalizeResult(r) {
-    // Distance normalization
-    const rawDist = (r.RaceDistance || r.Distance || r.CourseDistance || '').toString().toLowerCase().trim()
-    let distance = rawDist
-
-    const distMi = parseFloat(rawDist)
-    if (rawDist.includes('marathon') && !rawDist.includes('half')) distance = '26.2'
-    else if (rawDist.includes('half') || rawDist.includes('13.1')) distance = '13.1'
-    else if (rawDist.includes('70.3') || rawDist.includes('half iron')) distance = '70.3'
-    else if (rawDist.includes('140.6') || rawDist.includes('ironman') || rawDist.includes('full iron')) distance = '140.6'
-    else if (rawDist.includes('10k') || rawDist.includes('10km') || rawDist === '6.2') distance = '10K'
-    else if (rawDist.includes('5k') || rawDist.includes('5km') || rawDist === '3.1') distance = '5K'
-    else if (rawDist.includes('10 mi') || rawDist === '10') distance = '10 mi'
-    else if (rawDist.includes('50k')) distance = '50K'
-    else if (rawDist.includes('50 mi') || rawDist.includes('50m')) distance = '50M'
-    else if (rawDist.includes('100k')) distance = '100K'
-    else if (rawDist.includes('100 mi') || rawDist.includes('100m')) distance = '100M'
-    else if (!isNaN(distMi) && distMi > 0) {
-      // Try to match by numeric distance in miles
-      if (Math.abs(distMi - 3.1) <= 0.15)   distance = '5K'
-      else if (Math.abs(distMi - 6.2) <= 0.2)  distance = '10K'
-      else if (Math.abs(distMi - 13.1) <= 0.3) distance = '13.1'
-      else if (Math.abs(distMi - 26.2) <= 0.5) distance = '26.2'
-      else if (Math.abs(distMi - 70.3) <= 1)   distance = '70.3'
-      else if (Math.abs(distMi - 140.6) <= 2)  distance = '140.6'
-      else distance = `${distMi.toFixed(1)} mi`
-    }
-
-    // Date
-    const rawDate = r.RaceDate || r.EventDate || r.Date || ''
-    let date = ''
-    let date_sort = null
-    if (rawDate) {
-      const parsed = new Date(rawDate)
-      if (!isNaN(parsed)) {
+    // Parse date
+    let dateDisp = '', dateSort = null
+    if (date) {
+      const d = new Date(date)
+      if (!isNaN(d)) {
         const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
-        date = `${months[parsed.getMonth()]} ${parsed.getFullYear()}`
-        date_sort = parsed.toISOString().split('T')[0]
+        dateDisp = `${months[d.getMonth()]} ${d.getFullYear()}`
+        dateSort = d.toISOString().split('T')[0]
       }
     }
 
-    // Finish time
-    let time = ''
-    const chip = r.ChipTime || r.FinishTime || r.ClockTime || ''
-    if (chip) {
-      // Athlinks returns times in various formats — normalize to H:MM:SS or M:SS
-      const cleaned = chip.toString().replace(/[^0-9:]/g, '')
-      const parts   = cleaned.split(':').map(Number)
-      if (parts.length === 3) {
-        const [h, m, s] = parts
-        time = h > 0 ? `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}` : `${m}:${String(s).padStart(2,'0')}`
-      } else if (parts.length === 2) {
-        time = `${parts[0]}:${String(parts[1]).padStart(2,'0')}`
+    // Normalize distance from courseName
+    const cn = course.toLowerCase()
+    let distance = ''
+    if (cn.includes('marathon') && !cn.includes('half') && !cn.includes('70.3')) distance = '26.2'
+    else if (cn.includes('half marathon') || cn.includes('13.1')) distance = '13.1'
+    else if (cn.includes('70.3') || (cn.includes('half') && cn.includes('iron'))) distance = '70.3'
+    else if (cn.includes('140.6') || (cn.includes('ironman') && cn.includes('triathlon'))) distance = '140.6'
+    else if (cn.includes('triathlon') && cn.includes('1.2')) distance = '70.3'
+    else if (cn.includes('triathlon') && cn.includes('2.4')) distance = '140.6'
+    else if (cn.includes('10k') || cn.includes('10 k')) distance = '10K'
+    else if (cn.includes('5k') || cn.includes('5 k')) distance = '5K'
+    else if (cn.includes('10 mi') || cn.includes('10-mi') || cn.includes('ten mile')) distance = '10 mi'
+    else if (cn.includes('50k')) distance = '50K'
+    else if (cn.includes('50 mi')) distance = '50M'
+    else if (cn.includes('100k')) distance = '100K'
+    else if (cn.includes('100 mi')) distance = '100M'
+    else {
+      // Fallback: infer from time
+      if (time) {
+        const parts = time.split(':').map(Number)
+        const totalMins = parts.length === 3
+          ? parts[0]*60 + parts[1] + parts[2]/60
+          : parts[0] + parts[1]/60
+        if (totalMins < 25)      distance = '5K'
+        else if (totalMins < 50) distance = '10K'
+        else if (totalMins < 90) distance = '10 mi'
+        else if (totalMins < 150) distance = '13.1'
+        else                     distance = '26.2'
       }
     }
 
-    // Location
-    const city  = r.City  || r.EventCity  || ''
-    const state = r.State || r.EventState || ''
-    const location = [city, state].filter(Boolean).join(', ')
-
-    // Confidence — based on how much data we have
-    let confidence = 1
-    if (time && date && distance && distance !== rawDist) confidence = 3
-    else if ((time || date) && distance) confidence = 2
+    // Confidence: high if we have time + date + distance
+    const confidence = (time && dateSort && distance) ? 3 : (time || distance) ? 2 : 1
 
     return {
-      id:         `athlinks_${r.RaceID || r.CourseID || r.EventID || Math.random()}`,
-      name:       r.EventName || r.RaceName || r.CourseName || 'Unknown Race',
-      date,
-      date_sort,
-      location,
-      city,
-      state,
-      distance,
-      time,
+      id:         `athlinks_${r.EntryId || r.entryId || Math.random()}`,
+      name:       raw,
+      date:       dateDisp,
+      date_sort:  dateSort,
+      location:   [city, state].filter(Boolean).join(', '),
+      city:       city,
+      state:      state,
+      distance:   distance,
+      time:       time,
+      bib:        r.BibNum || r.bibNum || '',
       source:     'ATHLINKS',
       confidence,
-      raw:        undefined, // don't send raw data to client
     }
   }
 
-  // ── search_results: search by name + optional age range ──────────────────
-  if (action === 'search_results') {
-    const name      = params.name
-    const birthYear = params.birth_year ? parseInt(params.birth_year) : null
-
-    if (!name) return res.status(400).json({ error: 'name required' })
-
-    const currentYear = new Date().getFullYear()
-    const age         = birthYear ? currentYear - birthYear : null
-
-    // Build URL — try without API key first (historically public endpoint),
-    // fall back to keyed if we have one
-    const buildUrl = (withKey) => {
-      const keyParam = withKey && API_KEY ? `&api_key=${API_KEY}` : ''
-      if (age) {
-        const ageFloor   = Math.max(0, age - 2)
-        const ageCeiling = age + 2
-        return `${BASE}/results/search/${encodeURIComponent(name)}/${ageFloor}-${ageCeiling}?format=json&Includeclaimed=true${keyParam}`
-      }
-      return `${BASE}/results/search/${encodeURIComponent(name)}?format=json&Includeclaimed=true${keyParam}`
-    }
-
-    const attemptFetch = async (url) => {
-      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } })
-      if (!resp.ok) return { ok: false, status: resp.status }
-      const data = await resp.json()
-      return { ok: true, data }
-    }
+  // ── search: main athlete search ───────────────────────────────────────────
+  if (action === 'search') {
+    const name = params.name
+    if (!name) return res.status(400).json({ error: 'name required', results: [] })
 
     try {
-      // Try keyless first
-      let result = await attemptFetch(buildUrl(false))
+      // Use the full Search endpoint — returns all results grouped by year
+      const url = `https://alaska.athlinks.com/Search?searchTerm=${encodeURIComponent(name)}`
+      const resp = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'Referer': 'https://www.athlinks.com/',
+          'Origin': 'https://www.athlinks.com',
+        }
+      })
 
-      // If that fails with 401/403, try with key if we have one
-      if (!result.ok && (result.status === 401 || result.status === 403) && API_KEY) {
-        result = await attemptFetch(buildUrl(true))
+      if (!resp.ok) {
+        return res.status(resp.status).json({ error: `Athlinks error: ${resp.status}`, results: [] })
       }
 
-      if (!result.ok) {
-        return res.status(result.status || 500).json({ error: `Athlinks API error: ${result.status}`, results: [] })
+      const data = await resp.json()
+
+      if (!data.Success && !data.success) {
+        return res.status(500).json({ error: data.ErrorMessage || 'Unknown error', results: [] })
       }
 
-      const data = result.data
-      let rawResults = []
-      if (Array.isArray(data))    rawResults = data
-      else if (data?.Results)     rawResults = data.Results
-      else if (data?.results)     rawResults = data.results
-      else if (data?.Data)        rawResults = data.Data
+      const result = data.Result || data.result
+      // RaceList is an array of arrays (grouped by year)
+      const raceList = result?.RaceList || result?.raceList || []
+      const flat = raceList.flat()
 
-      const results = rawResults
-        .map(normalizeResult)
-        .filter(r => r.distance && r.distance !== '')
-        .sort((a, b) => {
-          if (b.confidence !== a.confidence) return b.confidence - a.confidence
-          return (b.date_sort || '').localeCompare(a.date_sort || '')
-        })
+      // Filter out virtual races and normalize
+      const results = flat
+        .filter(r => !r.IsVirtual && !r.isVirtual)
+        .map(normalizeRace)
+        .filter(r => r.name && r.distance) // must have name + distance
+        .sort((a, b) => (b.date_sort || '').localeCompare(a.date_sort || ''))
 
-      return res.status(200).json({ results, total: results.length })
-    } catch (e) {
-      console.error('Athlinks fetch error:', e.message)
+      return res.status(200).json({
+        results,
+        total: results.length,
+        locations: result?.Locations || [],
+      })
+    } catch(e) {
+      console.error('Athlinks search error:', e.message)
       return res.status(500).json({ error: e.message, results: [] })
     }
   }
 
-  // ── get_athlete_results: fetch all results for a known Athlinks athlete ID ──
-  if (action === 'get_athlete_results') {
-    const athleteId = params.athlete_id
-    if (!athleteId) return res.status(400).json({ error: 'athlete_id required' })
+  // ── preview: fast autocomplete (limit 3) ─────────────────────────────────
+  if (action === 'preview') {
+    const name = params.name
+    if (!name) return res.status(400).json({ error: 'name required', results: [] })
 
     try {
-      const url  = `${BASE}/athletes/${athleteId}/results?format=json&api_key=${API_KEY}`
-      const resp = await fetch(url, { headers: { 'Accept': 'application/json' } })
-      if (!resp.ok) return res.status(resp.status).json({ error: `Athlinks API error: ${resp.status}`, results: [] })
+      const url = `https://alaska.athlinks.com/events/race/result/api/find?term=${encodeURIComponent(name)}&limit=10`
+      const resp = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+          'Referer': 'https://www.athlinks.com/',
+          'Origin': 'https://www.athlinks.com',
+        }
+      })
+
+      if (!resp.ok) return res.status(resp.status).json({ results: [] })
 
       const data = await resp.json()
-      let rawResults = []
-      if (Array.isArray(data)) rawResults = data
-      else if (data?.Results) rawResults = data.Results
-      else if (data?.results) rawResults = data.results
+      const unclaimed = data?.result?.unclaimedResults || []
 
-      const results = rawResults
-        .map(normalizeResult)
-        .filter(r => r.distance)
-        .sort((a, b) => (b.date_sort || '').localeCompare(a.date_sort || ''))
+      const results = unclaimed.map(r => ({
+        id:        `athlinks_${r.entryId}`,
+        name:      r.raceTitle,
+        date:      r.raceStartDate ? new Date(r.raceStartDate).toLocaleDateString('en-US', { month:'short', year:'numeric' }) : '',
+        date_sort: r.raceStartDate ? r.raceStartDate.split('T')[0] : null,
+        location:  [r.raceCity, r.raceStateProvAbbrev].filter(Boolean).join(', '),
+        city:      r.raceCity,
+        state:     r.raceStateProvAbbrev,
+        distance:  r.courseName || '',
+        time:      r.athleteTime,
+        source:    'ATHLINKS',
+        confidence: 3,
+      }))
 
       return res.status(200).json({ results, total: results.length })
-    } catch (e) {
+    } catch(e) {
       return res.status(500).json({ error: e.message, results: [] })
     }
   }
