@@ -85,8 +85,9 @@ export default async function handler(req, res) {
 
   // ── enrich_race ────────────────────────────────────────────────────────────
   if (action === 'enrich_race') {
-    const raceId = params.race_id
-    if (!raceId) return res.status(400).json({ error: 'race_id required' })
+    const rawId = params.race_id
+    if (!rawId) return res.status(400).json({ error: 'race_id required' })
+    const raceId = String(rawId).replace(/^rs_/i, '')
 
     try {
       const url = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
@@ -150,8 +151,9 @@ export default async function handler(req, res) {
 
   // ── get_race_detail ────────────────────────────────────────────────────────
   if (action === 'get_race_detail') {
-    const raceId = params.race_id
-    if (!raceId) return res.status(400).json({ error: 'race_id required' })
+    const rawId = params.race_id
+    if (!rawId) return res.status(400).json({ error: 'race_id required' })
+    const raceId = String(rawId).replace(/^rs_/i, '')
     try {
       const url  = `https://runsignup.com/Rest/race/${raceId}?api_key=${API_KEY}&api_secret=${API_SECRET}&format=json&events=T&race_headings=T&race_links=T`
       const resp = await fetch(url)
