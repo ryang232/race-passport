@@ -170,6 +170,7 @@ function NearbyCard({ race, t, compact }) {
       if (!entry.isIntersecting) return
       observer.disconnect()
       const logoUrl = race.logo_url || race.hero_image
+      console.log("CARD DEBUG:", race.name, "logo_url:", race.logo_url)
       if (logoUrl) {
         setPhoto(logoUrl)
         setIsLogo(true)
