@@ -380,6 +380,8 @@ export default function Home() {
   const [importedCount]                   = useState(location.state?.imported || 0)
   const [nearbyRaces, setNearbyRaces]     = useState([])
   const [suggestedRaces, setSuggestedRaces] = useState([])
+  const [showAllNearby, setShowAllNearby]   = useState(false)
+  const [showAllSuggested, setShowAllSuggested] = useState(false)
   const [nearbyLoading, setNearbyLoading] = useState(true)
   const dropdownRef = useRef(null)
 
@@ -413,14 +415,28 @@ export default function Home() {
       setNearbyLoading(true)
       try {
         if (userState) {
-          const { data: nearby } = await supabase
+          // Fetch logo races first, fall back to all races if not enough
+          const { data: nearbyWithLogo } = await supabase
+            .from('races')
+            .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
+            .eq('state', userState.toUpperCase())
+            .eq('is_past', false)
+            .not('logo_url', 'is', null)
+            .order('date_sort', { ascending: true })
+            .limit(12)
+          const { data: nearbyAll } = await supabase
             .from('races')
             .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
             .eq('state', userState.toUpperCase())
             .eq('is_past', false)
             .order('date_sort', { ascending: true })
-            .limit(8)
-          if (nearby) setNearbyRaces(nearby)
+            .limit(20)
+          // Merge: logo races first, then fill with non-logo races
+          if (nearbyAll) {
+            const logoIds = new Set((nearbyWithLogo||[]).map(r => r.id))
+            const nonLogo = nearbyAll.filter(r => !logoIds.has(r.id))
+            setNearbyRaces([...(nearbyWithLogo||[]), ...nonLogo])
+          }
 
           if (favDistance) {
             const distMap = {
@@ -429,24 +445,39 @@ export default function Home() {
               'Ultra':'ULTRA', 'Triathlon':'70.3',
             }
             const targetDist = distMap[favDistance] || favDistance
-            const { data: suggested } = await supabase
+            const { data: suggestedWithLogo } = await supabase
+              .from('races')
+              .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
+              .eq('is_past', false)
+              .ilike('distance', targetDist)
+              .neq('state', userState?.toUpperCase() || '')
+              .not('logo_url', 'is', null)
+              .order('date_sort', { ascending: true })
+              .limit(12)
+            const { data: suggestedAll } = await supabase
               .from('races')
               .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
               .eq('is_past', false)
               .ilike('distance', targetDist)
               .neq('state', userState?.toUpperCase() || '')
               .order('date_sort', { ascending: true })
-              .limit(6)
-            if (suggested?.length) {
-              setSuggestedRaces(suggested)
+              .limit(20)
+            const withLogo = suggestedWithLogo || []
+            const all = suggestedAll || []
+            if (withLogo.length || all.length) {
+              const logoIds = new Set(withLogo.map(r => r.id))
+              const nonLogo = all.filter(r => !logoIds.has(r.id))
+              setSuggestedRaces([...withLogo, ...nonLogo])
             } else {
+              // Fallback: any distance in any state
               const { data: fallback } = await supabase
                 .from('races')
                 .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
                 .eq('is_past', false)
                 .ilike('distance', targetDist)
+                .not('logo_url', 'is', null)
                 .order('date_sort', { ascending: true })
-                .limit(6)
+                .limit(12)
               if (fallback) setSuggestedRaces(fallback)
             }
           }
@@ -773,8 +804,24 @@ export default function Home() {
                 </div>
               ))}
             </div>
-          ) : nearbyRaces.length > 0 ? (
-            <ScrollRow>{nearbyRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+          ) : nearbyRaces.length > 0 ? (() => {
+            const logoRaces = nearbyRaces.filter(r => r.logo_url)
+            const nonLogoRaces = nearbyRaces.filter(r => !r.logo_url)
+            const visibleRaces = showAllNearby ? nearbyRaces : (logoRaces.length > 0 ? logoRaces : nearbyRaces.slice(0, 8))
+            return (
+              <>
+                <ScrollRow>{visibleRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+                {!showAllNearby && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
+                  <button onClick={() => setShowAllNearby(true)}
+                    style={{ marginTop:'12px', padding:'8px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+                    + {nonLogoRaces.length} More Races
+                  </button>
+                )}
+              </>
+            )
+          })()
           ) : (
             <div style={{ padding:'32px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.border, letterSpacing:'1px', marginBottom:'8px' }}>No races found nearby</div>
@@ -802,7 +849,24 @@ export default function Home() {
                 See More →
               </button>
             </div>
-            <ScrollRow>{suggestedRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+            {(() => {
+              const logoRaces = suggestedRaces.filter(r => r.logo_url)
+              const nonLogoRaces = suggestedRaces.filter(r => !r.logo_url)
+              const visibleRaces = showAllSuggested ? suggestedRaces : (logoRaces.length > 0 ? logoRaces : suggestedRaces.slice(0, 6))
+              return (
+                <>
+                  <ScrollRow>{visibleRaces.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+                  {!showAllSuggested && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
+                    <button onClick={() => setShowAllSuggested(true)}
+                      style={{ marginTop:'12px', padding:'8px 20px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+                      + {nonLogoRaces.length} More Races
+                    </button>
+                  )}
+                </>
+              )
+            })()}
           </div>
         )}
 
