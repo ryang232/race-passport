@@ -424,8 +424,9 @@ export default function Discover() {
         }
         setAllRaces(all)
         const isFeaturedSafe = (r) => { const name=(r.name||'').toLowerCase(); return !/\btraining\b/.test(name)&&!/\bprogram\b/.test(name)&&!/\bbus\b/.test(name)&&!/\bcharter\b/.test(name) }
-        const featured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
-        setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(r => isActualRace(r) && isFeaturedSafe(r)).slice(0,5))
+        const namedFeatured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && r.logo_url && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
+        const logoFeatured  = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && r.logo_url)
+        setFeaturedRaces(namedFeatured.length >= 3 ? namedFeatured.slice(0,8) : logoFeatured.slice(0,8))
       } catch(e) { console.error('Failed to load races:', e) }
       setLoading(false)
     }
@@ -725,7 +726,7 @@ export default function Discover() {
               </div>
             ) : (
               <ScrollRow>
-                {featuredRaces.map(race => (
+                {featuredRaces.filter(r => r.logo_url).map(race => (
                   <RaceCard key={race.id} race={race} featured compact={isMobile} t={t} onClick={() => navigate(`/race-detail/${race.id}`)} />
                 ))}
               </ScrollRow>
