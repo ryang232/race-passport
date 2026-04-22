@@ -252,7 +252,7 @@ export default function RaceImport() {
     const iv = setInterval(() => { idx = Math.min(idx+1, statuses.length-1); setLoadingStatus(statuses[idx]) }, 900)
 
     try {
-      const q = new URLSearchParams({ action:'search_results', name:`${firstName.trim()} ${lastName.trim()}`, ...(birthYear.trim() ? { birth_year:birthYear.trim() } : {}) })
+      const q = new URLSearchParams({ action:'search', name:`${firstName.trim()} ${lastName.trim()}` })
       const resp = await fetch(`/api/athlinks?${q}`)
       const data = await resp.json()
       clearInterval(iv)
@@ -417,7 +417,7 @@ export default function RaceImport() {
               FIND YOUR<br/>RACE HISTORY
             </h1>
             <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7 }}>
-              We'll search Athlinks for your race results. Enter your name as it appears on race bibs.
+              We'll search Athlinks for your race results. Enter your name exactly as it appears on race bibs.
             </p>
           </div>
 
@@ -436,15 +436,6 @@ export default function RaceImport() {
                 onFocus={e => { e.target.style.borderColor='#1B2A4A'; e.target.style.boxShadow='0 0 0 3px rgba(27,42,74,0.08)' }}
                 onBlur={e => { e.target.style.borderColor='#e2e6ed'; e.target.style.boxShadow='none' }}
                 autoCapitalize="words" autoCorrect="off" />
-            </div>
-            <div>
-              <label style={{ display:'block', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'8px' }}>
-                Birth Year <span style={{ fontWeight:400, color:'#b0b8c4', letterSpacing:0, textTransform:'none' }}>(helps narrow results)</span>
-              </label>
-              <input value={birthYear} onChange={e => setBirthYear(e.target.value)} placeholder="1990" style={inputStyle}
-                onFocus={e => { e.target.style.borderColor='#1B2A4A'; e.target.style.boxShadow='0 0 0 3px rgba(27,42,74,0.08)' }}
-                onBlur={e => { e.target.style.borderColor='#e2e6ed'; e.target.style.boxShadow='none' }}
-                inputMode="numeric" maxLength={4} />
             </div>
           </div>
 
