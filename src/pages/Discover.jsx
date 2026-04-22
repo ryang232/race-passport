@@ -413,7 +413,7 @@ export default function Discover() {
       try {
         let all = [], from = 0
         while (true) {
-          const { data, error } = await supabase.from('races').select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,price_raw,terrain,elevation,sport,est_finishers,is_past,registration_url').eq('is_past', false).order('date_sort', { ascending:true }).range(from, from+999)
+          const { data, error } = await supabase.from('races').select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,price_raw,terrain,elevation,sport,est_finishers,is_past,registration_url,logo_url').eq('is_past', false).order('date_sort', { ascending:true }).range(from, from+999)
           if (error || !data || data.length === 0) break
           all = [...all, ...data]
           if (data.length < 1000) break
