@@ -590,11 +590,24 @@ export default function RaceDetail() {
         </div>
       </div>
 
-      {/* HERO — full bleed photo */}
-      <div style={{ height: isMobile?'240px':'420px', position:'relative', background:'#1B2A4A', overflow:'hidden' }}>
+      {/* HERO */}
+      <div style={{ height: isMobile?'240px':'380px', position:'relative', background:'#1B2A4A', overflow:'hidden' }}>
         <div style={{ position:'absolute', top:0, left:0, right:0, height:'4px', background:'#C9A84C', zIndex:2 }} />
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => e.target.style.display='none'} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.75))' }} />
+
+        {raceLogoUrl ? (
+          /* Logo hero — centered on dark navy */
+          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', background:'#1B2A4A', padding: isMobile ? '40px 80px' : '60px 160px' }}>
+            <img src={raceLogoUrl} alt={race.name}
+              style={{ maxWidth:'100%', maxHeight:'100%', objectFit:'contain', filter:'drop-shadow(0 8px 32px rgba(0,0,0,0.6))' }}
+              onError={e => e.target.style.display='none'} />
+          </div>
+        ) : (
+          /* City photo fallback */
+          <>
+            <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover' }} onError={e => e.target.style.display='none'} />
+            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom, rgba(0,0,0,0.05) 30%, rgba(0,0,0,0.75))' }} />
+          </>
+        )}
 
         {/* Stamp — top right */}
         <div style={{ position:'absolute', top: isMobile?'16px':'24px', right: isMobile?'16px':'24px', zIndex:3 }}>
@@ -602,21 +615,11 @@ export default function RaceDetail() {
         </div>
 
         {/* Race name + location — bottom left */}
-        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding: isMobile?'16px':'28px 40px', zIndex:2 }}>
-          <div style={{ display:'flex', alignItems:'flex-end', gap:'16px', justifyContent:'space-between' }}>
-            <div style={{ flex:1, minWidth:0 }}>
-              {/* Race logo if available */}
-              {raceLogoUrl && (
-                <div style={{ marginBottom:'8px' }}>
-                  <img src={raceLogoUrl} alt="Race logo" style={{ height: isMobile?'36px':'48px', maxWidth:'160px', objectFit:'contain', filter:'drop-shadow(0 2px 4px rgba(0,0,0,0.5))' }} onError={e => e.target.style.display='none'} />
-                </div>
-              )}
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile?'11px':'13px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.6)', textTransform:'uppercase', marginBottom:'6px' }}>
-                {race.date} · {race.city || race.location}
-              </div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile?'clamp(22px,6vw,32px)':'clamp(32px,5vw,60px)', color:'#fff', letterSpacing:'1.5px', lineHeight:1 }}>{race.name}</div>
-            </div>
+        <div style={{ position:'absolute', bottom:0, left:0, right:0, padding: isMobile?'16px':'28px 40px', zIndex:2, background: raceLogoUrl ? 'linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%)' : 'none' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile?'11px':'13px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.7)', textTransform:'uppercase', marginBottom:'6px' }}>
+            {race.date} · {race.city || race.location}
           </div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile?'clamp(22px,6vw,32px)':'clamp(32px,5vw,60px)', color:'#fff', letterSpacing:'1.5px', lineHeight:1 }}>{race.name}</div>
         </div>
       </div>
 
@@ -625,7 +628,6 @@ export default function RaceDetail() {
         <div style={{ display:'flex', overflowX: isMobile?'auto':'visible', padding:`0 ${p}` }}>
           {[
             race.distance && { label:'Distance', value:race.distance },
-            race.terrain  && { label:'Terrain',  value:race.terrain  },
             race.date     && { label:'Date',      value:race.date     },
             (race.city||race.state) && { label:'Location', value:[race.city,race.state].filter(Boolean).join(', ') },
           ].filter(Boolean).map((s,i,arr) => (
@@ -669,14 +671,26 @@ export default function RaceDetail() {
             )}
 
             {/* Events */}
-            {events.length > 0 && (
+            {events.length > 0 && (() => {
+              // Filter to only real race events — skip volunteer, virtual, expo, training, kids, spectator
+              const BAD_TYPES = ['volunteer','spectator']
+              const BAD_NAMES = ['volunteer','spectator','expo','training','virtual','kids fun','tot trot','dog run','wheelchair','hand cycle']
+              const realEvents = events.filter(ev => {
+                const type = (ev.event_type||'').toLowerCase()
+                const name = (ev.name||'').toLowerCase()
+                if (BAD_TYPES.some(b => type.includes(b))) return false
+                if (BAD_NAMES.some(b => name.includes(b))) return false
+                if (ev.volunteer === 'T') return false
+                return true
+              })
+              if (realEvents.length === 0) return null
+              return (
               <div style={{ background:t.isDark?t.surface:'#fff', borderRadius:'16px', padding:'24px', border:`1px solid ${t.border}`, animation:'fadeIn 0.3s ease both' }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'14px' }}>Race Events</div>
                 <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-                  {events.map((ev,i) => {
+                  {realEvents.map((ev,i) => {
                     const evc = getDistanceColor(ev.distance||race.distance)
-                    const evcl = (ev.distance||'').replace(' mi','')
-                    // Extract event price from registration periods
+                    const evcl = (ev.distance||'').replace(' mi','').replace(' miles','')
                     const evPrice = extractPrice(ev)
                     return (
                       <div key={i} style={{ padding:'12px 16px', background:t.surfaceAlt, borderRadius:'10px', border:`1px solid ${t.border}`, borderLeft:`3px solid ${evc.stampBorder}`, display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
@@ -684,7 +698,7 @@ export default function RaceDetail() {
                           {evcl && (
                             <div style={{ width:40, height:40, borderRadius:'50%', border:`2px solid ${evc.stampBorder}`, background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
                               <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${evc.stampDash}` }} />
-                              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:evcl.length>3?9:evcl.length>2?11:14, color:evc.stampText, position:'relative', zIndex:1 }}>{evcl}</span>
+                              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:evcl.length>4?8:evcl.length>2?11:14, color:evc.stampText, position:'relative', zIndex:1 }}>{evcl}</span>
                             </div>
                           )}
                           <div>
@@ -698,7 +712,8 @@ export default function RaceDetail() {
                   })}
                 </div>
               </div>
-            )}
+              )
+            })()}
 
             {/* Apple Maps */}
             {race.lat && race.lng && (
@@ -769,14 +784,6 @@ export default function RaceDetail() {
 
         {/* Weather */}
         {weather && <WeatherCard weather={weather} t={t} />}
-
-        {/* Terrain (only if we have it) */}
-        {race.terrain && (
-          <div style={{ background:t.isDark?t.surface:'#fff', borderRadius:'12px', padding:'14px 16px', border:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Terrain</div>
-            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.text, letterSpacing:'1px' }}>{race.terrain}</div>
-          </div>
-        )}
 
         {/* Source badge */}
         <div style={{ background:t.isDark?t.surface:'#fff', borderRadius:'12px', padding:'12px 14px', border:`1px solid ${t.border}`, display:'flex', alignItems:'center', gap:'10px' }}>
