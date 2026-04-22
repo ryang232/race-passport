@@ -159,7 +159,10 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       enrichCache.add(race.id)
       fetch(`${API_BASE}?action=enrich_race&race_id=${race.id}`)
         .then(r => r.json())
-        .then(data => { if (data.hero_image) setRace(prev => ({ ...prev, hero_image: data.hero_image })) })
+        .then(data => {
+          const logo = data.logo_url || data.hero_image
+          if (logo) setRace(prev => ({ ...prev, logo_url: logo, hero_image: logo }))
+        })
         .catch(() => {})
     }, { rootMargin:'200px' })
     if (cardRef.current) observer.observe(cardRef.current)
