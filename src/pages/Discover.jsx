@@ -422,6 +422,10 @@ export default function Discover() {
         }
         setAllRaces(all)
         console.log('FIRST RACE FROM DB:', JSON.stringify(all[0]))
+        const mdWithLogo = all.filter(r => r.state === 'MD' && r.logo_url)
+        const mdTotal = all.filter(r => r.state === 'MD')
+        console.log(`MD races loaded: ${mdTotal.length}, with logo: ${mdWithLogo.length}`)
+        if (mdWithLogo[0]) console.log('SAMPLE MD LOGO RACE:', mdWithLogo[0].name, mdWithLogo[0].logo_url)
         const isFeaturedSafe = (r) => { const name=(r.name||'').toLowerCase(); return !/\btraining\b/.test(name)&&!/\bprogram\b/.test(name)&&!/\bbus\b/.test(name)&&!/\bcharter\b/.test(name) }
         const featured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
         setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(r => isActualRace(r) && isFeaturedSafe(r)).slice(0,5))
