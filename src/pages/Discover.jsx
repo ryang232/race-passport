@@ -151,8 +151,12 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
   const [isLogo, setIsLogo]           = useState(false)
   const cardRef = useRef(null)
 
+  // Always read logo from initialRace first — it updates when allRaces finishes loading
+  const effectiveLogo = initialRace.logo_url || initialRace.hero_image || race.logo_url || race.hero_image
+
+  // Enrich via API only if no logo available anywhere
   useEffect(() => {
-    if (featured || race.logo_url || race.hero_image || enrichCache.has(race.id)) return
+    if (featured || effectiveLogo || enrichCache.has(race.id)) return
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
       observer.disconnect()
@@ -161,25 +165,23 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
         .then(r => r.json())
         .then(data => {
           const logo = data.logo_url || data.hero_image
-          if (logo) setRace(prev => ({ ...prev, logo_url: logo, hero_image: logo }))
+          if (logo) setRace(prev => ({ ...prev, logo_url: logo }))
         })
         .catch(() => {})
     }, { rootMargin:'200px' })
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
-  }, [race.id, race.logo_url, race.hero_image, featured])
+  }, [race.id, effectiveLogo, featured])
 
+  // Photo loading — runs whenever effectiveLogo changes
   useEffect(() => {
     setPhotoLoaded(false)
     setPhoto(PHOTO_PLACEHOLDER)
     setIsLogo(false)
 
-    const logoUrl = race.logo_url || race.hero_image
-    console.log('DISCOVER CARD:', race.name, '| logo_url:', race.logo_url)
-    if (logoUrl) {
-      setPhoto(logoUrl)
+    if (effectiveLogo) {
+      setPhoto(effectiveLogo)
       setIsLogo(true)
-      // photoLoaded stays false until onLoad fires on the img tag
       return
     }
 
@@ -198,7 +200,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       if (cardRef.current) observer.observe(cardRef.current)
       return () => observer.disconnect()
     }
-  }, [race.id, race.city, race.state, race.logo_url, race.hero_image, featured])
+  }, [effectiveLogo, race.id, race.city, race.state, featured])
 
   const imgH = compact ? 110 : featured ? 170 : 200
   const cardW = featured
@@ -421,11 +423,6 @@ export default function Discover() {
           from += 1000
         }
         setAllRaces(all)
-        console.log('FIRST RACE FROM DB:', JSON.stringify(all[0]))
-        const mdWithLogo = all.filter(r => r.state === 'MD' && r.logo_url)
-        const mdTotal = all.filter(r => r.state === 'MD')
-        console.log(`MD races loaded: ${mdTotal.length}, with logo: ${mdWithLogo.length}`)
-        if (mdWithLogo[0]) console.log('SAMPLE MD LOGO RACE:', mdWithLogo[0].name, mdWithLogo[0].logo_url)
         const isFeaturedSafe = (r) => { const name=(r.name||'').toLowerCase(); return !/\btraining\b/.test(name)&&!/\bprogram\b/.test(name)&&!/\bbus\b/.test(name)&&!/\bcharter\b/.test(name) }
         const featured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
         setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(r => isActualRace(r) && isFeaturedSafe(r)).slice(0,5))
