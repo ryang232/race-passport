@@ -107,7 +107,7 @@ export default async function handler(req, res) {
       const { price, price_raw } = extractBestPrice(race)
 
       const update = {
-        hero_image:     heroImage,
+        logo_url:       heroImage,
         description:    race.description        || null,
         website_url:    race.url                || null,
         course_map_url: race.course_map         || null,
@@ -137,6 +137,7 @@ export default async function handler(req, res) {
       return res.status(200).json({
         race_id:        raceId,
         hero_image:     heroImage,
+        logo_url:       heroImage,
         website_url:    race.url || null,
         price,
         price_raw,
@@ -254,7 +255,7 @@ export default async function handler(req, res) {
               elevation:     null,
               est_finishers: null,
               registration_url: info.url || null,
-              hero_image:    info.race_logo || info.logo_url || null,
+              logo_url:      info.race_logo || info.logo_url || null,
               sport:         dist === '70.3' || dist === '140.6' ? 'Triathlon' : 'Running',
               is_past:       false,
               last_updated:  new Date().toISOString(),
