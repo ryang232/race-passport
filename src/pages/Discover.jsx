@@ -421,6 +421,7 @@ export default function Discover() {
           from += 1000
         }
         setAllRaces(all)
+        console.log('FIRST RACE FROM DB:', JSON.stringify(all[0]))
         const isFeaturedSafe = (r) => { const name=(r.name||'').toLowerCase(); return !/\btraining\b/.test(name)&&!/\bprogram\b/.test(name)&&!/\bbus\b/.test(name)&&!/\bcharter\b/.test(name) }
         const featured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
         setFeaturedRaces(featured.length >= 3 ? featured.slice(0,5) : all.filter(r => isActualRace(r) && isFeaturedSafe(r)).slice(0,5))
