@@ -464,7 +464,7 @@ export default function RaceDetail() {
         const { data, error } = await supabase.from('races').select('*').eq('id', id).single()
         if (error || !data) { navigate('/discover'); return }
         setRace(data)
-        if (data.hero_image) setRaceLogoUrl(data.hero_image)
+        if (data.logo_url || data.hero_image) setRaceLogoUrl(data.logo_url || data.hero_image)
         loadRacePhoto(data).then(url => { if (url) setPhoto(url) })
 
         // Fetch weather
