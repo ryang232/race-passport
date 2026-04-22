@@ -158,16 +158,25 @@ function NearbyCard({ race, t, compact }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
+  const [isLogo, setIsLogo] = useState(false)
   const navigate = useNavigate()
   const cardRef = useRef(null)
 
   useEffect(() => {
     setPhotoLoaded(false)
     setPhoto(PHOTO_PLACEHOLDER)
+    setIsLogo(false)
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
       observer.disconnect()
-      loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+      const logoUrl = race.logo_url || race.hero_image
+      if (logoUrl) {
+        setPhoto(logoUrl)
+        setIsLogo(true)
+        setPhotoLoaded(true)
+      } else {
+        loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+      }
     }, { rootMargin:'100px' })
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
@@ -180,8 +189,18 @@ function NearbyCard({ race, t, compact }) {
       onClick={() => handleCardClick(race, navigate)}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width: compact ? 'clamp(200px,60vw,280px)' : 'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+        {isLogo ? (
+          /* Logo: centered on dark background with drop shadow */
+          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'12px', background:'#1B2A4A' }}>
+            <img src={photo} alt={race.name} style={{ maxWidth:'85%', maxHeight:'85%', objectFit:'contain', opacity: photoLoaded ? 1 : 0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} onLoad={() => setPhotoLoaded(true)} onError={() => { setIsLogo(false); setPhotoLoaded(false) }} />
+          </div>
+        ) : (
+          /* City photo: full cover */
+          <>
+            <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
+            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+          </>
+        )}
         {!compact && (
           <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
@@ -233,6 +252,7 @@ function UpcomingCard({ race, t, compact }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
+  const [isLogo, setIsLogo] = useState(false)
   const navigate = useNavigate()
   const countdown = useCountdown(race.date_sort || race.date)
   const cardRef = useRef(null)
@@ -240,10 +260,16 @@ function UpcomingCard({ race, t, compact }) {
   useEffect(() => {
     setPhotoLoaded(false)
     setPhoto(PHOTO_PLACEHOLDER)
+    setIsLogo(false)
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
       observer.disconnect()
-      loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+      const logoUrl = race.logo_url || race.hero_image
+      if (logoUrl) {
+        setPhoto(logoUrl); setIsLogo(true); setPhotoLoaded(true)
+      } else {
+        loadRacePhoto(race).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
+      }
     }, { rootMargin:'100px' })
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
@@ -256,9 +282,17 @@ function UpcomingCard({ race, t, compact }) {
       onClick={() => handleCardClick(race, navigate)}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, boxShadow: hovered ? t.cardShadowHover : t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform: hovered ? 'translateY(-5px)' : 'none', flexShrink:0, width: compact ? 'clamp(200px,60vw,280px)' : 'clamp(260px,26vw,380px)' }}>
       <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
-        {!compact && (
+        {isLogo ? (
+          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'12px', background:'#1B2A4A' }}>
+            <img src={photo} alt={race.name} style={{ maxWidth:'85%', maxHeight:'85%', objectFit:'contain', opacity: photoLoaded ? 1 : 0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} onLoad={() => setPhotoLoaded(true)} onError={() => { setIsLogo(false); setPhotoLoaded(false) }} />
+          </div>
+        ) : (
+          <>
+            <img src={photo} alt={race.name} style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.4s', transform: hovered ? 'scale(1.05)' : 'scale(1)', opacity: photoLoaded ? 1 : 0 }} onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
+            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
+          </>
+        )}
+        {!compact && !isLogo && (
           <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
             {countdown.past ? (
