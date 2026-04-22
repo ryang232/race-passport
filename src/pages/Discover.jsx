@@ -175,10 +175,11 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
     setIsLogo(false)
 
     const logoUrl = race.logo_url || race.hero_image
+    console.log('DISCOVER CARD:', race.name, '| logo_url:', race.logo_url)
     if (logoUrl) {
       setPhoto(logoUrl)
       setIsLogo(true)
-      setPhotoLoaded(true)
+      // photoLoaded stays false until onLoad fires on the img tag
       return
     }
 
