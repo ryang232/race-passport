@@ -138,13 +138,15 @@ function Stamp({ distance, name, location, month, year, size=130, onClick, t }) 
 }
 
 function CardStamp({ distance, size=48 }) {
-  const colors = getDistanceColor(distance)
-  const cleaned = (distance||'').replace(' mi','')
-  const fs = cleaned.length > 3 ? 9 : cleaned.length > 2 ? 11 : 14
+  const colors  = getDistanceColor(distance)
+  const cleaned = (distance||'').replace(' mi','').replace(' miles','')
+  const fs = size <= 36
+    ? (cleaned.length > 4 ? 7 : cleaned.length > 2 ? 9 : 12)
+    : (cleaned.length > 4 ? 10 : cleaned.length > 2 ? 13 : 17)
   return (
-    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-      <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
-      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+      <div style={{ position:'absolute', inset: size<=36?2:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
+      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.3px', position:'relative', zIndex:1, textAlign:'center', lineHeight:1 }}>{cleaned}</span>
     </div>
   )
 }
@@ -202,23 +204,23 @@ function NearbyCard({ race, t, compact }) {
           </>
         )}
         {!compact && (
-          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'16px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:'12px', width:'100%' }}>
-              {[{ label:'Terrain', value:race.terrain },{ label:'Price', value:race.price },{ label:'Elevation', value:race.elevation }].map(s => (
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'12px', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'16px', zIndex:5 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', width:'100%' }}>
+              {[
+                { label:'Distance', value: race.distance || '—' },
+                { label:'Price',    value: race.price ? `$${race.price}` : 'See Site' },
+                { label:'Date',     value: race.date || '—' },
+                { label:'Location', value: race.city || race.location || '—' },
+              ].map(s => (
                 <div key={s.label} style={{ textAlign:'center' }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{s.value}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'3px' }}>{s.label}</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#fff', letterSpacing:'0.5px', lineHeight:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.value}</div>
                 </div>
               ))}
             </div>
-            <div style={{ width:'100%', height:'1px', background:'rgba(255,255,255,0.1)' }} />
-            <div style={{ textAlign:'center' }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Est. Training</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{race.weeks} Weeks</div>
-            </div>
           </div>
         )}
-        <div style={{ position:'absolute', bottom:8, left:8, opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>
+        <div style={{ position:'absolute', bottom:8, left:8 }}>
           <CardStamp distance={race.distance} size={compact ? 36 : 48} />
         </div>
       </div>
@@ -292,8 +294,8 @@ function UpcomingCard({ race, t, compact }) {
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.55))' }} />
           </>
         )}
-        {!compact && !isLogo && (
-          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px' }}>
+        {!compact && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', opacity: hovered ? 1 : 0, transition:'opacity 0.25s', padding:'20px', zIndex:5 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'16px' }}>{countdown.past ? 'Race Day!' : 'Countdown to Race Day'}</div>
             {countdown.past ? (
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#C9A84C', letterSpacing:'2px' }}>GO TIME!</div>
@@ -314,8 +316,8 @@ function UpcomingCard({ race, t, compact }) {
             <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:'#C9A84C', letterSpacing:'1px' }}>{countdown.days}d {countdown.hours}h</span>
           </div>
         )}
-        <div style={{ position:'absolute', top:8, right:8, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase', opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>Registered</div>
-        <div style={{ position:'absolute', bottom: compact ? 'auto' : 12, top: compact ? 8 : 'auto', left:8, opacity: hovered && !compact ? 0 : 1, transition:'opacity 0.2s' }}>
+        <div style={{ position:'absolute', top:8, right:8, background:'rgba(27,42,74,0.88)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1.5px', color:'#fff', textTransform:'uppercase' }}>Registered</div>
+        <div style={{ position:'absolute', bottom: compact ? 'auto' : 12, top: compact ? 8 : 'auto', left:8 }}>
           <CardStamp distance={race.distance} size={compact ? 32 : 46} />
         </div>
       </div>
@@ -421,6 +423,7 @@ export default function Home() {
   const [suggestedRaces, setSuggestedRaces] = useState([])
   const [showAllNearby, setShowAllNearby]   = useState(false)
   const [showAllSuggested, setShowAllSuggested] = useState(false)
+  const [upcomingLogos, setUpcomingLogos]   = useState({})
   const [nearbyLoading, setNearbyLoading] = useState(true)
   const dropdownRef = useRef(null)
 
@@ -526,6 +529,21 @@ export default function Home() {
     }
 
     loadProfile()
+
+    // Look up logo_url for upcoming races from the races table
+    const upcoming = getSessionUpcoming()
+    const mockIds = MOCK_UPCOMING.map(m => m.id)
+    const allUpcomingIds = [...upcoming.map(r => String(r.id)), ...mockIds].filter(Boolean)
+    if (allUpcomingIds.length > 0) {
+      supabase.from('races').select('id,logo_url').in('id', allUpcomingIds)
+        .then(({ data }) => {
+          if (data) {
+            const map = {}
+            data.forEach(r => { if (r.logo_url) map[r.id] = r.logo_url })
+            setUpcomingLogos(map)
+          }
+        })
+    }
 
     const style = document.createElement('style')
     style.id = 'rp-home-styles'
@@ -918,7 +936,7 @@ export default function Home() {
                 </button>
               </div>
             )
-            return <ScrollRow>{allUpcoming.map(race => <UpcomingCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+            return <ScrollRow>{allUpcoming.map(race => <UpcomingCard key={race.id} race={{ ...race, logo_url: upcomingLogos[String(race.id)] || race.logo_url }} t={t} compact={isMobile} />)}</ScrollRow>
           })()}
         </div>
 
