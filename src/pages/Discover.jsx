@@ -129,16 +129,23 @@ function classifyDistance(race) {
 
 const API_BASE = '/api/runsignup'
 const enrichCache = new Set()
+
+// Clear enrich cache when module reloads (navigation)
+if (typeof window !== 'undefined') {
+  window.__rp_clearEnrichCache = () => enrichCache.clear()
+}
 const SS_KEY = 'rp_discover_state'
 
 function CardStamp({ distance, size=50 }) {
-  const colors = getDistanceColor(distance)
-  const cleaned = (distance||'').replace(' mi','')
-  const fs = cleaned.length>3 ? 9 : cleaned.length>2 ? 11 : 14
+  const colors  = getDistanceColor(distance)
+  const cleaned = (distance||'').replace(' mi','').replace(' miles','')
+  const fs = size <= 36
+    ? (cleaned.length > 4 ? 7 : cleaned.length > 2 ? 9 : 12)
+    : (cleaned.length > 4 ? 10 : cleaned.length > 2 ? 13 : 17)
   return (
-    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
-      <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
-      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.5px', position:'relative', zIndex:1 }}>{cleaned}</span>
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+      <div style={{ position:'absolute', inset: size<=36 ? 2 : 3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
+      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.3px', position:'relative', zIndex:1, textAlign:'center', lineHeight:1 }}>{cleaned}</span>
     </div>
   )
 }
@@ -173,10 +180,9 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
     return () => observer.disconnect()
   }, [race.id, effectiveLogo, featured])
 
-  // Photo loading — runs whenever effectiveLogo changes
+  // Photo loading — apply logo immediately, lazy-load city photos
   useEffect(() => {
     setPhotoLoaded(false)
-    setPhoto(PHOTO_PLACEHOLDER)
     setIsLogo(false)
 
     if (effectiveLogo) {
@@ -185,6 +191,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       return
     }
 
+    setPhoto(PHOTO_PLACEHOLDER)
     const enriched = { ...race, ...parseCityState(race) }
     if (featured) {
       const tid = setTimeout(() => {
@@ -229,28 +236,31 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
             <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
           </>
         )}
-        {!featured && !compact && !isLogo && (
-          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
+        {!featured && !compact && (
+          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'12px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'16px', zIndex:5 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', width:'100%' }}>
               {[
-                { label:'Price',     value:race.price?`$${race.price}`:'TBD' },
-                { label:'Terrain',   value:race.terrain||'Road' },
-                { label:'Elevation', value:race.elevation||'—' },
-                { label:'Finishers', value:race.est_finishers?race.est_finishers.toLocaleString():'—' },
+                { label:'Distance', value: race.distance || '—' },
+                { label:'Price',    value: race.price ? `$${race.price}` : 'See Site' },
+                { label:'Date',     value: race.date || '—' },
+                { label:'Location', value: race.city || race.location || '—' },
               ].map(s => (
                 <div key={s.label} style={{ textAlign:'center' }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>{s.label}</div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#fff', letterSpacing:'0.5px', lineHeight:1 }}>{s.value}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'3px' }}>{s.label}</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#fff', letterSpacing:'0.5px', lineHeight:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.value}</div>
                 </div>
               ))}
             </div>
           </div>
         )}
-        {featured && race.price && (
-          <div style={{ position:'absolute', top:8, right:8, background:'rgba(27,42,74,0.85)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1px', color:'#fff' }}>${race.price}</div>
+        {featured && (
+          <div style={{ position:'absolute', top:8, right:8, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'4px' }}>
+            {race.price && <div style={{ background:'rgba(27,42,74,0.9)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1px', color:'#C9A84C' }}>${race.price}</div>}
+            {race.date && <div style={{ background:'rgba(27,42,74,0.85)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'0.5px', color:'rgba(255,255,255,0.9)' }}>{race.date}</div>}
+          </div>
         )}
-        <div style={{ position:'absolute', bottom:8, left:8, opacity:(!featured&&!compact&&hovered)?0:1, transition:'opacity 0.2s' }}>
-          <CardStamp distance={race.distance||''} size={compact||featured?34:50} />
+        <div style={{ position:'absolute', bottom:8, left:8 }}>
+          <CardStamp distance={race.distance||''} size={featured ? 44 : compact ? 32 : 50} />
         </div>
       </div>
       <div style={{ padding: compact ? '8px 10px' : '12px 14px', borderTop:`1px solid ${t.borderLight}` }}>
@@ -488,7 +498,7 @@ export default function Discover() {
     )
   }
 
-  useEffect(() => { window.scrollTo(0, 0) }, [])
+  useEffect(() => { window.scrollTo(0, 0); return () => enrichCache.clear() }, [])
   useEffect(() => { if (location.state?.autoSearch) { const { distFilter:df, dateFrom:from, dateTo:to } = location.state.autoSearch; if (df) setDistFilter(df); if (from) setDateFrom(from); if (to) setDateTo(to); setCommitted({ search:'', distFilter:df||'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:from||'', dateTo:to||'' }) } }, [])
   useEffect(() => { if (userLat && userLng && mapInstanceRef.current) { mapInstanceRef.current.flyTo([userLat, userLng], 10, { animate:false }) } }, [mapInstanceRef.current !== null])
 
@@ -714,7 +724,7 @@ export default function Discover() {
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Bucket List Races</div>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '24px' : '32px', color:t.text, letterSpacing:'1px' }}>Featured Races</div>
               </div>
-              {!isMobile && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>Abbott Majors · Popular City Races · Upcoming</div>}
+              {!isMobile && <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>Top rated · Upcoming · Nationwide</div>}
             </div>
             {loading ? (
               <div style={{ display:'flex', gap:'12px', overflow:'hidden' }}>
