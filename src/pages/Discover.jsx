@@ -148,10 +148,11 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
   const [race, setRace]               = useState(initialRace)
   const [photo, setPhoto]             = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
+  const [isLogo, setIsLogo]           = useState(false)
   const cardRef = useRef(null)
 
   useEffect(() => {
-    if (featured || race.hero_image || enrichCache.has(race.id)) return
+    if (featured || race.logo_url || race.hero_image || enrichCache.has(race.id)) return
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
       observer.disconnect()
@@ -163,11 +164,21 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
     }, { rootMargin:'200px' })
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
-  }, [race.id, race.hero_image, featured])
+  }, [race.id, race.logo_url, race.hero_image, featured])
 
   useEffect(() => {
     setPhotoLoaded(false)
     setPhoto(PHOTO_PLACEHOLDER)
+    setIsLogo(false)
+
+    const logoUrl = race.logo_url || race.hero_image
+    if (logoUrl) {
+      setPhoto(logoUrl)
+      setIsLogo(true)
+      setPhotoLoaded(true)
+      return
+    }
+
     const enriched = { ...race, ...parseCityState(race) }
     if (featured) {
       const tid = setTimeout(() => {
@@ -183,7 +194,7 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       if (cardRef.current) observer.observe(cardRef.current)
       return () => observer.disconnect()
     }
-  }, [race.id, race.city, race.state, race.hero_image, featured])
+  }, [race.id, race.city, race.state, race.logo_url, race.hero_image, featured])
 
   const imgH = compact ? 110 : featured ? 170 : 200
   const cardW = featured
@@ -196,11 +207,23 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       onClick={onClick}
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink: featured||compact ? 0 : undefined, width: cardW, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered&&!compact?'translateY(-5px)':'none', outline:isActive?'2.5px solid #C9A84C':'none', outlineOffset:'2px' }}>
       <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
-        <img src={photo} alt={race.name}
-          style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.5s', transform:hovered&&!compact?'scale(1.05)':'scale(1)', opacity:photoLoaded?1:0 }}
-          onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
-        <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
-        {!featured && !compact && (
+        {isLogo ? (
+          /* Logo: centered on dark background */
+          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding: compact?'10px':'16px', background:'#1B2A4A' }}>
+            <img src={photo} alt={race.name}
+              style={{ maxWidth:'85%', maxHeight:'85%', objectFit:'contain', opacity: photoLoaded?1:0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }}
+              onLoad={() => setPhotoLoaded(true)} onError={() => { setIsLogo(false); setPhotoLoaded(false) }} />
+          </div>
+        ) : (
+          /* City photo: full cover */
+          <>
+            <img src={photo} alt={race.name}
+              style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.5s', transform:hovered&&!compact?'scale(1.05)':'scale(1)', opacity:photoLoaded?1:0 }}
+              onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
+            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
+          </>
+        )}
+        {!featured && !compact && !isLogo && (
           <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.9)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'14px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'20px' }}>
             <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'12px', width:'100%' }}>
               {[
