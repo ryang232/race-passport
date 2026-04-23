@@ -391,6 +391,55 @@ export default function Profile() {
           </div>
         </Section>
 
+        {/* PACER — AI COACH */}
+        <Section title="Pacer · Your AI Race Coach">
+          <div style={{ marginBottom:'20px' }}>
+            <div style={{ display:'flex', alignItems:'flex-start', gap:'14px', padding:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.3)'}`, borderRadius:'12px', marginBottom:'16px' }}>
+              <div style={{ fontSize:'24px', lineHeight:1, flexShrink:0 }}>🏃</div>
+              <div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>What is Pacer?</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, lineHeight:1.7 }}>
+                  Pacer is your personal AI running coach built into Race Passport. It analyzes your race history to give you personalized coaching insights, predict your current fitness, score how well upcoming races fit you, and identify gaps in your training.
+                </div>
+              </div>
+            </div>
+
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>What Pacer uses to coach you</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'20px' }}>
+              {[
+                { icon:'📋', label:'Your Race Passport', desc:'All races you\'ve imported — names, distances, finish times, dates, and locations.' },
+                { icon:'🎯', label:'Your Profile Settings', desc:'Your goal distance, home state, and experience level from your profile.' },
+                { icon:'⚡', label:'Strava (if connected)', desc:'Recent activity count, total miles, and training frequency — never your personal health data.' },
+              ].map(item => (
+                <div key={item.label} style={{ display:'flex', alignItems:'flex-start', gap:'12px', padding:'12px 14px', background:t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.03)', borderRadius:'8px', border:`1px solid ${t.borderLight}` }}>
+                  <span style={{ fontSize:'16px', flexShrink:0 }}>{item.icon}</span>
+                  <div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:t.text, marginBottom:'2px' }}>{item.label}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.5 }}>{item.desc}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ padding:'12px 14px', background:t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.03)', borderRadius:'8px', border:`1px solid ${t.borderLight}` }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Pacer never uses</div>
+              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
+                {['Heart rate or health data','GPS location history','Personal messages','Payment information','Data from other apps'].map(item => (
+                  <div key={item} style={{ display:'flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:'transparent', border:`1px solid ${t.border}`, borderRadius:'20px' }}>
+                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1.5 1.5l5 5M6.5 1.5l-5 5" stroke="#c53030" strokeWidth="1.2" strokeLinecap="round"/></svg>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{item}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display:'flex', gap:'12px', flexWrap:'wrap' }}>
+            <a href="/privacy" style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>Privacy Policy →</a>
+            <a href="/terms" style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textDecoration:'none', textTransform:'uppercase' }}>Terms of Service →</a>
+          </div>
+        </Section>
+
         {/* DANGER ZONE */}
         <Section title="Danger Zone" danger>
           <div style={{ display:'flex', alignItems: isMobile ? 'flex-start' : 'center', justifyContent:'space-between', gap:'16px', flexDirection: isMobile ? 'column' : 'row' }}>
