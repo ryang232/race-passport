@@ -391,6 +391,54 @@ function SuggestedRacesContent({ races, showAll, setShowAll, t, isMobile }) {
   )
 }
 
+// ── Pacer Insight Card ────────────────────────────────────────────────────────
+function PacerCard({ insight, loading, t, isMobile }) {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!loading && insight) setTimeout(() => setVisible(true), 100)
+  }, [loading, insight])
+
+  if (loading) return (
+    <div style={{ marginBottom:'32px', borderRadius:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.25)'}`, padding: isMobile ? '16px' : '20px 24px', display:'flex', alignItems:'center', gap:'16px' }}>
+      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+        <div style={{ width:16, height:16, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+      </div>
+      <div style={{ flex:1 }}>
+        <div style={{ height:11, borderRadius:6, background: t.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(27,42,74,0.07)', marginBottom:10, width:'65%', animation:'pulse 1.5s ease infinite' }} />
+        <div style={{ height:10, borderRadius:6, background: t.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(27,42,74,0.05)', width:'40%', animation:'pulse 1.5s ease infinite' }} />
+      </div>
+    </div>
+  )
+
+  if (!insight) return null
+
+  return (
+    <div style={{ marginBottom:'32px', borderRadius:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark ? 'rgba(201,168,76,0.2)' : 'rgba(201,168,76,0.35)'}`, padding: isMobile ? '16px' : '20px 24px', display:'flex', alignItems:'flex-start', gap:'16px', opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(8px)', transition:'opacity 0.5s ease, transform 0.5s ease' }}>
+      {/* Icon */}
+      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'1px' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </div>
+      {/* Text */}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'7px' }}>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
+          <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Coach</span>
+        </div>
+        <p style={{ fontFamily:"'Barlow',sans-serif", fontSize: isMobile ? '13px' : '14px', color:t.text, margin:'0 0 10px', lineHeight:1.65, fontWeight:400 }}>
+          {insight.insight}
+        </p>
+        <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', background: t.isDark ? 'rgba(201,168,76,0.1)' : 'rgba(201,168,76,0.12)', borderRadius:'20px', padding:'5px 12px' }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1l1.5 3H10L7.5 6l1 3L5 7.5 1.5 9l1-3L0 4h3.5z" fill="#C9A84C"/></svg>
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', letterSpacing:'0.5px' }}>{insight.next_step}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function ParallaxBackground({ t }) {
   const [offsetX, setOffsetX] = useState(0)
   useEffect(() => {
@@ -425,6 +473,8 @@ export default function Home() {
   const [showAllSuggested, setShowAllSuggested] = useState(false)
   const [upcomingLogos, setUpcomingLogos]   = useState({})
   const [nearbyLoading, setNearbyLoading] = useState(true)
+  const [pacerInsight, setPacerInsight]   = useState(null)
+  const [pacerLoading, setPacerLoading]   = useState(false)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -432,11 +482,38 @@ export default function Home() {
     if (h >= 12 && h < 17) setGreeting('GOOD AFTERNOON')
     else if (h >= 17) setGreeting('GOOD EVENING')
 
+    const loadPacerInsight = async (races, prof) => {
+      if (!races || races.length === 0) return
+      setPacerLoading(true)
+      try {
+        const resp = await fetch('/api/pacer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'insight',
+            races: races.slice(0, 15),
+            profile: {
+              first_name: (prof?.full_name || '').split(' ')[0],
+              state: prof?.state,
+              favorite_distance: prof?.favorite_distance,
+              experience: prof?.experience_level,
+            },
+          }),
+        })
+        const data = await resp.json()
+        if (data.insight) setPacerInsight(data)
+      } catch(e) { console.error('Pacer error:', e) }
+      setPacerLoading(false)
+    }
+
     const loadProfile = async () => {
       if (!user || isDemo(user?.email)) {
-        setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}`, state:'MD', favorite_distance:'13.1' })
-        setPassportRaces(RYAN_STAMPS.map(s => ({ ...s, distance: s.distance, name: s.name, date: `${s.month} ${s.year}`, location: s.location })))
+        const demoProfile = { full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}`, state:'MD', favorite_distance:'13.1' }
+        const demoRaces = RYAN_STAMPS.map(s => ({ ...s, date:`${s.month} ${s.year}`, date_sort:`${s.year}-01-01` }))
+        setProfile(demoProfile)
+        setPassportRaces(demoRaces)
         loadNearbyAndSuggested('MD', '13.1')
+        loadPacerInsight(demoRaces, demoProfile)
         return
       }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -450,7 +527,10 @@ export default function Home() {
         .select('*')
         .eq('user_id', user.id)
         .order('date_sort', { ascending: false })
-      if (praces) setPassportRaces(praces)
+      if (praces) {
+        setPassportRaces(praces)
+        loadPacerInsight(praces, data)
+      }
     }
 
     const loadNearbyAndSuggested = async (userState, favDistance) => {
@@ -645,6 +725,7 @@ export default function Home() {
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
     { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
+    { label:'The Wall', path:'/wall',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M10 2c0 4-5 6-5 10a5 5 0 0 0 10 0c0-4-5-6-5-10z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M10 14a1.5 1.5 0 0 1-1.5-1.5c0-1 1.5-2 1.5-2s1.5 1 1.5 2A1.5 1.5 0 0 1 10 14z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/></svg> },
     { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
     { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
@@ -842,6 +923,9 @@ export default function Home() {
 
       {/* PAGE CONTENT */}
       <div style={{ position:'relative', zIndex:10, width:'100%', padding: isMobile ? '24px 16px 80px' : '36px 40px 80px' }}>
+
+        {/* PACER INSIGHT */}
+        <PacerCard insight={pacerInsight} loading={pacerLoading} t={t} isMobile={isMobile} />
 
         {/* RACES NEAR YOU */}
         <div style={{ marginBottom:'52px' }}>
