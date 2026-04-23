@@ -569,7 +569,7 @@ export default function Home() {
 
       // Session cache — persist insight for the whole browser session
       // so navigating away and back doesn't regenerate it
-      const cacheKey = `pacer_insight_${prof?.full_name||'user'}`
+      const cacheKey = `pacer_insight_v2_${prof?.full_name||'user'}`
       const cached = sessionStorage.getItem(cacheKey)
       if (cached) {
         try { setPacerInsight(JSON.parse(cached)); return } catch(e) {}
@@ -602,7 +602,7 @@ export default function Home() {
 
     const loadReadiness = async (races, prof) => {
       if (!races || races.length === 0) return
-      const cacheKey = `pacer_readiness_${prof?.full_name||'user'}`
+      const cacheKey = `pacer_readiness_v2_${prof?.full_name||'user'}`
       const cached = sessionStorage.getItem(cacheKey)
       if (cached) { try { setReadiness(JSON.parse(cached)); return } catch(e) {} }
       setReadinessLoading(true)
