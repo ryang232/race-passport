@@ -21,6 +21,8 @@ import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
 import StravaCallback from './pages/StravaCallback'
 import Wall from './pages/Wall'
+import Terms from './pages/Terms'
+import Privacy from './pages/Privacy'
 
 export default function App() {
   return (
@@ -42,6 +44,8 @@ export default function App() {
             <Route path="/strava-callback"     element={<StravaCallback />} />
             <Route path="/home"                element={<Home />} />
             <Route path="/wall"                element={<Wall />} />
+            <Route path="/terms"               element={<Terms />} />
+            <Route path="/privacy"             element={<Privacy />} />
             <Route path="/discover"            element={<Discover />} />
             <Route path="/race/:id"            element={<RacePage />} />
             <Route path="/race-detail/:id"     element={<RaceDetail />} />
