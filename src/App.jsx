@@ -20,6 +20,7 @@ import Passport from './pages/Passport'
 import Profile from './pages/Profile'
 import PublicProfile from './pages/PublicProfile'
 import StravaCallback from './pages/StravaCallback'
+import Wall from './pages/Wall'
 
 export default function App() {
   return (
@@ -40,6 +41,7 @@ export default function App() {
             <Route path="/goal-races"          element={<GoalRaces />} />
             <Route path="/strava-callback"     element={<StravaCallback />} />
             <Route path="/home"                element={<Home />} />
+            <Route path="/wall"                element={<Wall />} />
             <Route path="/discover"            element={<Discover />} />
             <Route path="/race/:id"            element={<RacePage />} />
             <Route path="/race-detail/:id"     element={<RaceDetail />} />
