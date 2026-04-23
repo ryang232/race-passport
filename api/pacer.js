@@ -163,20 +163,28 @@ Respond ONLY with valid JSON array, no markdown:
       if (!prMap[r.distance] || toSecs(r.time) < toSecs(prMap[r.distance])) prMap[r.distance] = r.time
     })
 
-    const prompt = `You are Pacer. Based on this runner's history, give a compact readiness forecast.
+    const prompt = `You are Pacer, an AI running coach. Give a compact readiness forecast based ONLY on the actual data provided below. Do not guess or make up times.
 
-RUNNER:
-- Total races: ${races.length}
-- Most raced: ${topDist}
-- Days since last race: ${days!==null?days:'unknown'}
+RUNNER DATA:
+- Total races in passport: ${races.length}
+- Most raced distance: ${topDist}
 - Goal distance: ${profile?.favorite_distance||topDist}
-- PRs: ${Object.entries(prMap).map(([d,t])=>`${d}: ${t}`).join(', ')||'none recorded'}
+- Days since last race: ${days!==null?days:'unknown'}
+- Personal records (in H:MM:SS or MM:SS format):
+${Object.entries(prMap).length > 0 ? Object.entries(prMap).map(([d,t])=>`  ${d}: ${t}`).join('\n') : '  No finish times recorded yet'}
 
-Respond ONLY with valid JSON, no markdown:
+IMPORTANT RULES:
+- "best_distance" must be the distance they are most ready to race NOW based on their history
+- "time_range" must be a realistic estimate based on their actual PR for that distance — if their half PR is 1:57:40, a realistic time range is "1:55–2:00" not "4:30–4:50"
+- Times for a 5K are like 20–40 min. 10K: 40–80 min. Half marathon: 1:30–3:00. Marathon: 3:00–6:00. Never confuse these.
+- "race_window" is how many weeks until they should race next
+- If no PR exists for a distance, say "Est. needed" for time_range
+
+Respond ONLY with valid JSON, no markdown, no explanation:
 {
-  "best_distance": "e.g. 10K",
-  "time_range": "e.g. 48–52 min",
-  "race_window": "e.g. 4–6 weeks"
+  "best_distance": "Half Marathon",
+  "time_range": "1:55–2:05",
+  "race_window": "6–8 weeks"
 }`
 
     try {
