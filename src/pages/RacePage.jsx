@@ -628,8 +628,13 @@ export default function RacePage() {
   const [showAddGear, setShowAddGear] = useState(false)
   const [saving, setSaving]         = useState(false)
   const [activePhoto, setActivePhoto] = useState(null)
-  const [localPhotos, setLocalPhotos] = useState([]) // uploaded photos as object URLs
+  const [localPhotos, setLocalPhotos] = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
+  const [pacerReflection, setPacerReflection] = useState(null)
+  const [pacerReflectionLoading, setPacerReflectionLoading] = useState(false)
+  const [reportCard, setReportCard]   = useState(null)
+  const [reportCardLoading, setReportCardLoading] = useState(false)
+  const [showReportCard, setShowReportCard] = useState(false)
   const fileInputRef = useRef(null)
   const dropdownRef  = useRef(null)
 
@@ -722,6 +727,7 @@ export default function RacePage() {
       * { box-sizing:border-box; }
       @keyframes fadeIn { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
       @keyframes spin { to{transform:rotate(360deg);} }
+      @keyframes pulse { 0%,100%{opacity:0.5;}50%{opacity:1;} }
       .rp-photo-slot { border-radius:10px;overflow:hidden;cursor:pointer;transition:transform 0.2s,box-shadow 0.2s;position:relative;aspect-ratio:4/3; }
       .rp-photo-slot:hover { transform:translateY(-3px);box-shadow:0 8px 24px rgba(27,42,74,0.15); }
       .sticker-chip { padding:6px 12px;border-radius:20px;border:1.5px solid;background:transparent;cursor:pointer;font-size:18px;transition:transform 0.15s; }
@@ -736,6 +742,33 @@ export default function RacePage() {
     document.addEventListener('mousedown', handleClick)
     return () => { document.getElementById('rp-racepage-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [numId])
+
+  // Load Pacer reflection once race is ready
+  useEffect(() => {
+    if (!race || !race.name) return
+    const cacheKey = `pacer_reflection_${race.id||race.name}`
+    const cached = sessionStorage.getItem(cacheKey)
+    if (cached) { try { setPacerReflection(JSON.parse(cached)); return } catch(e) {} }
+    setPacerReflectionLoading(true)
+    fetch('/api/pacer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'race_reflection',
+        race: { id:race.id, name:race.name, distance:race.distance, time:race.time, date:race.date, is_pr:race.pr, splits:race.splits||[] },
+        races: allPassportRaces.slice(0, 15),
+      }),
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (data.headline) {
+        setPacerReflection(data)
+        sessionStorage.setItem(cacheKey, JSON.stringify(data))
+      }
+    })
+    .catch(() => {})
+    .finally(() => setPacerReflectionLoading(false))
+  }, [race?.id])
 
   if (!race) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:t.bg }}>
@@ -893,6 +926,38 @@ export default function RacePage() {
       {/* CONTENT */}
       <div style={{ maxWidth:'1200px', margin:'0 auto', padding: isMobile ? '16px 16px 80px' : '32px 40px 80px' }}>
 
+        {/* PACER REFLECTION */}
+        {(pacerReflectionLoading || pacerReflection) && (
+          <div style={{ marginBottom:'20px', borderRadius:'16px', background: t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', border:`1px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.35)'}`, padding: isMobile?'16px':'20px 24px', animation:'fadeIn 0.4s ease both' }}>
+            {pacerReflectionLoading ? (
+              <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+                <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'20px' }}>🏃</div>
+                <div style={{ flex:1 }}>
+                  <div style={{ height:11, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)', marginBottom:10, width:'50%', animation:'pulse 1.5s ease infinite' }} />
+                  <div style={{ height:10, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.05)', width:'75%', animation:'pulse 1.5s ease infinite' }} />
+                </div>
+              </div>
+            ) : pacerReflection && (
+              <div style={{ display:'flex', alignItems:'flex-start', gap:'14px' }}>
+                <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'1px', fontSize:'20px', lineHeight:1 }}>🏃</div>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'6px' }}>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
+                    <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Race Coach</span>
+                  </div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile?'20px':'24px', color:t.text, letterSpacing:'1px', marginBottom:'8px', lineHeight:1.1 }}>{pacerReflection.headline}</div>
+                  <p style={{ fontFamily:"'Barlow',sans-serif", fontSize: isMobile?'13px':'14px', color:t.text, margin:'0 0 10px', lineHeight:1.65 }}>{pacerReflection.reflection}</p>
+                  <div style={{ display:'inline-flex', alignItems:'center', gap:'7px', background:t.isDark?'rgba(201,168,76,0.1)':'rgba(201,168,76,0.12)', borderRadius:'20px', padding:'5px 12px' }}>
+                    <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1l1.5 3H10L7.5 6l1 3L5 7.5 1.5 9l1-3L0 4h3.5z" fill="#C9A84C"/></svg>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C' }}>{pacerReflection.highlight}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* PHOTOS */}
         <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile ? '16px' : '28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
@@ -1044,6 +1109,85 @@ export default function RacePage() {
 
         {/* STRAVA ACTIVITY */}
         <StravaActivitySection race={race} t={t} />
+
+        {/* PACER REPORT CARD — Training Log */}
+        <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.22s both', transition:'background 0.25s' }}>
+          <button onClick={() => {
+            setShowReportCard(p => !p)
+            if (!reportCard && !reportCardLoading) {
+              setReportCardLoading(true)
+              fetch('/api/pacer', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'report_card',
+                  race: { name:race.name, distance:race.distance, time:race.time, splits:race.splits||[], strava_activities:[] },
+                  races: allPassportRaces.slice(0,15),
+                }),
+              })
+              .then(r => r.json())
+              .then(data => { if (data.grades) setReportCard(data) })
+              .catch(() => {})
+              .finally(() => setReportCardLoading(false))
+            }
+          }}
+            style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', background:'none', border:'none', cursor:'pointer', padding:0, marginBottom: showReportCard ? '20px' : 0 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+              <span style={{ fontSize:'20px' }}>🏃</span>
+              <div style={{ textAlign:'left' }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Pacer Report Card</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>AI analysis of your training for this race</div>
+              </div>
+            </div>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showReportCard?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
+              <path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </button>
+
+          {showReportCard && (
+            reportCardLoading ? (
+              <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
+                {[1,2,3,4].map(i => (
+                  <div key={i} style={{ height:52, borderRadius:'8px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }} />
+                ))}
+              </div>
+            ) : reportCard ? (
+              <div>
+                <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, lineHeight:1.7, marginBottom:'20px' }}>{reportCard.summary}</p>
+                <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'20px' }}>
+                  {reportCard.grades.map(g => {
+                    const gradeColor = g.grade.startsWith('A') ? '#16a34a' : g.grade.startsWith('B') ? '#C9A84C' : '#9aa5b4'
+                    return (
+                      <div key={g.category} style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px 16px', background:t.surfaceAlt, borderRadius:'10px', border:`1px solid ${t.borderLight}` }}>
+                        <div style={{ width:40, height:40, borderRadius:'8px', background:`${gradeColor}18`, border:`1.5px solid ${gradeColor}40`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:gradeColor, letterSpacing:'0.5px' }}>{g.grade}</span>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:t.text, marginBottom:'2px' }}>{g.category}</div>
+                          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.4 }}>{g.comment}</div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'12px' }}>
+                  <div style={{ padding:'14px 16px', background:`rgba(22,163,74,0.06)`, borderRadius:'10px', border:'1px solid rgba(22,163,74,0.2)' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#16a34a', textTransform:'uppercase', marginBottom:'4px' }}>🏆 Top Win</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.5 }}>{reportCard.top_win}</div>
+                  </div>
+                  <div style={{ padding:'14px 16px', background:`rgba(201,168,76,0.06)`, borderRadius:'10px', border:'1px solid rgba(201,168,76,0.2)' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>⚡ Next Focus</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.5 }}>{reportCard.next_focus}</div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ textAlign:'center', padding:'20px', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px' }}>
+                Connect Strava to unlock your full training analysis
+              </div>
+            )
+          )}
+        </div>
 
         {/* MUSIC */}
         <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
