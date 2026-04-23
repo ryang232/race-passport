@@ -156,7 +156,7 @@ function handleCardClick(race, navigate) {
   navigate(`/race-detail/${race.id}`)
 }
 
-function NearbyCard({ race, t, compact }) {
+function NearbyCard({ race, t, compact, fitScore }) {
   const [hovered, setHovered] = useState(false)
   const [photo, setPhoto] = useState(PHOTO_PLACEHOLDER)
   const [photoLoaded, setPhotoLoaded] = useState(false)
@@ -230,6 +230,15 @@ function NearbyCard({ race, t, compact }) {
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '13px', color:t.textMuted, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.city || race.location}</div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '14px', fontWeight:600, color:t.text, flexShrink:0 }}>{race.date}</div>
         </div>
+        {fitScore && (
+          <div style={{ marginTop:'6px', display:'flex', alignItems:'center', gap:'5px' }}>
+            <div style={{ display:'inline-flex', alignItems:'center', gap:'4px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'10px', padding:'2px 7px' }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', color:'#C9A84C', letterSpacing:'0.5px' }}>{fitScore.score}%</span>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'0.5px', color:'#C9A84C' }}>FIT</span>
+            </div>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fitScore.reason}</span>
+          </div>
+        )}
       </div>
     </div>
   )
@@ -377,13 +386,16 @@ function NearbyRacesContent({ races, showAll, setShowAll, t, isMobile }) {
   )
 }
 
-function SuggestedRacesContent({ races, showAll, setShowAll, t, isMobile }) {
+function SuggestedRacesContent({ races, showAll, setShowAll, t, isMobile, fitScores }) {
   const logoRaces    = races.filter(r => r.logo_url)
   const nonLogoRaces = races.filter(r => !r.logo_url)
   const visible      = showAll ? races : (logoRaces.length > 0 ? logoRaces : races.slice(0, 6))
   return (
     <>
-      <ScrollRow>{visible.map(race => <NearbyCard key={race.id} race={race} t={t} compact={isMobile} />)}</ScrollRow>
+      <ScrollRow>{visible.map(race => {
+        const fit = fitScores?.[String(race.id)]
+        return <NearbyCard key={race.id} race={race} t={t} compact={isMobile} fitScore={fit} />
+      })}</ScrollRow>
       {!showAll && nonLogoRaces.length > 0 && logoRaces.length > 0 && (
         <LoadMoreButton count={nonLogoRaces.length} onClick={() => setShowAll(true)} t={t} />
       )}
@@ -400,8 +412,8 @@ function PacerCard({ insight, loading, t, isMobile }) {
 
   if (loading) return (
     <div style={{ marginBottom:'32px', borderRadius:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.25)'}`, padding: isMobile ? '16px' : '20px 24px', display:'flex', alignItems:'center', gap:'16px' }}>
-      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-        <div style={{ width:16, height:16, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} />
+      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'20px' }}>
+        🏃
       </div>
       <div style={{ flex:1 }}>
         <div style={{ height:11, borderRadius:6, background: t.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(27,42,74,0.07)', marginBottom:10, width:'65%', animation:'pulse 1.5s ease infinite' }} />
@@ -414,18 +426,14 @@ function PacerCard({ insight, loading, t, isMobile }) {
 
   return (
     <div style={{ marginBottom:'32px', borderRadius:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark ? 'rgba(201,168,76,0.2)' : 'rgba(201,168,76,0.35)'}`, padding: isMobile ? '16px' : '20px 24px', display:'flex', alignItems:'flex-start', gap:'16px', opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(8px)', transition:'opacity 0.5s ease, transform 0.5s ease' }}>
-      {/* Icon */}
-      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'1px' }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-          <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" stroke="#C9A84C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-        </svg>
+      <div style={{ width:40, height:40, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, marginTop:'1px', fontSize:'20px', lineHeight:1 }}>
+        🏃
       </div>
-      {/* Text */}
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'7px' }}>
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
           <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Coach</span>
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Race Coach</span>
         </div>
         <p style={{ fontFamily:"'Barlow',sans-serif", fontSize: isMobile ? '13px' : '14px', color:t.text, margin:'0 0 10px', lineHeight:1.65, fontWeight:400 }}>
           {insight.insight}
@@ -435,6 +443,77 @@ function PacerCard({ insight, loading, t, isMobile }) {
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', letterSpacing:'0.5px' }}>{insight.next_step}</span>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── Readiness / Forecast Strip ────────────────────────────────────────────────
+function ReadinessStrip({ readiness, loading, t, isMobile }) {
+  if (loading) return (
+    <div style={{ marginBottom:'32px', borderRadius:'12px', background: t.isDark ? 'rgba(27,42,74,0.4)' : 'rgba(27,42,74,0.04)', border:`1px solid ${t.border}`, padding:'14px 20px', display:'flex', alignItems:'center', gap:'16px' }}>
+      <div style={{ height:10, borderRadius:5, background: t.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(27,42,74,0.08)', width:'60%', animation:'pulse 1.5s ease infinite' }} />
+    </div>
+  )
+  if (!readiness) return null
+  const items = [
+    { label:'Best Distance', value: readiness.best_distance },
+    { label:'Est. Time',     value: readiness.time_range },
+    { label:'Race Window',   value: readiness.race_window },
+  ]
+  return (
+    <div style={{ marginBottom:'32px', borderRadius:'12px', background: t.isDark ? 'rgba(27,42,74,0.4)' : 'rgba(27,42,74,0.04)', border:`1px solid ${t.border}`, padding: isMobile ? '12px 16px' : '14px 24px', display:'flex', alignItems:'center', gap: isMobile ? '8px' : '0', flexWrap: isMobile ? 'wrap' : 'nowrap' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'6px', marginRight:'20px', flexShrink:0 }}>
+        <span style={{ fontSize:'14px' }}>🏃</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'11px', letterSpacing:'2px', color:'#C9A84C' }}>PACER FORECAST</span>
+      </div>
+      {items.map((item, i) => (
+        <div key={item.label} style={{ display:'flex', alignItems:'center', gap:'0' }}>
+          {i > 0 && <div style={{ width:1, height:24, background:t.border, margin:'0 16px', flexShrink:0 }} />}
+          <div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>{item.label}</div>
+            <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text, letterSpacing:'0.5px', lineHeight:1.2 }}>{item.value}</div>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ── Passport AI — gap detection strip ────────────────────────────────────────
+function PassportAIStrip({ races, stravaConnected, t, isMobile, onNavigate }) {
+  const message = useMemo(() => {
+    if (!races || races.length === 0) return null
+    // Find races with missing times
+    const missingTime = races.filter(r => !r.time).length
+    // Find gap > 1 year in race history
+    const sorted = [...races].sort((a,b) => (b.date_sort||'').localeCompare(a.date_sort||''))
+    let maxGap = 0
+    for (let i = 0; i < sorted.length - 1; i++) {
+      if (sorted[i].date_sort && sorted[i+1].date_sort) {
+        const gap = (new Date(sorted[i].date_sort) - new Date(sorted[i+1].date_sort)) / (1000*60*60*24*365)
+        if (gap > maxGap) maxGap = gap
+      }
+    }
+    if (stravaConnected) return { text: `Pacer scanned your Strava — check for any races you haven't added yet.`, action: 'Review Strava →', path: '/race-import' }
+    if (missingTime > 0) return { text: `${missingTime} race${missingTime>1?'s':''} in your Passport ${missingTime>1?'are':'is'} missing finish times.`, action: 'Add Times →', path: '/passport' }
+    if (maxGap > 1.2) return { text: `There's a gap in your race history. Did you race between ${sorted[sorted.length-1].date?.split(' ')[1]||'then'} and now?`, action: 'Import Races →', path: '/race-import' }
+    return null
+  }, [races, stravaConnected])
+
+  if (!message) return null
+
+  return (
+    <div style={{ marginBottom:'24px', borderRadius:'10px', background: t.isDark ? 'rgba(201,168,76,0.05)' : 'rgba(201,168,76,0.06)', border:`1px solid ${t.isDark ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.2)'}`, padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', justifyContent:'space-between' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'10px', minWidth:0 }}>
+        <span style={{ fontSize:'16px', flexShrink:0 }}>🏃</span>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.4 }}>
+          <strong style={{ color:'#C9A84C' }}>Pacer: </strong>{message.text}
+        </span>
+      </div>
+      <button onClick={() => onNavigate(message.path)}
+        style={{ flexShrink:0, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap' }}>
+        {message.action}
+      </button>
     </div>
   )
 }
@@ -475,6 +554,9 @@ export default function Home() {
   const [nearbyLoading, setNearbyLoading] = useState(true)
   const [pacerInsight, setPacerInsight]   = useState(null)
   const [pacerLoading, setPacerLoading]   = useState(false)
+  const [readiness, setReadiness]         = useState(null)
+  const [readinessLoading, setReadinessLoading] = useState(false)
+  const [fitScores, setFitScores]         = useState({}) // race.id -> {score, reason}
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -484,6 +566,15 @@ export default function Home() {
 
     const loadPacerInsight = async (races, prof) => {
       if (!races || races.length === 0) return
+
+      // Session cache — persist insight for the whole browser session
+      // so navigating away and back doesn't regenerate it
+      const cacheKey = `pacer_insight_${prof?.full_name||'user'}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) {
+        try { setPacerInsight(JSON.parse(cached)); return } catch(e) {}
+      }
+
       setPacerLoading(true)
       try {
         const resp = await fetch('/api/pacer', {
@@ -501,9 +592,66 @@ export default function Home() {
           }),
         })
         const data = await resp.json()
-        if (data.insight) setPacerInsight(data)
+        if (data.insight) {
+          setPacerInsight(data)
+          sessionStorage.setItem(cacheKey, JSON.stringify(data))
+        }
       } catch(e) { console.error('Pacer error:', e) }
       setPacerLoading(false)
+    }
+
+    const loadReadiness = async (races, prof) => {
+      if (!races || races.length === 0) return
+      const cacheKey = `pacer_readiness_${prof?.full_name||'user'}`
+      const cached = sessionStorage.getItem(cacheKey)
+      if (cached) { try { setReadiness(JSON.parse(cached)); return } catch(e) {} }
+      setReadinessLoading(true)
+      try {
+        const resp = await fetch('/api/pacer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'readiness',
+            races: races.slice(0, 15),
+            profile: {
+              first_name: (prof?.full_name||'').split(' ')[0],
+              state: prof?.state,
+              favorite_distance: prof?.favorite_distance,
+            },
+          }),
+        })
+        const data = await resp.json()
+        if (data.best_distance) {
+          setReadiness(data)
+          sessionStorage.setItem(cacheKey, JSON.stringify(data))
+        }
+      } catch(e) {}
+      setReadinessLoading(false)
+    }
+
+    const loadFitScores = async (races, prof, suggestedList) => {
+      if (!races?.length || !suggestedList?.length) return
+      try {
+        const resp = await fetch('/api/pacer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'fit_scores',
+            races: races.slice(0, 10),
+            profile: { state: prof?.state, favorite_distance: prof?.favorite_distance },
+            races_to_score: suggestedList.slice(0, 8).map(r => ({
+              id: String(r.id), name: r.name, distance: r.distance,
+              city: r.city, state: r.state, date: r.date,
+            })),
+          }),
+        })
+        const data = await resp.json()
+        if (data.scores?.length) {
+          const map = {}
+          data.scores.forEach(s => { map[s.id] = { score: s.score, reason: s.reason } })
+          setFitScores(map)
+        }
+      } catch(e) {}
     }
 
     const loadProfile = async () => {
@@ -514,6 +662,7 @@ export default function Home() {
         setPassportRaces(demoRaces)
         loadNearbyAndSuggested('MD', '13.1')
         loadPacerInsight(demoRaces, demoProfile)
+        loadReadiness(demoRaces, demoProfile)
         return
       }
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
@@ -530,6 +679,7 @@ export default function Home() {
       if (praces) {
         setPassportRaces(praces)
         loadPacerInsight(praces, data)
+        loadReadiness(praces, data)
       }
     }
 
@@ -697,6 +847,38 @@ export default function Home() {
   }, [passportRaces])
 
   const stravaJustConnected = location.state?.stravaConnected
+
+  // Load fit scores once both suggested races and passport races are available
+  useEffect(() => {
+    if (suggestedRaces.length > 0 && passportRaces.length > 0 && profile) {
+      const prof = { state: profile.state, favorite_distance: profile.favorite_distance }
+      // Use an inline async to avoid exposing loadFitScores outside the main effect
+      const run = async () => {
+        try {
+          const resp = await fetch('/api/pacer', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'fit_scores',
+              races: passportRaces.slice(0, 10),
+              profile: prof,
+              races_to_score: suggestedRaces.slice(0, 8).map(r => ({
+                id: String(r.id), name: r.name, distance: r.distance,
+                city: r.city, state: r.state, date: r.date,
+              })),
+            }),
+          })
+          const data = await resp.json()
+          if (data.scores?.length) {
+            const map = {}
+            data.scores.forEach(s => { map[s.id] = { score: s.score, reason: s.reason } })
+            setFitScores(map)
+          }
+        } catch(e) {}
+      }
+      run()
+    }
+  }, [suggestedRaces.length, passportRaces.length])
 
   // When returning from Strava OAuth, poll Supabase until tokens are saved
   // The StravaCallback saves tokens then immediately redirects, so there can
@@ -966,7 +1148,7 @@ export default function Home() {
           <div style={{ marginBottom:'52px' }}>
             <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'22px' }}>
               <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Based on your goal distance</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Pacer Picks · Based on your race history</div>
                 <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Suggested For You</span>
               </div>
               <button onClick={() => navigate('/discover', { state:{ autoSearch:{ distFilter: profile?.favorite_distance === 'Half Marathon' ? '13.1' : profile?.favorite_distance || 'ALL' } } })}
@@ -974,16 +1156,21 @@ export default function Home() {
                 See More →
               </button>
             </div>
-            <SuggestedRacesContent races={suggestedRaces} showAll={showAllSuggested} setShowAll={setShowAllSuggested} t={t} isMobile={isMobile} />
+            <SuggestedRacesContent races={suggestedRaces} showAll={showAllSuggested} setShowAll={setShowAllSuggested} t={t} isMobile={isMobile} fitScores={fitScores} />
           </div>
         )}
 
+        {/* READINESS STRIP */}
+        <ReadinessStrip readiness={readiness} loading={readinessLoading} t={t} isMobile={isMobile} />
+
         {/* YOUR STAMPS */}
         <div style={{ marginBottom:'52px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
             <button onClick={() => navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
           </div>
+          {/* Passport AI strip — above stamps */}
+          <PassportAIStrip races={passportRaces} stravaConnected={stravaConnected} t={t} isMobile={isMobile} onNavigate={navigate} />
           <ScrollRow>
             {stamps.map(stamp => (
               <Stamp key={stamp.id} distance={stamp.distance} name={stamp.name} location={stamp.location} month={stamp.month} year={stamp.year} size={130} t={t} onClick={() => navigate(`/race/${stamp.id}`)} />
