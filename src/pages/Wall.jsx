@@ -120,11 +120,11 @@ function StoryCard({ story, t, isMobile }) {
         </div>
       </div>
 
-      <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?'24px':'30px', color:t.text, letterSpacing:'1px', lineHeight:1.2, margin:'0 0 16px' }}>{story.title}</h2>
+      <h2 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:isMobile?'24px':'34px', color:t.text, letterSpacing:'1px', lineHeight:1.2, margin:'0 0 16px' }}>{story.title}</h2>
 
       {story.strava_activity && <StravaCard activity={story.strava_activity} t={t} />}
 
-      <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:isMobile?'14px':'15px', color:t.textMuted, lineHeight:1.85, marginBottom:'10px', whiteSpace:'pre-line' }}>{bodyDisplay}</div>
+      <div style={{ fontFamily:"'Barlow',sans-serif", fontSize:isMobile?'14px':'16px', color:t.textMuted, lineHeight:1.85, marginBottom:'10px', whiteSpace:'pre-line' }}>{bodyDisplay}</div>
 
       {story.body.length > PREVIEW && (
         <button onClick={() => setExpanded(p=>!p)}
@@ -411,9 +411,9 @@ export default function Wall() {
       {!isMobile && (
         <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
-            <div>
+            <div style={{ flex:1 }}>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(48px,6vw,80px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'2px', transition:'color 0.25s' }}>THE WALL</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(22px,3vw,36px)', color:t.textMuted, letterSpacing:'1.5px', lineHeight:1.2, transition:'color 0.25s', maxWidth:'680px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(20px,2.2vw,30px)', color:t.textMuted, letterSpacing:'1.5px', lineHeight:1.3, transition:'color 0.25s' }}>
                 That moment when your body says stop and everything in you wants to quit. It's not a finish line. It's a test of why you started.{' '}
                 <span style={{ color:'#C9A84C' }}>What's your why?</span>
               </div>
@@ -442,15 +442,14 @@ export default function Wall() {
       {/* ── FEED TABS + CONTENT ── */}
       <div style={{ width:'100%', padding: isMobile ? '0 20px 100px' : '0 40px 80px', animation:'fadeIn 0.4s ease both' }}>
 
-        {/* Tabs — full width underline bar like Home's section separators */}
-        <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${t.borderLight}`, marginBottom:'40px' }}>
+        {/* Tabs — bigger, bolder */}
+        <div style={{ display:'flex', gap:0, borderBottom:`1px solid ${t.borderLight}`, marginBottom:'48px' }}>
           {['all','featured'].map(tab => (
             <button key={tab} onClick={()=>setActiveTab(tab)}
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase', color:activeTab===tab?t.text:t.textMuted, padding:'16px 24px', background:'none', border:'none', borderBottom:activeTab===tab?'2px solid #C9A84C':'2px solid transparent', cursor:'pointer', transition:'all 0.15s' }}>
+              style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', letterSpacing:'2px', color:activeTab===tab?t.text:t.textMuted, padding:'20px 32px', background:'none', border:'none', borderBottom:activeTab===tab?'3px solid #C9A84C':'3px solid transparent', cursor:'pointer', transition:'all 0.15s' }}>
               {tab==='all'?'All Stories':'Featured'}
             </button>
           ))}
-          {/* Mobile share button inline with tabs */}
           {isMobile && (
             <button onClick={()=>setShowModal(true)}
               style={{ marginLeft:'auto', padding:'10px 16px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', alignSelf:'center' }}>
@@ -459,8 +458,8 @@ export default function Wall() {
           )}
         </div>
 
-        {/* Stories — max-width container centered, matching Home content width */}
-        <div style={{ maxWidth:'720px' }}>
+        {/* Stories — wide, centered, matching RaceDetail layout */}
+        <div style={{ maxWidth:'1200px', margin:'0 auto' }}>
           {[RYAN_STORY].map(story => (
             <StoryCard key={story.id} story={story} t={t} isMobile={isMobile} />
           ))}
