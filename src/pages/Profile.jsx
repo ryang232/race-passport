@@ -86,6 +86,8 @@ export default function Profile() {
   const [doneIronman, setDoneIronman]   = useState(null)
   const [savingSection, setSavingSection] = useState(null)
   const [savedSection, setSavedSection]   = useState(null)
+  const [pacerEnabled, setPacerEnabled]   = useState(true)
+  const [showPacerNudge, setShowPacerNudge] = useState(false)
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -110,6 +112,8 @@ export default function Profile() {
         setExperience(data.experience_level||''); setFavoriteDistance(data.favorite_distance||'')
         if (data.done_marathon != null) setDoneMarathon(data.done_marathon)
         if (data.done_ironman != null)  setDoneIronman(data.done_ironman)
+        // Pacer preference — default true if not set
+        if (data.pacer_enabled != null) setPacerEnabled(data.pacer_enabled)
       }
     }
     loadProfile()
@@ -393,19 +397,60 @@ export default function Profile() {
 
         {/* PACER — AI COACH */}
         <Section title="Pacer · Your AI Race Coach">
-          <div style={{ marginBottom:'20px' }}>
-            <div style={{ display:'flex', alignItems:'flex-start', gap:'14px', padding:'16px', background: t.isDark ? 'rgba(201,168,76,0.06)' : '#FFFDF5', border:`1px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.3)'}`, borderRadius:'12px', marginBottom:'16px' }}>
-              <div style={{ fontSize:'24px', lineHeight:1, flexShrink:0 }}>🏃</div>
+          {/* Toggle row */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px', padding:'16px', background: t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', border:`1px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.3)'}`, borderRadius:'12px' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+              <span style={{ fontSize:'22px' }}>🏃</span>
               <div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>What is Pacer?</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, lineHeight:1.7 }}>
-                  Pacer is your personal AI running coach built into Race Passport. It analyzes your race history to give you personalized coaching insights, predict your current fitness, score how well upcoming races fit you, and identify gaps in your training.
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text }}>Pacer AI Coaching</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>
+                  {pacerEnabled ? 'Active — coaching insights on your Home, races, and more' : 'Paused — Pacer features are hidden across the app'}
                 </div>
               </div>
             </div>
+            <button onClick={() => {
+              if (pacerEnabled) {
+                setShowPacerNudge(true)
+              } else {
+                setPacerEnabled(true)
+                setShowPacerNudge(false)
+                supabase.from('profiles').update({ pacer_enabled: true }).eq('id', profile?.id).then(() => {})
+              }
+            }}
+              style={{ width:48, height:26, borderRadius:'13px', border:'none', cursor:'pointer', position:'relative', transition:'background 0.25s', background:pacerEnabled?'#C9A84C':'#d0d7e0', padding:0, flexShrink:0 }}>
+              <div style={{ position:'absolute', top:3, left:pacerEnabled?'calc(100% - 23px)':'3px', width:20, height:20, borderRadius:'50%', background:'#fff', transition:'left 0.25s', boxShadow:'0 1px 4px rgba(0,0,0,0.2)' }} />
+            </button>
+          </div>
 
+          {/* Nudge confirmation */}
+          {showPacerNudge && (
+            <div style={{ marginBottom:'20px', padding:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)', borderRadius:'10px', border:`1px solid ${t.border}` }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'6px' }}>Are you sure you want to turn off Pacer?</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'14px', lineHeight:1.6 }}>
+                You'll miss out on personalized race insights, fit scores on suggested races, your readiness forecast, and celebratory reflections on completed races. Pacer is always positive and here to cheer you on!
+              </div>
+              <div style={{ display:'flex', gap:'8px' }}>
+                <button onClick={() => setShowPacerNudge(false)}
+                  style={{ flex:1, padding:'9px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'none', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
+                  Keep Pacer On
+                </button>
+                <button onClick={() => {
+                  setPacerEnabled(false)
+                  setShowPacerNudge(false)
+                  supabase.from('profiles').update({ pacer_enabled: false }).eq('id', profile?.id).then(() => {})
+                  // Clear cached insights
+                  Object.keys(sessionStorage).filter(k => k.startsWith('pacer_')).forEach(k => sessionStorage.removeItem(k))
+                }}
+                  style={{ flex:1, padding:'9px', border:'1.5px solid rgba(197,48,48,0.3)', borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#c53030', cursor:'pointer', textTransform:'uppercase' }}>
+                  Turn Off Pacer
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom:'20px' }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>What Pacer uses to coach you</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'20px' }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:'8px', marginBottom:'16px' }}>
               {[
                 { icon:'📋', label:'Your Race Passport', desc:'All races you\'ve imported — names, distances, finish times, dates, and locations.' },
                 { icon:'🎯', label:'Your Profile Settings', desc:'Your goal distance, home state, and experience level from your profile.' },
