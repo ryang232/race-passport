@@ -686,11 +686,21 @@ export default function Home() {
 
     const loadNearbyAndSuggested = async (userState, favDistance) => {
       setNearbyLoading(true)
-      const EXCLUDE_WORDS = ['expo', 'spectator', 'volunteer', 'wellness expo', 'health expo', 'tot trot']
-      const excludeExpos = (list) => (list||[]).filter(r => {
-        const name = (r.name||'').toLowerCase()
-        return !EXCLUDE_WORDS.some(w => name.includes(w))
-      })
+      // Smart filter — only exclude if it's clearly not a race
+      // Uses word boundaries to avoid false positives like "festival" containing no bad words
+      const isNotARace = (name) => {
+        const n = (name||'').toLowerCase()
+        return /\bexpo\b/.test(n)
+          || /\bspectator\b/.test(n)
+          || /\bvolunteer\b/.test(n)
+          || /\btot trot\b/.test(n)
+          || /\bwod\b/.test(n)
+          || /\bcrossfit\b/.test(n)
+          || n.endsWith(' expo')
+          || n.includes('wellness expo')
+          || n.includes('health expo')
+      }
+      const filterRaces = (list) => (list||[]).filter(r => !isNotARace(r.name))
       try {
         if (userState) {
           const { data: nearbyWithLogo } = await supabase
@@ -700,18 +710,18 @@ export default function Home() {
             .eq('is_past', false)
             .not('logo_url', 'is', null)
             .order('date_sort', { ascending: true })
-            .limit(20)
+            .limit(30)
           const { data: nearbyAll } = await supabase
             .from('races')
             .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
             .eq('state', userState.toUpperCase())
             .eq('is_past', false)
             .order('date_sort', { ascending: true })
-            .limit(30)
+            .limit(40)
           if (nearbyAll) {
-            const logoRaces = excludeExpos(nearbyWithLogo)
+            const logoRaces = filterRaces(nearbyWithLogo)
             const logoIds = new Set(logoRaces.map(r => r.id))
-            const nonLogo = excludeExpos(nearbyAll).filter(r => !logoIds.has(r.id))
+            const nonLogo = filterRaces(nearbyAll).filter(r => !logoIds.has(r.id))
             setNearbyRaces([...logoRaces, ...nonLogo])
           }
 
@@ -723,9 +733,6 @@ export default function Home() {
             }
             const targetDist = distMap[favDistance] || favDistance
 
-            // Expo/non-race keywords to exclude
-            const EXCLUDE_WORDS = ['expo', 'spectator', 'volunteer', 'virtual', 'kids', 'tot trot', 'fun run', 'wellness expo', 'health expo']
-
             const { data: suggestedWithLogo } = await supabase
               .from('races')
               .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
@@ -736,17 +743,13 @@ export default function Home() {
               .order('date_sort', { ascending: true })
               .limit(30)
 
-            // Filter client-side to exclude expos and non-races
-            const filtered = (suggestedWithLogo || []).filter(r => {
-              const name = (r.name || '').toLowerCase()
-              return !EXCLUDE_WORDS.some(w => name.includes(w))
-            }).slice(0, 12)
+            const filtered = filterRaces(suggestedWithLogo).slice(0, 12)
 
             if (filtered.length > 0) {
               setSuggestedRaces(filtered)
             } else {
-              // Fallback: same distance any state, logos only, no expos
-              const { data: fallback } = await supabase
+              // Fallback 1: include user's state
+              const { data: fallback1 } = await supabase
                 .from('races')
                 .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
                 .eq('is_past', false)
@@ -754,11 +757,21 @@ export default function Home() {
                 .not('logo_url', 'is', null)
                 .order('date_sort', { ascending: true })
                 .limit(30)
-              const fallbackFiltered = (fallback || []).filter(r => {
-                const name = (r.name || '').toLowerCase()
-                return !EXCLUDE_WORDS.some(w => name.includes(w))
-              }).slice(0, 12)
-              if (fallbackFiltered.length > 0) setSuggestedRaces(fallbackFiltered)
+              const f1 = filterRaces(fallback1).slice(0, 12)
+              if (f1.length > 0) {
+                setSuggestedRaces(f1)
+              } else {
+                // Fallback 2: any upcoming races with logos, any distance
+                const { data: fallback2 } = await supabase
+                  .from('races')
+                  .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
+                  .eq('is_past', false)
+                  .not('logo_url', 'is', null)
+                  .order('date_sort', { ascending: true })
+                  .limit(30)
+                const f2 = filterRaces(fallback2).slice(0, 12)
+                if (f2.length > 0) setSuggestedRaces(f2)
+              }
             }
           }
         }
