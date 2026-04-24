@@ -143,7 +143,7 @@ ${POSITIVITY_RULES}
 
 RUNNER PROFILE:
 - Goal distance: ${profile?.favorite_distance||topDist}
-- Home state: ${profile?.state||'unknown'}
+- Home city: ${profile?.city||'unknown'}, ${profile?.state||'unknown'}
 - Most raced distance: ${topDist}
 - Total races: ${races.length}
 - Days since last race: ${days!==null?days:'unknown'}
@@ -152,7 +152,8 @@ RUNNER PROFILE:
 RACES TO SCORE (ID|name|distance|location|date):
 ${toScore}
 
-Score each race 60–99 on fit. Give an enthusiastic short reason (max 8 words, positive framing).
+Score each race 60–99 on fit. Consider: distance match, proximity to their home city/state, timing, and their race history.
+Give an enthusiastic short reason (max 8 words, positive framing).
 Respond ONLY with valid JSON array, no markdown:
 [{"id":"race_id","score":85,"reason":"Perfect next step for your journey!"}]`
 
