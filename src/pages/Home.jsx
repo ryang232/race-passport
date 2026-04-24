@@ -1106,6 +1106,31 @@ export default function Home() {
       {/* PAGE CONTENT */}
       <div style={{ position:'relative', zIndex:10, width:'100%', padding: isMobile ? '24px 16px 80px' : '36px 40px 80px' }}>
 
+        {/* STRAVA UNREVIEWED BANNER */}
+        {stravaConnected && (() => {
+          // Check for upcoming races with unreviewed activities
+          const sessionRaces = getSessionUpcoming()
+          const upcoming = [...sessionRaces, ...MOCK_UPCOMING.filter(m => !sessionRaces.find(s => s.id === m.id))]
+          if (upcoming.length === 0) return null
+          const nextRace = upcoming[0]
+          const hasUnreviewed = sessionStorage.getItem(`unreviewed_${nextRace.id}`) === 'true'
+          if (!hasUnreviewed) return null
+          return (
+            <div style={{ marginBottom:'20px', borderRadius:'12px', background:'rgba(252,76,2,0.06)', border:'1px solid rgba(252,76,2,0.2)', padding:'12px 16px', display:'flex', alignItems:'center', gap:'12px', justifyContent:'space-between' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.4 }}>
+                  <strong style={{ color:'#FC4C02' }}>New Strava activities</strong> — are any part of your <strong>{nextRace.name}</strong> training?
+                </span>
+              </div>
+              <button onClick={() => { sessionStorage.removeItem(`unreviewed_${nextRace.id}`); navigate(`/race/${nextRace.id}/training`) }}
+                style={{ flexShrink:0, padding:'7px 14px', border:'none', borderRadius:'8px', background:'#FC4C02', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap' }}>
+                Review →
+              </button>
+            </div>
+          )
+        })()}
+
         {/* PACER INSIGHT */}
         <PacerCard insight={pacerInsight} loading={pacerLoading} t={t} isMobile={isMobile} />
 
