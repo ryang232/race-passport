@@ -231,12 +231,13 @@ function NearbyCard({ race, t, compact, fitScore }) {
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact ? '11px' : '14px', fontWeight:600, color:t.text, flexShrink:0 }}>{race.date}</div>
         </div>
         {fitScore && (
-          <div style={{ marginTop:'6px', display:'flex', alignItems:'center', gap:'5px' }}>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'4px', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)', borderRadius:'10px', padding:'2px 7px' }}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', color:'#C9A84C', letterSpacing:'0.5px' }}>{fitScore.score}%</span>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'0.5px', color:'#C9A84C' }}>FIT</span>
+          <div style={{ marginTop:'8px', padding:'8px 10px', background: t.isDark?'rgba(201,168,76,0.08)':'rgba(201,168,76,0.07)', borderRadius:'8px', border:`1px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.25)'}` }}>
+            <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'3px' }}>
+              <span style={{ fontSize:'12px' }}>🏃</span>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#C9A84C', letterSpacing:'1px' }}>{fitScore.score}%</span>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase' }}>Pacer Fit</span>
             </div>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{fitScore.reason}</span>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, lineHeight:1.4 }}>{fitScore.reason}</div>
           </div>
         )}
       </div>
@@ -685,9 +686,13 @@ export default function Home() {
 
     const loadNearbyAndSuggested = async (userState, favDistance) => {
       setNearbyLoading(true)
+      const EXCLUDE_WORDS = ['expo', 'spectator', 'volunteer', 'wellness expo', 'health expo', 'tot trot']
+      const excludeExpos = (list) => (list||[]).filter(r => {
+        const name = (r.name||'').toLowerCase()
+        return !EXCLUDE_WORDS.some(w => name.includes(w))
+      })
       try {
         if (userState) {
-          // Fetch logo races first, fall back to all races if not enough
           const { data: nearbyWithLogo } = await supabase
             .from('races')
             .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
@@ -695,19 +700,19 @@ export default function Home() {
             .eq('is_past', false)
             .not('logo_url', 'is', null)
             .order('date_sort', { ascending: true })
-            .limit(12)
+            .limit(20)
           const { data: nearbyAll } = await supabase
             .from('races')
             .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
             .eq('state', userState.toUpperCase())
             .eq('is_past', false)
             .order('date_sort', { ascending: true })
-            .limit(20)
-          // Merge: logo races first, then fill with non-logo races
+            .limit(30)
           if (nearbyAll) {
-            const logoIds = new Set((nearbyWithLogo||[]).map(r => r.id))
-            const nonLogo = nearbyAll.filter(r => !logoIds.has(r.id))
-            setNearbyRaces([...(nearbyWithLogo||[]), ...nonLogo])
+            const logoRaces = excludeExpos(nearbyWithLogo)
+            const logoIds = new Set(logoRaces.map(r => r.id))
+            const nonLogo = excludeExpos(nearbyAll).filter(r => !logoIds.has(r.id))
+            setNearbyRaces([...logoRaces, ...nonLogo])
           }
 
           if (favDistance) {
@@ -717,6 +722,10 @@ export default function Home() {
               'Ultra':'ULTRA', 'Triathlon':'70.3',
             }
             const targetDist = distMap[favDistance] || favDistance
+
+            // Expo/non-race keywords to exclude
+            const EXCLUDE_WORDS = ['expo', 'spectator', 'volunteer', 'virtual', 'kids', 'tot trot', 'fun run', 'wellness expo', 'health expo']
+
             const { data: suggestedWithLogo } = await supabase
               .from('races')
               .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
@@ -725,23 +734,18 @@ export default function Home() {
               .neq('state', userState?.toUpperCase() || '')
               .not('logo_url', 'is', null)
               .order('date_sort', { ascending: true })
-              .limit(12)
-            const { data: suggestedAll } = await supabase
-              .from('races')
-              .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
-              .eq('is_past', false)
-              .ilike('distance', targetDist)
-              .neq('state', userState?.toUpperCase() || '')
-              .order('date_sort', { ascending: true })
-              .limit(20)
-            const withLogo = suggestedWithLogo || []
-            const all = suggestedAll || []
-            if (withLogo.length || all.length) {
-              const logoIds = new Set(withLogo.map(r => r.id))
-              const nonLogo = all.filter(r => !logoIds.has(r.id))
-              setSuggestedRaces([...withLogo, ...nonLogo])
+              .limit(30)
+
+            // Filter client-side to exclude expos and non-races
+            const filtered = (suggestedWithLogo || []).filter(r => {
+              const name = (r.name || '').toLowerCase()
+              return !EXCLUDE_WORDS.some(w => name.includes(w))
+            }).slice(0, 12)
+
+            if (filtered.length > 0) {
+              setSuggestedRaces(filtered)
             } else {
-              // Fallback: any distance in any state
+              // Fallback: same distance any state, logos only, no expos
               const { data: fallback } = await supabase
                 .from('races')
                 .select('id,name,location,city,state,lat,lng,distance,date,date_sort,price,terrain,elevation,registration_url,logo_url')
@@ -749,8 +753,12 @@ export default function Home() {
                 .ilike('distance', targetDist)
                 .not('logo_url', 'is', null)
                 .order('date_sort', { ascending: true })
-                .limit(12)
-              if (fallback) setSuggestedRaces(fallback)
+                .limit(30)
+              const fallbackFiltered = (fallback || []).filter(r => {
+                const name = (r.name || '').toLowerCase()
+                return !EXCLUDE_WORDS.some(w => name.includes(w))
+              }).slice(0, 12)
+              if (fallbackFiltered.length > 0) setSuggestedRaces(fallbackFiltered)
             }
           }
         }
