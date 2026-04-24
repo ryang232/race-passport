@@ -101,7 +101,8 @@ export function useStrava(profile, userId) {
   const getActivities = async (options = {}) => {
     if (!token) return []
     const params = new URLSearchParams({ per_page: options.per_page || 60, page: options.page || 1 })
-    if (options.after) params.set('after', options.after)
+    if (options.after)  params.set('after',  options.after)
+    if (options.before) params.set('before', options.before)
     try {
       const r    = await fetch(`${API}?action=activities&access_token=${token}&${params}`)
       const data = await r.json()
