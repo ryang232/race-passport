@@ -127,11 +127,12 @@ export default async function handler(req, res) {
 
     // ── Fetch recent activities ──────────────────────────────────────────────
     if (action === 'activities') {
-      const { access_token, per_page = 60, page = 1, after } = req.query
+      const { access_token, per_page = 60, page = 1, after, before } = req.query
       if (!access_token) return res.status(400).json({ error: 'Missing access_token' })
 
       const params = new URLSearchParams({ per_page, page })
-      if (after) params.set('after', after)
+      if (after)  params.set('after',  after)
+      if (before) params.set('before', before)
 
       const r = await fetch(`https://www.strava.com/api/v3/athlete/activities?${params}`, {
         headers: { Authorization: `Bearer ${access_token}` },
