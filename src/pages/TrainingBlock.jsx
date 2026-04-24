@@ -255,9 +255,9 @@ export default function TrainingBlock() {
   const { t, isDark, toggleTheme } = useTheme()
   const isMobile  = useIsMobile()
 
-  const [race, setRace]           = useState(location.state?.race || null)
-  const [raceActivity, setRaceActivity] = useState(null) // the actual Strava activity on race day
-  const [profile, setProfile]     = useState(null)
+  const [race, setRace]             = useState(location.state?.race || null)
+  const [raceActivities, setRaceActivities] = useState([]) // ALL activities on race day (swim, bike, run for tri)
+  const [profile, setProfile]       = useState(null)
   const [activities, setActivities] = useState([]) // all pulled activities (excl race day)
   const [selected, setSelected]   = useState({})
   const [loading, setLoading]     = useState(true)
@@ -367,22 +367,13 @@ export default function TrainingBlock() {
         // Sort newest first (chronological descending)
         .sort((a,b) => new Date(b.start_date_local) - new Date(a.start_date_local))
 
-      // Separate race day activity from training activities
+      // Separate race day activities from training
       const raceDateStr = raceDate.toISOString().split('T')[0]
-      const raceDayActs = all.filter(a => {
-        const aDate = (a.start_date_local||'').split('T')[0]
-        return aDate === raceDateStr
-      })
-      const trainingActs = all.filter(a => {
-        const aDate = (a.start_date_local||'').split('T')[0]
-        return aDate !== raceDateStr
-      })
+      const raceDayActs = all.filter(a => (a.start_date_local||'').split('T')[0] === raceDateStr)
+      const trainingActs = all.filter(a => (a.start_date_local||'').split('T')[0] !== raceDateStr)
 
-      // Pin race day activity (largest distance on race day)
-      if (raceDayActs.length > 0) {
-        const raceAct = raceDayActs.sort((a,b) => (b.distance||0)-(a.distance||0))[0]
-        setRaceActivity(raceAct)
-      }
+      // Pin ALL race day activities (Swim + Bike + Run for tri)
+      setRaceActivities(raceDayActs.sort((a,b) => new Date(a.start_date_local) - new Date(b.start_date_local)))
 
       setActivities(trainingActs)
 
@@ -645,10 +636,18 @@ export default function TrainingBlock() {
               </div>
             </div>
 
-            {/* ⭐ Race day pinned at top */}
-            {raceActivity && (
-              <div style={{ marginBottom:'8px' }}>
-                <ActivityCard activity={raceActivity} selected={false} onToggle={() => {}} t={t} isMobile={isMobile} isRaceDay={true} />
+            {/* ⭐ Race day — all activities pinned at top */}
+            {raceActivities.length > 0 && (
+              <div style={{ marginBottom:'12px' }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'6px' }}>
+                  ⭐ Race Day — {new Date(raceActivities[0].start_date_local).toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+                  {raceActivities.map(a => (
+                    <ActivityCard key={a.id} activity={a} selected={false} onToggle={() => {}} t={t} isMobile={isMobile} isRaceDay={true} />
+                  ))}
+                </div>
+                <div style={{ height:'1px', background:t.borderLight, margin:'12px 0' }} />
               </div>
             )}
 
