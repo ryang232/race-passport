@@ -1139,9 +1139,18 @@ export default function RacePage() {
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>AI analysis of your training for this race</div>
               </div>
             </div>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showReportCard?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
-              <path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+              <button
+                onClick={e => { e.stopPropagation(); navigate(`/race/${race.id}/training`, { state:{ race } }) }}
+                style={{ padding:'7px 14px', border:`1.5px solid #C9A84C`, borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap', transition:'all 0.15s' }}
+                onMouseEnter={e => { e.currentTarget.style.background='rgba(201,168,76,0.18)' }}
+                onMouseLeave={e => { e.currentTarget.style.background='rgba(201,168,76,0.08)' }}>
+                View My Training →
+              </button>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showReportCard?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
+                <path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
           </button>
 
           {showReportCard && (
