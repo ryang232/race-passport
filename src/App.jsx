@@ -23,6 +23,7 @@ import StravaCallback from './pages/StravaCallback'
 import Wall from './pages/Wall'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
+import TrainingBlock from './pages/TrainingBlock'
 
 export default function App() {
   return (
@@ -48,6 +49,7 @@ export default function App() {
             <Route path="/privacy"             element={<Privacy />} />
             <Route path="/discover"            element={<Discover />} />
             <Route path="/race/:id"            element={<RacePage />} />
+            <Route path="/race/:id/training"   element={<TrainingBlock />} />
             <Route path="/race-detail/:id"     element={<RaceDetail />} />
             <Route path="/passport"            element={<Passport />} />
             <Route path="/profile"             element={<Profile />} />
