@@ -358,5 +358,129 @@ Respond ONLY with valid JSON, no markdown:
     }
   }
 
-  return res.status(400).json({ error: `Unknown action: ${action}` })
+  // ── checklist: generate race day checklist ───────────────────────────────
+  if (action === 'checklist') {
+    if (!race) return res.status(400).json({ error: 'race required' })
+
+    const raceName = race.name || 'your race'
+    const distance = (race.distance || '').toString().toLowerCase()
+    const raceState = race.state || ''
+    const userState = profile?.state || ''
+    const isTri = distance.includes('70.3') || distance.includes('140.6') || distance.includes('tri')
+    const isMarathon = distance.includes('26.2') || distance.toLowerCase().includes('marathon')
+    const isHalf = distance.includes('13.1') || distance.toLowerCase().includes('half')
+    const isUltra = distance.includes('50') || distance.includes('100') || distance.toLowerCase().includes('ultra')
+    const needsTravel = raceState && userState && raceState.toUpperCase() !== userState.toUpperCase()
+
+    const prompt = `You are Pacer, an enthusiastic AI running coach generating a personalized race day checklist.
+${POSITIVITY_RULES}
+
+RACE DETAILS:
+- Race: ${raceName}
+- Distance: ${race.distance}
+- Location: ${race.city||''}, ${raceState}
+- Race date: ${race.date||'upcoming'}
+- Is triathlon: ${isTri}
+- Is marathon: ${isMarathon}
+- Is ultra: ${isUltra}
+- Needs travel: ${needsTravel}
+- User uses gels: ${race.uses_gels !== false ? 'yes' : 'no'}
+
+Generate a practical, specific race day checklist. Be thorough but not overwhelming.
+
+${isTri ? `For this triathlon, create sections: Swim, T1, Bike, T2, Run${needsTravel?', Travel':''}, Misc` : ''}
+${!isTri ? `For this ${race.distance} race, create sections: Race Morning, Gear, Nutrition${needsTravel?', Travel':''}, Misc` : ''}
+
+Rules:
+- Each section: 5-10 specific, actionable items
+- Items should be concrete (not "running shoes" but "Running shoes — tied and ready in T2 bag")
+- For triathlons: include transition-specific items like "Helmet MUST be on before touching bike"
+- For nutrition: suggest gel/fuel items but not specific counts — that's their call
+- Travel section only if needsTravel is true
+- Misc: always include "Review race morning schedule" and "Set 2 alarms"
+- Tone: excited and supportive, like a coach who's been there
+
+Respond ONLY with valid JSON, no markdown:
+{
+  "sections": [
+    {
+      "id": "swim",
+      "label": "Swim",
+      "emoji": "🏊",
+      "color": "#3b82f6",
+      "items": [
+        { "id": "swim_1", "text": "Wetsuit (if water temp allows)", "checked": false },
+        { "id": "swim_2", "text": "Goggles — race pair + backup", "checked": false }
+      ]
+    }
+  ]
+}`
+
+    try {
+      const text = await callClaude(prompt, 1500)
+      const parsed = JSON.parse(text)
+      return res.status(200).json(parsed)
+    } catch(e) {
+      // Fallback checklist
+      const fallback = isTri ? [
+        { id:'swim', label:'Swim', emoji:'🏊', color:'#3b82f6', items:[
+          { id:'s1', text:'Wetsuit', checked:false },
+          { id:'s2', text:'Goggles (+ backup pair)', checked:false },
+          { id:'s3', text:'Swim cap (race-provided + backup)', checked:false },
+          { id:'s4', text:'Anti-chafe balm', checked:false },
+        ]},
+        { id:'t1', label:'T1', emoji:'🔄', color:'#8b5cf6', items:[
+          { id:'t1a', text:'Bike shoes (pre-clipped in pedals)', checked:false },
+          { id:'t1b', text:'Helmet — on BEFORE touching bike', checked:false },
+          { id:'t1c', text:'Sunglasses', checked:false },
+          { id:'t1d', text:'Race number belt', checked:false },
+        ]},
+        { id:'bike', label:'Bike', emoji:'🚴', color:'#f59e0b', items:[
+          { id:'b1', text:'Bike (checked in night before)', checked:false },
+          { id:'b2', text:'CO2 cartridges + inflator (x2)', checked:false },
+          { id:'b3', text:'Spare tube', checked:false },
+          { id:'b4', text:'Water bottles filled', checked:false },
+          { id:'b5', text:'Nutrition taped to frame', checked:false },
+        ]},
+        { id:'t2', label:'T2', emoji:'🔄', color:'#ec4899', items:[
+          { id:'t2a', text:'Running shoes', checked:false },
+          { id:'t2b', text:'Race hat / visor', checked:false },
+          { id:'t2c', text:'Sunscreen (reapply)', checked:false },
+        ]},
+        { id:'run', label:'Run', emoji:'🏃', color:'#10b981', items:[
+          { id:'r1', text:'Gels / race nutrition', checked:false },
+          { id:'r2', text:'Salt tabs', checked:false },
+          { id:'r3', text:'Race bib visible', checked:false },
+        ]},
+        { id:'misc', label:'Misc', emoji:'📋', color:'#9aa5b4', items:[
+          { id:'m1', text:'Review race morning schedule', checked:false },
+          { id:'m2', text:'Set 2 alarms', checked:false },
+          { id:'m3', text:'Post-race recovery clothes', checked:false },
+        ]},
+      ] : [
+        { id:'morning', label:'Race Morning', emoji:'🌅', color:'#f59e0b', items:[
+          { id:'rm1', text:'Set 2 alarms', checked:false },
+          { id:'rm2', text:'Breakfast (test during training, nothing new)', checked:false },
+          { id:'rm3', text:'Review race morning schedule', checked:false },
+        ]},
+        { id:'gear', label:'Gear', emoji:'👟', color:'#10b981', items:[
+          { id:'g1', text:'Running shoes', checked:false },
+          { id:'g2', text:'Race outfit (pinned bib)', checked:false },
+          { id:'g3', text:'GPS watch (charged)', checked:false },
+          { id:'g4', text:'Sunglasses / hat', checked:false },
+        ]},
+        { id:'nutrition', label:'Nutrition', emoji:'⚡', color:'#C9A84C', items:[
+          { id:'n1', text:'Gels / chews', checked:false },
+          { id:'n2', text:'Pre-race fuel', checked:false },
+          { id:'n3', text:'Electrolytes', checked:false },
+        ]},
+        { id:'misc', label:'Misc', emoji:'📋', color:'#9aa5b4', items:[
+          { id:'m1', text:'Race bib picked up', checked:false },
+          { id:'m2', text:'Post-race recovery clothes', checked:false },
+        ]},
+      ]
+      return res.status(200).json({ sections: fallback })
+    }
+  }
 }
+
