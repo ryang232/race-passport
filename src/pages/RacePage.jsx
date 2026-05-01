@@ -635,6 +635,14 @@ export default function RacePage() {
   const [reportCard, setReportCard]   = useState(null)
   const [reportCardLoading, setReportCardLoading] = useState(false)
   const [showReportCard, setShowReportCard] = useState(false)
+  const [checklistSections, setChecklistSections] = useState(null)
+  const [checklistLoading, setChecklistLoading] = useState(false)
+  const [checklistSaved, setChecklistSaved] = useState(false)
+  const [showChecklist, setShowChecklist] = useState(false)
+  const [newItemText, setNewItemText] = useState('')
+  const [activeChecklistTab, setActiveChecklistTab] = useState(null)
+  const [editingItemId, setEditingItemId] = useState(null)
+  const [editingText, setEditingText] = useState('')
   const fileInputRef = useRef(null)
   const dropdownRef  = useRef(null)
 
@@ -769,6 +777,24 @@ export default function RacePage() {
     .catch(() => {})
     .finally(() => setPacerReflectionLoading(false))
   }, [race?.id])
+
+  // Load checklist from Supabase
+  useEffect(() => {
+    if (!race?.id || !user) return
+    const isUpcoming = race.date_sort ? new Date(race.date_sort) > new Date() : false
+    if (!isUpcoming) return
+    supabase.from('race_checklists')
+      .select('sections')
+      .eq('user_id', user.id)
+      .eq('race_id', race.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.sections?.length) {
+          setChecklistSections(data.sections)
+          setActiveChecklistTab(data.sections[0]?.id)
+        }
+      })
+  }, [race?.id, user])
 
   if (!race) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:t.bg }}>
@@ -1197,6 +1223,261 @@ export default function RacePage() {
             )
           )}
         </div>
+
+        {/* RACE DAY CHECKLIST — upcoming races only */}
+        {race && (() => {
+          const isUpcoming = race.date_sort ? new Date(race.date_sort) > new Date() : false
+          if (!isUpcoming) return null
+
+          const totalItems = (checklistSections||[]).reduce((s,sec) => s + sec.items.length, 0)
+          const checkedItems = (checklistSections||[]).reduce((s,sec) => s + sec.items.filter(i=>i.checked).length, 0)
+          const pct = totalItems > 0 ? Math.round((checkedItems/totalItems)*100) : 0
+          const activeSection = (checklistSections||[]).find(s => s.id === activeChecklistTab)
+
+          const generateChecklist = async () => {
+            setChecklistLoading(true)
+            try {
+              const resp = await fetch('/api/pacer', {
+                method:'POST',
+                headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({
+                  action:'checklist',
+                  race:{ name:race.name, distance:race.distance, city:race.city, state:race.state, date:race.date, date_sort:race.date_sort },
+                  profile:{ state:profile?.state, city:profile?.city },
+                }),
+              })
+              const data = await resp.json()
+              if (data.sections?.length) {
+                setChecklistSections(data.sections)
+                setActiveChecklistTab(data.sections[0]?.id)
+                // Save to Supabase
+                await supabase.from('race_checklists').upsert({
+                  user_id:user.id, race_id:race.id, sections:data.sections, updated_at:new Date().toISOString()
+                }, { onConflict:'user_id,race_id' })
+              }
+            } catch(e) {}
+            setChecklistLoading(false)
+          }
+
+          const saveChecklist = async (sections) => {
+            if (!user || !race?.id) return
+            await supabase.from('race_checklists').upsert({
+              user_id:user.id, race_id:race.id, sections, updated_at:new Date().toISOString()
+            }, { onConflict:'user_id,race_id' })
+            setChecklistSaved(true)
+            setTimeout(() => setChecklistSaved(false), 2000)
+          }
+
+          const toggleItem = (sectionId, itemId) => {
+            const updated = (checklistSections||[]).map(s =>
+              s.id === sectionId ? { ...s, items: s.items.map(i => i.id===itemId?{...i,checked:!i.checked}:i) } : s
+            )
+            setChecklistSections(updated)
+            saveChecklist(updated)
+          }
+
+          const addItem = (sectionId) => {
+            if (!newItemText.trim()) return
+            const updated = (checklistSections||[]).map(s =>
+              s.id === sectionId ? { ...s, items:[...s.items,{id:`item_${Date.now()}`,text:newItemText.trim(),checked:false}] } : s
+            )
+            setChecklistSections(updated)
+            setNewItemText('')
+            saveChecklist(updated)
+          }
+
+          const deleteItem = (sectionId, itemId) => {
+            const updated = (checklistSections||[]).map(s =>
+              s.id === sectionId ? { ...s, items:s.items.filter(i=>i.id!==itemId) } : s
+            )
+            setChecklistSections(updated)
+            saveChecklist(updated)
+          }
+
+          const saveEditItem = (sectionId, itemId) => {
+            if (!editingText.trim()) return
+            const updated = (checklistSections||[]).map(s =>
+              s.id === sectionId ? { ...s, items:s.items.map(i=>i.id===itemId?{...i,text:editingText}:i) } : s
+            )
+            setChecklistSections(updated)
+            setEditingItemId(null)
+            saveChecklist(updated)
+          }
+
+          const checkAll = (sectionId) => {
+            const updated = (checklistSections||[]).map(s =>
+              s.id === sectionId ? { ...s, items:s.items.map(i=>({...i,checked:true})) } : s
+            )
+            setChecklistSections(updated)
+            saveChecklist(updated)
+          }
+
+          return (
+            <div style={{ background:t.surface, borderRadius:'16px', marginBottom:'16px', border:`1px solid ${t.border}`, overflow:'hidden', animation:'fadeIn 0.4s ease 0.23s both', transition:'background 0.25s' }}>
+              {/* Header */}
+              <button onClick={() => setShowChecklist(p=>!p)}
+                style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', padding:'20px 24px', background:'none', border:'none', cursor:'pointer' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                  <span style={{ fontSize:'22px' }}>📋</span>
+                  <div style={{ textAlign:'left' }}>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Checklist</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>
+                      {checklistSections ? `${checkedItems}/${totalItems} packed · ${pct}% ready` : 'Pacer will build your list'}
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
+                  {/* Progress ring */}
+                  {checklistSections && totalItems > 0 && (
+                    <div style={{ position:'relative', width:44, height:44, flexShrink:0 }}>
+                      <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform:'rotate(-90deg)' }}>
+                        <circle cx="22" cy="22" r="18" fill="none" stroke={t.isDark?'rgba(201,168,76,0.12)':'rgba(27,42,74,0.1)'} strokeWidth="3.5" />
+                        <circle cx="22" cy="22" r="18" fill="none" stroke="#C9A84C" strokeWidth="3.5"
+                          strokeDasharray={`${2*Math.PI*18}`}
+                          strokeDashoffset={`${2*Math.PI*18*(1-pct/100)}`}
+                          strokeLinecap="round" style={{ transition:'stroke-dashoffset 0.5s ease' }} />
+                      </svg>
+                      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:t.text, letterSpacing:'0.5px' }}>{pct}%</span>
+                      </div>
+                    </div>
+                  )}
+                  {checklistSaved && <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#16a34a' }}>✓ Saved</span>}
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showChecklist?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
+                    <path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+              </button>
+
+              {showChecklist && (
+                <div style={{ borderTop:`1px solid ${t.borderLight}` }}>
+                  {!checklistSections ? (
+                    /* Empty state — generate */
+                    <div style={{ padding:'40px 24px', textAlign:'center' }}>
+                      <div style={{ fontSize:'32px', marginBottom:'12px' }}>📋</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'8px' }}>
+                        Let Pacer Build Your Checklist
+                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.6, maxWidth:'380px', margin:'0 auto 20px' }}>
+                        Pacer will generate a personalized race day packing list for your {race.distance} — organized by segment. You can edit, add, and remove anything.
+                      </div>
+                      <button onClick={generateChecklist} disabled={checklistLoading}
+                        style={{ padding:'12px 28px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:'10px', transition:'background 0.2s' }}
+                        onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'}
+                        onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
+                        {checklistLoading ? (
+                          <><div style={{ width:16, height:16, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /><span style={{ color:'#fff' }}>Pacer is building your list...</span></>
+                        ) : <span style={{ color:'#fff' }}>Generate My Checklist →</span>}
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Segment tabs */}
+                      <div style={{ display:'flex', overflowX:'auto', borderBottom:`1px solid ${t.borderLight}` }}>
+                        {checklistSections.map(s => {
+                          const sChecked = s.items.filter(i=>i.checked).length
+                          const isActive = s.id === activeChecklistTab
+                          return (
+                            <button key={s.id} onClick={()=>setActiveChecklistTab(s.id)}
+                              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'10px 18px', background:'none', border:'none', borderBottom:`3px solid ${isActive?s.color:'transparent'}`, cursor:'pointer', flexShrink:0, position:'relative', transition:'border-color 0.15s' }}>
+                              <span style={{ fontSize:'16px' }}>{s.emoji}</span>
+                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:isActive?'#fff':t.textMuted, textTransform:'uppercase', transition:'color 0.15s' }}>{s.label}</span>
+                              {sChecked > 0 && (
+                                <div style={{ position:'absolute', top:6, right:8, width:14, height:14, borderRadius:'50%', background:s.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                  <span style={{ fontSize:'8px', color:'#fff', fontWeight:700 }}>{sChecked}</span>
+                                </div>
+                              )}
+                            </button>
+                          )
+                        })}
+                      </div>
+
+                      {/* Active section */}
+                      {activeSection && (
+                        <div style={{ padding:'16px 20px' }}>
+                          {/* Section header */}
+                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
+                              <span style={{ fontSize:'16px' }}>{activeSection.emoji}</span>
+                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>
+                                {activeSection.items.filter(i=>i.checked).length} of {activeSection.items.length} packed
+                              </span>
+                            </div>
+                            <button onClick={()=>checkAll(activeSection.id)}
+                              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, background:'none', border:'none', cursor:'pointer', textTransform:'uppercase' }}>
+                              Check All
+                            </button>
+                          </div>
+
+                          {/* Items */}
+                          <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:'12px' }}>
+                            {activeSection.items.map(item => (
+                              <div key={item.id}
+                                style={{ display:'flex', alignItems:'center', gap:'10px', padding:'9px 12px', borderRadius:'8px', background:item.checked?'rgba(255,255,255,0.02)':t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.02)', border:`1px solid ${item.checked?t.borderLight:t.border}`, transition:'all 0.15s', position:'relative' }}
+                                onMouseEnter={e=>e.currentTarget.querySelector('.del-btn').style.opacity='1'}
+                                onMouseLeave={e=>e.currentTarget.querySelector('.del-btn').style.opacity='0'}>
+                                {/* Checkbox */}
+                                <div onClick={()=>toggleItem(activeSection.id,item.id)}
+                                  style={{ width:20, height:20, borderRadius:'5px', border:`2px solid ${item.checked?activeSection.color:t.border}`, background:item.checked?activeSection.color:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}>
+                                  {item.checked && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                </div>
+                                {/* Text */}
+                                {editingItemId === item.id ? (
+                                  <input autoFocus value={editingText}
+                                    onChange={e=>setEditingText(e.target.value)}
+                                    onKeyDown={e=>{ if(e.key==='Enter') saveEditItem(activeSection.id,item.id); if(e.key==='Escape') setEditingItemId(null) }}
+                                    onBlur={()=>saveEditItem(activeSection.id,item.id)}
+                                    style={{ flex:1, background:'none', border:'none', color:t.text, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:500, outline:'none', caretColor:'#C9A84C' }} />
+                                ) : (
+                                  <span onDoubleClick={()=>{ setEditingItemId(item.id); setEditingText(item.text) }}
+                                    style={{ flex:1, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:500, color:item.checked?t.textMuted:t.text, textDecoration:item.checked?'line-through':'none', cursor:'text', transition:'all 0.15s', letterSpacing:'0.3px' }}>
+                                    {item.text}
+                                  </span>
+                                )}
+                                {/* Delete */}
+                                <button className="del-btn" onClick={()=>deleteItem(activeSection.id,item.id)}
+                                  style={{ opacity:0, background:'none', border:'none', color:t.textMuted, cursor:'pointer', fontSize:'14px', padding:'0 2px', transition:'opacity 0.15s', flexShrink:0 }}>✕</button>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Add item */}
+                          <div style={{ display:'flex', gap:'8px' }}>
+                            <input value={newItemText} onChange={e=>setNewItemText(e.target.value)}
+                              onKeyDown={e=>{ if(e.key==='Enter') addItem(activeSection.id) }}
+                              placeholder={`Add to ${activeSection.label}...`}
+                              style={{ flex:1, padding:'9px 12px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.03)', color:t.text, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', outline:'none', transition:'border-color 0.15s' }}
+                              onFocus={e=>e.target.style.borderColor='#C9A84C'}
+                              onBlur={e=>e.target.style.borderColor=t.border} />
+                            <button onClick={()=>addItem(activeSection.id)}
+                              style={{ padding:'9px 16px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', whiteSpace:'nowrap' }}
+                              onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'}
+                              onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
+                              + Add
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Footer */}
+                      <div style={{ padding:'10px 20px 14px', borderTop:`1px solid ${t.borderLight}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
+                          Double-tap any item to edit
+                        </span>
+                        <button onClick={generateChecklist} disabled={checklistLoading}
+                          style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, background:'none', border:`1px solid ${t.border}`, borderRadius:'6px', padding:'5px 12px', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+                          onMouseEnter={e=>{ e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+                          onMouseLeave={e=>{ e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+                          {checklistLoading ? 'Regenerating...' : '↺ Reset to Pacer List'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })()}
 
         {/* MUSIC */}
         <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
