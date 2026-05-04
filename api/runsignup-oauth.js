@@ -1,5 +1,5 @@
 // api/runsignup-oauth.js
-// Handles RunSignup OAuth2 flow and user-level race data
+// Handles RunSignup OAuth2 flow (Authorization Code + PKCE) and user-level race data
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -10,22 +10,49 @@ export default async function handler(req, res) {
   const params = req.method === 'POST' ? req.body : req.query
   const action = params.action || 'debug'
 
-  const CLIENT_ID     = process.env.RUNSIGNUP_CLIENT_ID     // 293
-  const CLIENT_SECRET = process.env.RUNSIGNUP_CLIENT_SECRET // BnrkJ26l...
+  const CLIENT_ID     = process.env.RUNSIGNUP_CLIENT_ID
+  const CLIENT_SECRET = process.env.RUNSIGNUP_CLIENT_SECRET
   const REDIRECT_URI  = 'https://racepassportapp.com/runsignup-callback'
 
-  // ── Build auth URL ─────────────────────────────────────────────────────────
+  // ── Build auth URL + generate PKCE code_verifier/challenge ────────────────
   if (action === 'auth_url') {
     const { user_id } = params
+
+    // Generate code_verifier: random 64-char string [A-Za-z0-9-._~]
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~'
+    const { randomBytes, createHash } = await import('crypto')
+    const bytes = randomBytes(48)
+    let verifier = ''
+    for (let i = 0; i < 64; i++) {
+      verifier += chars[bytes[i % 48] % chars.length]
+    }
+
+    // Generate code_challenge: BASE64URL(SHA256(verifier)) without padding
+    const hash = createHash('sha256').update(verifier).digest('base64')
+    const challenge = hash.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '')
+
     const state = user_id ? encodeURIComponent(user_id) : 'racepassport'
-    const url = `https://runsignup.com/OAuth2/Authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=rsu_api_read&state=${state}`
-    return res.status(200).json({ url })
+
+    const url = [
+      'https://runsignup.com/Profile/OAuth2/RequestGrant',
+      `?response_type=code`,
+      `&client_id=${CLIENT_ID}`,
+      `&redirect_uri=${encodeURIComponent(REDIRECT_URI)}`,
+      `&scope=rsu_api_write`,
+      `&state=${state}`,
+      `&code_challenge_method=S256`,
+      `&code_challenge=${challenge}`,
+    ].join('')
+
+    // Return verifier so client stores it in sessionStorage for the exchange step
+    return res.status(200).json({ url, code_verifier: verifier })
   }
 
-  // ── Exchange code for access token ─────────────────────────────────────────
+  // ── Exchange code for access token (with PKCE verifier) ───────────────────
   if (action === 'exchange') {
-    const { code } = params
+    const { code, code_verifier } = params
     if (!code) return res.status(400).json({ error: 'Missing code' })
+    if (!code_verifier) return res.status(400).json({ error: 'Missing code_verifier' })
 
     try {
       const body = new URLSearchParams({
@@ -34,9 +61,10 @@ export default async function handler(req, res) {
         client_secret: CLIENT_SECRET,
         redirect_uri:  REDIRECT_URI,
         code,
+        code_verifier,
       })
 
-      const r = await fetch('https://runsignup.com/OAuth2/Token', {
+      const r = await fetch('https://runsignup.com/rest/v2/auth/auth-code-redemption.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),
@@ -44,7 +72,7 @@ export default async function handler(req, res) {
 
       const data = await r.json()
       if (!r.ok || data.error) {
-        return res.status(400).json({ error: data.error_description || data.error || 'Token exchange failed' })
+        return res.status(400).json({ error: data.error_description || data.error || 'Token exchange failed', raw: data })
       }
 
       return res.status(200).json({
@@ -70,7 +98,7 @@ export default async function handler(req, res) {
         refresh_token,
       })
 
-      const r = await fetch('https://runsignup.com/OAuth2/Token', {
+      const r = await fetch('https://runsignup.com/rest/v2/auth/refresh-token.json', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: body.toString(),
@@ -110,7 +138,6 @@ export default async function handler(req, res) {
       const data = await r.json()
       const raw = data?.registered_races || []
 
-      // Normalize into Race Passport format
       const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
       const normalize = (dist) => {
@@ -130,6 +157,12 @@ export default async function handler(req, res) {
         return dist.trim() || 'Other'
       }
 
+      const isExpo = (name) => {
+        const n = (name||'').toLowerCase()
+        return /\bexpo\b/.test(n) || /\bspectator\b/.test(n) || /\bvolunteer\b/.test(n)
+          || /\btot trot\b/.test(n) || n.includes('wellness expo') || n.includes('health expo')
+      }
+
       const races = raw
         .map((reg, i) => {
           const race = reg.race || reg
@@ -141,9 +174,8 @@ export default async function handler(req, res) {
             const d = new Date(dateSort + 'T12:00:00')
             if (!isNaN(d)) dateDisp = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
           }
-
-          const city  = race.address?.city  || ''
-          const state = race.address?.state || ''
+          const city     = race.address?.city  || ''
+          const state    = race.address?.state || ''
           const location = [city, state].filter(Boolean).join(', ')
 
           return {
@@ -161,12 +193,7 @@ export default async function handler(req, res) {
             race_id:    String(race.race_id || ''),
           }
         })
-        // Filter out future races and expos
-        .filter(r => {
-          const n = (r.name || '').toLowerCase()
-          const isExpo = /\bexpo\b/.test(n) || /\bspectator\b/.test(n) || /\bvolunteer\b/.test(n)
-          return !isExpo
-        })
+        .filter(r => !isExpo(r.name))
         .sort((a, b) => {
           if (!a.date_sort && !b.date_sort) return 0
           if (!a.date_sort) return 1
