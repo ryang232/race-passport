@@ -54,18 +54,17 @@ export default function CreateAccount() {
   const location  = useLocation()
   const prefillEmail = location.state?.email || ''
 
-  const [firstName, setFirstName]         = useState('')
-  const [lastName, setLastName]           = useState('')
-  const [email, setEmail]                 = useState(prefillEmail)
-  const [dob, setDob]                     = useState('')
-  const [bibName, setBibName]             = useState('')
-  const [password, setPassword]           = useState('')
+  const [firstName, setFirstName]             = useState('')
+  const [lastName, setLastName]               = useState('')
+  const [email, setEmail]                     = useState(prefillEmail)
+  const [dob, setDob]                         = useState('')
+  const [bibName, setBibName]                 = useState('')
+  const [password, setPassword]               = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [error, setError]                 = useState(null)
-  const [loading, setLoading]             = useState(false)
+  const [error, setError]                     = useState(null)
+  const [loading, setLoading]                 = useState(false)
 
   useEffect(() => {
-    // Only auto-fill for demo — real users start with blank fields
     if (isDemo(prefillEmail)) { setFirstName(DEMO_FIRST_NAME); setLastName(DEMO_LAST_NAME) }
     const style = document.createElement('style')
     style.id = 'rp-ca-styles'
@@ -86,7 +85,6 @@ export default function CreateAccount() {
     return () => document.getElementById('rp-ca-styles')?.remove()
   }, [prefillEmail])
 
-  // Request browser location — called after account is created
   const requestLocation = () => new Promise(resolve => {
     if (!navigator.geolocation) return resolve(null)
     navigator.geolocation.getCurrentPosition(
@@ -106,15 +104,11 @@ export default function CreateAccount() {
     if (password.length < 6){ setError('Password must be at least 6 characters'); return }
     if (password !== confirmPassword) { setError('Passwords do not match'); return }
 
-    // DEMO bypass
     if (isDemo(email)) { navigate('/race-search-prompt', { state:{ firstName: firstName.trim() } }); return }
 
     setLoading(true)
-
-    // Request location immediately when they hit Create Account — browser prompt fires right away
     const locPromise = requestLocation()
 
-    // Create auth user
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -142,14 +136,12 @@ export default function CreateAccount() {
       return
     }
 
-    // Save DOB + bib name to profile
     if (data?.user) {
       const updates = {
         date_of_birth: dob || null,
         race_name:     bibName.trim() || null,
         full_name:     `${firstName.trim()} ${lastName.trim()}`,
       }
-      // Await the location that was already requested on button click
       const loc = await locPromise
       if (loc) { updates.signup_lat = loc.lat; updates.signup_lng = loc.lng }
       await supabase.from('profiles').update(updates).eq('id', data.user.id)
@@ -170,6 +162,7 @@ export default function CreateAccount() {
 
   return (
     <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 0' }}>
+
       {/* Ticker background */}
       <div style={{ position:'fixed', top:'50%', transform:'translateY(-55%)', left:0, whiteSpace:'nowrap', pointerEvents:'none', zIndex:0 }}>
         <div style={{ display:'inline-flex', alignItems:'center', animation:'tickerScroll 60s linear infinite' }}>
@@ -178,14 +171,27 @@ export default function CreateAccount() {
       </div>
 
       <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'36px 36px 32px', width:'100%', maxWidth:'420px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10),0 0 0 1px rgba(27,42,74,0.07)' }}>
+
         {/* Header */}
         <div style={{ textAlign:'center', marginBottom:'24px' }}>
-          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'12px' }}>
+
+          {/* Brand mark */}
+          <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'14px' }}>
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#1B2A4A', margin:'0 0 4px', letterSpacing:'1.5px', lineHeight:1 }}>CREATE ACCOUNT</h1>
-          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:0, textTransform:'uppercase' }}>Step 1 — Let's get to know you</p>
+
+          {/* Step indicator */}
+          <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'8px' }}>
+            <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
+            <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+            <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'14px' }}>
+            Step 1 — Let's Get to Know You
+          </div>
+
+          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:'#1B2A4A', margin:'0', letterSpacing:'1.5px', lineHeight:1 }}>CREATE ACCOUNT</h1>
         </div>
 
         {error && <ErrorBox>{error}</ErrorBox>}
