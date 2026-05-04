@@ -79,17 +79,19 @@ The user entered this race query: "${q}"
 
 Identify the specific race they are referring to and return ONLY a JSON object (no markdown, no explanation, no code fences) with these exact fields:
 {
-  "name": "full official race name",
+  "name": "official event/series name ONLY — do NOT include the distance in the name field. e.g. 'Baltimore Running Festival' not 'Baltimore Running Festival Marathon'. e.g. 'Cherry Blossom Ten Mile Run' not 'Cherry Blossom 10 Miler Half Marathon'",
   "date": "Month YYYY format e.g. Oct 2024",
   "date_sort": "YYYY-MM-DD use actual race date, 01 for day if unknown",
   "location": "City, ST",
   "city": "city name only",
   "state": "2-letter state abbreviation",
-  "distance": "normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other",
+  "distance": "normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other — infer from the query if the user specified a distance",
   "confidence": 3
 }
 
-Rules:
+CRITICAL RULES:
+- The name field must NEVER include the distance. Keep it as the event/series name only.
+- If the user says 'Baltimore Running Festival 10K' the name is 'Baltimore Running Festival' and the distance is '10K'
 - If you recognize the race confidently, set confidence to 3
 - If it is a partial match or you are not certain, set confidence to 2
 - ALWAYS return valid JSON even if uncertain — use your best guess
