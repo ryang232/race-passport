@@ -158,36 +158,13 @@ function PacerManualModal({ onAdd, onClose }) {
     setError('')
     setEnriched(null)
     try {
-      const prompt = `You are a race data assistant. The user entered: Race name: "${name.trim()}"${distance ? `, Distance: ${distance}` : ''}${year ? `, Year: ${year}` : ''}.
-
-Look up this race and return ONLY a JSON object (no markdown, no explanation) with these exact fields:
-{
-  "name": "full official race name",
-  "date": "Month YYYY format e.g. Oct 2024",
-  "date_sort": "YYYY-MM-DD format of race date, use 01 for day if unknown",
-  "location": "City, State",
-  "city": "city name",
-  "state": "2-letter state code",
-  "distance": "normalized distance: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other",
-  "confidence": 3
-}
-
-If you cannot identify the specific race, still return your best guess with "confidence": 2. Never return an error — always return valid JSON.`
-
-      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      const queryStr = [name.trim(), year, distance].filter(Boolean).join(' ')
+      const resp = await fetch('/api/pacer', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
-          max_tokens: 400,
-          messages: [{ role: 'user', content: prompt }]
-        })
+        body: JSON.stringify({ action: 'race_lookup', query: queryStr })
       })
-      const data = await resp.json()
-      const text = data.content?.[0]?.text || ''
-      const clean = text.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(clean)
-      // Override distance if user selected one
+      const parsed = await resp.json()
       if (distance) parsed.distance = distance
       if (time) parsed.time = time
       setEnriched(parsed)
@@ -216,8 +193,8 @@ If you cannot identify the specific race, still return your best guess with "con
   }
 
   return (
-    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'20px 20px 0 0', padding:'24px 24px 48px', width:'100%', maxWidth:'560px', boxShadow:'0 -8px 40px rgba(0,0,0,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
+    <div onClick={onClose} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.6)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:'20px' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'20px', padding:'24px 24px 32px', width:'100%', maxWidth:'520px', boxShadow:'0 8px 40px rgba(0,0,0,0.2)', maxHeight:'90vh', overflowY:'auto' }}>
         <div style={{ width:36, height:4, borderRadius:2, background:'#e2e6ed', margin:'0 auto 20px' }} />
 
         {/* Pacer header */}
