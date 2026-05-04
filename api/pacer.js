@@ -8,13 +8,12 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end()
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' })
 
-  const { action, races, profile, races_to_score, race } = req.body
+  const { action, races, profile, races_to_score, race, query } = req.body
   if (!action) return res.status(400).json({ error: 'action required' })
 
   const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY
   if (!ANTHROPIC_API_KEY) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not configured' })
 
-  // ── Core positivity rules injected into every prompt ─────────────────────
   const POSITIVITY_RULES = `
 PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
 - ALWAYS lead with celebration and positivity. Every runner is doing something incredible.
@@ -35,7 +34,7 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-4-5',
+        model: 'claude-sonnet-4-6',
         max_tokens,
         messages: [{ role: 'user', content: prompt }],
       }),
@@ -68,6 +67,45 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
       if (!prMap[r.distance] || toSecs(r.time) < toSecs(prMap[r.distance])) prMap[r.distance] = r.time
     })
     return prMap
+  }
+
+  // ── race_lookup: Pacer-assisted manual race entry ─────────────────────────
+  if (action === 'race_lookup') {
+    const q = query || req.body.query
+    if (!q) return res.status(400).json({ error: 'query required' })
+
+    const prompt = `You are a race data assistant with deep knowledge of endurance events in the United States.
+The user entered this race query: "${q}"
+
+Identify the specific race they are referring to and return ONLY a JSON object (no markdown, no explanation, no code fences) with these exact fields:
+{
+  "name": "full official race name",
+  "date": "Month YYYY format e.g. Oct 2024",
+  "date_sort": "YYYY-MM-DD use actual race date, 01 for day if unknown",
+  "location": "City, ST",
+  "city": "city name only",
+  "state": "2-letter state abbreviation",
+  "distance": "normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other",
+  "confidence": 3
+}
+
+Rules:
+- If you recognize the race confidently, set confidence to 3
+- If it is a partial match or you are not certain, set confidence to 2
+- ALWAYS return valid JSON even if uncertain — use your best guess
+- For well-known races like Cherry Blossom, Boston Marathon, Marine Corps Marathon, Baltimore Running Festival, Frederick Running Festival, you should have high confidence
+- Never return an error — always return JSON`
+
+    try {
+      const text = await callClaude(prompt, 300)
+      const parsed = JSON.parse(text)
+      return res.status(200).json(parsed)
+    } catch(e) {
+      return res.status(200).json({
+        name: q, date: '', date_sort: null, location: '', city: '', state: '',
+        distance: 'Other', confidence: 1,
+      })
+    }
   }
 
   // ── insight: main Home Pacer card ─────────────────────────────────────────
@@ -152,7 +190,7 @@ RUNNER PROFILE:
 RACES TO SCORE (ID|name|distance|location|date):
 ${toScore}
 
-Score each race 60–99 on fit. Consider: distance match, proximity to their home city/state, timing, and their race history.
+Score each race 60-99 on fit. Consider: distance match, proximity to their home city/state, timing, and their race history.
 Give an enthusiastic short reason (max 8 words, positive framing).
 Respond ONLY with valid JSON array, no markdown:
 [{"id":"race_id","score":85,"reason":"Perfect next step for your journey!"}]`
@@ -174,7 +212,7 @@ Respond ONLY with valid JSON array, no markdown:
       return res.status(200).json({
         best_distance: profile?.favorite_distance || '5K',
         time_range: 'Ready to race!',
-        race_window: '4–8 weeks',
+        race_window: '4-8 weeks',
       })
     }
 
@@ -196,24 +234,18 @@ RUNNER DATA:
 - Personal records (exact format H:MM:SS or MM:SS):
 ${Object.entries(prMap).length > 0 ? Object.entries(prMap).map(([d,t])=>`  ${d}: ${t}`).join('\n') : '  No finish times recorded yet'}
 
-CRITICAL TIME FORMAT RULES — READ CAREFULLY:
-- 5K times look like: 22:00 to 45:00 (twenty-two minutes to forty-five minutes)
-- 10K times look like: 45:00 to 1:30:00 (forty-five minutes to ninety minutes)
-- Half marathon (13.1 mi) times look like: 1:30:00 to 3:30:00 (one hour thirty to three hours thirty)
-- Marathon (26.2 mi) times look like: 3:00:00 to 7:00:00 (three hours to seven hours)
-- If their half PR is 1:57:40, their realistic time range is "1:55–2:05" — NOT "4:30–5:00"
+CRITICAL TIME FORMAT RULES:
+- 5K times: 22:00 to 45:00
+- 10K times: 45:00 to 1:30:00
+- Half marathon: 1:30:00 to 3:30:00
+- Marathon: 3:00:00 to 7:00:00
 - Use the runner's ACTUAL PR as the anchor for your estimate
 
-Based on their history and recency of racing, estimate:
-- best_distance: what distance are they most ready to race RIGHT NOW
-- time_range: realistic finish time range anchored to their actual PR (e.g. "1:55–2:05" for a 1:57 half runner)
-- race_window: ideal weeks until next race based on days since last race
-
-Respond ONLY with valid JSON, no markdown, no explanation:
+Respond ONLY with valid JSON, no markdown:
 {
   "best_distance": "Half Marathon",
-  "time_range": "1:55–2:05",
-  "race_window": "6–8 weeks"
+  "time_range": "1:55-2:05",
+  "race_window": "6-8 weeks"
 }`
 
     try {
@@ -225,30 +257,23 @@ Respond ONLY with valid JSON, no markdown, no explanation:
       return res.status(200).json({
         best_distance: topDist,
         time_range: pr ? `~${pr}` : 'Ready to run!',
-        race_window: days !== null && days < 21 ? '3–5 weeks' : '4–8 weeks',
+        race_window: days !== null && days < 21 ? '3-5 weeks' : '4-8 weeks',
       })
     }
   }
 
-  // ── race_reflection: Pacer card on individual completed race pages ─────────
+  // ── race_reflection ───────────────────────────────────────────────────────
   if (action === 'race_reflection') {
     if (!race) return res.status(400).json({ error: 'race required' })
 
-    // Is this a PR? Is it their first of this distance?
     const isPR = race.is_pr || race.pr
     const raceName = race.name || 'this race'
     const distance = race.distance || ''
     const time = race.time || ''
     const date = race.date || ''
     const splits = race.splits || []
-
-    // Count how many of this distance they've done
-    const sameDistCount = (races||[]).filter(r =>
-      r.distance === distance && r.id !== race.id
-    ).length
+    const sameDistCount = (races||[]).filter(r => r.distance === distance && r.id !== race.id).length
     const isFirst = sameDistCount === 0
-
-    // Build splits summary for tri
     const splitsText = splits.length > 0
       ? `Race splits: ${splits.map(s=>`${s.label}: ${s.time}`).join(', ')}`
       : ''
@@ -268,13 +293,11 @@ ${splitsText ? `- ${splitsText}` : ''}
 RUNNER'S HISTORY AT THIS DISTANCE:
 ${(races||[]).filter(r=>r.distance===distance).map(r=>`  ${r.date||'?'}: ${r.name}, ${r.time||'no time'}`).join('\n') || '  This is their first!'}
 
-Write a personal, celebratory reflection on this specific race. Reference the actual race name, distance, and time. If it's a PR, go BIG with the celebration. If it's their first at this distance, honor the courage that takes. Always find something genuinely praiseworthy.
-
 Respond ONLY with valid JSON, no markdown:
 {
-  "headline": "Short punchy celebration headline (e.g. 'First 70.3 DONE!' or 'New PR Unlocked!')",
-  "reflection": "2-3 sentences. Warm, specific, celebratory. Reference the actual race, time, and achievement. End with genuine encouragement for what's next.",
-  "highlight": "One specific thing to be proud of from this race (e.g. 'Negative split on the run' or 'Finished strong in 78° heat')"
+  "headline": "Short punchy celebration headline",
+  "reflection": "2-3 sentences. Warm, specific, celebratory.",
+  "highlight": "One specific thing to be proud of from this race"
 }`
 
     try {
@@ -283,14 +306,14 @@ Respond ONLY with valid JSON, no markdown:
       return res.status(200).json(parsed)
     } catch(e) {
       return res.status(200).json({
-        headline: isPR ? '🏆 New Personal Record!' : isFirst ? '🎉 First One Down!' : '✅ Race Complete!',
-        reflection: `Completing ${raceName} is something to be genuinely proud of — every mile of that ${distance} took real grit and commitment. You showed up, you raced, and you finished. That's what it's all about.`,
+        headline: isPR ? 'New Personal Record!' : isFirst ? 'First One Down!' : 'Race Complete!',
+        reflection: `Completing ${raceName} is something to be genuinely proud of — every mile took real grit and commitment.`,
         highlight: isPR ? `New PR: ${time}` : `Finished: ${time || 'Strong finish'}`,
       })
     }
   }
 
-  // ── report_card: training analysis for a race build ───────────────────────
+  // ── report_card ───────────────────────────────────────────────────────────
   if (action === 'report_card') {
     if (!race) return res.status(400).json({ error: 'race required' })
 
@@ -299,15 +322,11 @@ Respond ONLY with valid JSON, no markdown:
     const distance = race.distance || ''
     const time = race.time || ''
     const splits = race.splits || []
-
-    // Summarize training data
     const totalActivities = activities.length
     const totalMiles = activities.reduce((sum, a) => sum + ((a.distance||0)/1609.34), 0).toFixed(1)
     const avgWeeklyMiles = totalActivities > 0 ? (parseFloat(totalMiles) / Math.max(1, activities.length/5)).toFixed(1) : 0
     const longRuns = activities.filter(a => (a.distance||0)/1609.34 > 10).length
-    const splitsText = splits.length > 0
-      ? splits.map(s=>`${s.label}: ${s.time}`).join(', ')
-      : 'not recorded'
+    const splitsText = splits.length > 0 ? splits.map(s=>`${s.label}: ${s.time}`).join(', ') : 'not recorded'
 
     const prompt = `You are Pacer, a warm and enthusiastic AI running coach reviewing a runner's training for a completed race.
 ${POSITIVITY_RULES}
@@ -318,25 +337,23 @@ THE RACE:
 - Finish time: ${time || 'not recorded'}
 - Splits: ${splitsText}
 
-TRAINING DATA (${totalActivities} activities in the build):
+TRAINING DATA (${totalActivities} activities):
 - Total training miles: ${totalMiles} mi
 - Est. weekly average: ${avgWeeklyMiles} mi/week
 - Long runs (10+ miles): ${longRuns}
 ${activities.slice(0,10).map(a => `  ${new Date(a.start_date_local||'').toLocaleDateString()}: ${((a.distance||0)/1609.34).toFixed(1)}mi, ${Math.round((a.moving_time||0)/60)}min`).join('\n')}
 
-Generate a training Report Card. Be genuinely celebratory about what they did well. For areas to grow, frame as exciting opportunities — never as failures or negatives.
-
 Respond ONLY with valid JSON, no markdown:
 {
-  "summary": "2 sentences. Overall training assessment — positive and energizing.",
+  "summary": "2 sentences. Overall positive training assessment.",
   "grades": [
-    {"category": "Consistency", "grade": "A", "comment": "Positive comment on what they did well or could build on"},
+    {"category": "Consistency", "grade": "A", "comment": "Positive comment"},
     {"category": "Long Runs", "grade": "B+", "comment": "Positive comment"},
     {"category": "Volume", "grade": "B", "comment": "Positive comment"},
-    {"category": "Race Execution", "grade": "A-", "comment": "Positive comment based on splits if available"}
+    {"category": "Race Execution", "grade": "A-", "comment": "Positive comment"}
   ],
   "top_win": "The single best thing about their training build",
-  "next_focus": "One exciting opportunity to focus on for next time — positive framing only"
+  "next_focus": "One exciting opportunity — positive framing only"
 }`
 
     try {
@@ -345,20 +362,20 @@ Respond ONLY with valid JSON, no markdown:
       return res.status(200).json(parsed)
     } catch(e) {
       return res.status(200).json({
-        summary: `Your training for ${raceName} shows real dedication — getting to the start line is the first victory, and you did that!`,
+        summary: `Your training for ${raceName} shows real dedication — getting to the start line is the first victory!`,
         grades: [
-          { category:'Consistency', grade:'A', comment:'You showed up and put in the work — that commitment is everything.' },
-          { category:'Long Runs',   grade:'B+', comment:'Building that aerobic base is paying dividends in your racing.' },
+          { category:'Consistency', grade:'A', comment:'You showed up and put in the work.' },
+          { category:'Long Runs',   grade:'B+', comment:'Building that aerobic base is paying off.' },
           { category:'Volume',      grade:'B', comment:'Solid foundation — more miles will only make you stronger.' },
           { category:'Race Execution', grade:'A-', comment:'Crossing that finish line is the ultimate execution.' },
         ],
-        top_win: 'You finished the race — that\'s the most important thing.',
+        top_win: "You finished the race — that's the most important thing.",
         next_focus: 'Keep building your base and enjoy the process!',
       })
     }
   }
 
-  // ── checklist: generate race day checklist ───────────────────────────────
+  // ── checklist ─────────────────────────────────────────────────────────────
   if (action === 'checklist') {
     if (!race) return res.status(400).json({ error: 'race required' })
 
@@ -381,26 +398,12 @@ RACE DETAILS:
 - Location: ${race.city||''}, ${raceState}
 - Race date: ${race.date||'upcoming'}
 - Is triathlon: ${isTri}
-- Is marathon: ${isMarathon}
-- Is ultra: ${isUltra}
 - Needs travel: ${needsTravel}
-- User uses gels: ${race.uses_gels !== false ? 'yes' : 'no'}
 
-Generate a practical, specific race day checklist. Be thorough but not overwhelming.
+${isTri ? `Create sections: Swim, T1, Bike, T2, Run${needsTravel?', Travel':''}, Misc` : ''}
+${!isTri ? `Create sections: Race Morning, Gear, Nutrition${needsTravel?', Travel':''}, Misc` : ''}
 
-${isTri ? `For this triathlon, create sections: Swim, T1, Bike, T2, Run${needsTravel?', Travel':''}, Misc` : ''}
-${!isTri ? `For this ${race.distance} race, create sections: Race Morning, Gear, Nutrition${needsTravel?', Travel':''}, Misc` : ''}
-
-Rules:
-- Each section: 5-10 specific, actionable items
-- Items should be concrete (not "running shoes" but "Running shoes — tied and ready in T2 bag")
-- For triathlons: include transition-specific items like "Helmet MUST be on before touching bike"
-- For nutrition: suggest gel/fuel items but not specific counts — that's their call
-- Travel section only if needsTravel is true
-- Misc: always include "Review race morning schedule" and "Set 2 alarms"
-- Tone: excited and supportive, like a coach who's been there
-
-Respond ONLY with valid JSON, no markdown:
+Each section: 5-10 specific actionable items. Respond ONLY with valid JSON, no markdown:
 {
   "sections": [
     {
@@ -409,8 +412,7 @@ Respond ONLY with valid JSON, no markdown:
       "emoji": "🏊",
       "color": "#3b82f6",
       "items": [
-        { "id": "swim_1", "text": "Wetsuit (if water temp allows)", "checked": false },
-        { "id": "swim_2", "text": "Goggles — race pair + backup", "checked": false }
+        { "id": "swim_1", "text": "Wetsuit (if water temp allows)", "checked": false }
       ]
     }
   ]
@@ -421,16 +423,15 @@ Respond ONLY with valid JSON, no markdown:
       const parsed = JSON.parse(text)
       return res.status(200).json(parsed)
     } catch(e) {
-      // Fallback checklist
       const fallback = isTri ? [
         { id:'swim', label:'Swim', emoji:'🏊', color:'#3b82f6', items:[
           { id:'s1', text:'Wetsuit', checked:false },
-          { id:'s2', text:'Goggles (+ backup pair)', checked:false },
-          { id:'s3', text:'Swim cap (race-provided + backup)', checked:false },
+          { id:'s2', text:'Goggles (+ backup)', checked:false },
+          { id:'s3', text:'Swim cap', checked:false },
           { id:'s4', text:'Anti-chafe balm', checked:false },
         ]},
         { id:'t1', label:'T1', emoji:'🔄', color:'#8b5cf6', items:[
-          { id:'t1a', text:'Bike shoes (pre-clipped in pedals)', checked:false },
+          { id:'t1a', text:'Bike shoes', checked:false },
           { id:'t1b', text:'Helmet — on BEFORE touching bike', checked:false },
           { id:'t1c', text:'Sunglasses', checked:false },
           { id:'t1d', text:'Race number belt', checked:false },
@@ -440,27 +441,23 @@ Respond ONLY with valid JSON, no markdown:
           { id:'b2', text:'CO2 cartridges + inflator (x2)', checked:false },
           { id:'b3', text:'Spare tube', checked:false },
           { id:'b4', text:'Water bottles filled', checked:false },
-          { id:'b5', text:'Nutrition taped to frame', checked:false },
         ]},
         { id:'t2', label:'T2', emoji:'🔄', color:'#ec4899', items:[
           { id:'t2a', text:'Running shoes', checked:false },
           { id:'t2b', text:'Race hat / visor', checked:false },
-          { id:'t2c', text:'Sunscreen (reapply)', checked:false },
         ]},
         { id:'run', label:'Run', emoji:'🏃', color:'#10b981', items:[
           { id:'r1', text:'Gels / race nutrition', checked:false },
           { id:'r2', text:'Salt tabs', checked:false },
-          { id:'r3', text:'Race bib visible', checked:false },
         ]},
         { id:'misc', label:'Misc', emoji:'📋', color:'#9aa5b4', items:[
           { id:'m1', text:'Review race morning schedule', checked:false },
           { id:'m2', text:'Set 2 alarms', checked:false },
-          { id:'m3', text:'Post-race recovery clothes', checked:false },
         ]},
       ] : [
         { id:'morning', label:'Race Morning', emoji:'🌅', color:'#f59e0b', items:[
           { id:'rm1', text:'Set 2 alarms', checked:false },
-          { id:'rm2', text:'Breakfast (test during training, nothing new)', checked:false },
+          { id:'rm2', text:'Breakfast (nothing new on race day)', checked:false },
           { id:'rm3', text:'Review race morning schedule', checked:false },
         ]},
         { id:'gear', label:'Gear', emoji:'👟', color:'#10b981', items:[
@@ -482,5 +479,6 @@ Respond ONLY with valid JSON, no markdown:
       return res.status(200).json({ sections: fallback })
     }
   }
-}
 
+  return res.status(400).json({ error: `Unknown action: ${action}` })
+}
