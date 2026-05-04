@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 
+const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
+
 export default function RaceSearchPrompt() {
   const navigate = useNavigate()
   const location = useLocation()
@@ -8,117 +10,135 @@ export default function RaceSearchPrompt() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    // Slight delay so the card animates in smoothly
     setTimeout(() => setVisible(true), 80)
-
     const style = document.createElement('style')
     style.id = 'rp-rsp-styles'
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       @keyframes tickerScroll { from{transform:translateX(0);} to{transform:translateX(-50%);} }
-      @keyframes fadeUp { from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
-      .rp-primary { width:100%; padding:14px; border:none; background:#1B2A4A; color:#fff; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; cursor:pointer; transition:background 0.2s,transform 0.1s; border-radius:6px; }
-      .rp-primary:hover { background:#C9A84C; }
-      .rp-primary:active { transform:scale(0.985); }
-      .rp-secondary { width:100%; padding:13px; border:1.5px solid #e2e6ed; background:#fff; color:#1B2A4A; font-family:'Barlow Condensed',sans-serif; font-size:13px; font-weight:600; letter-spacing:0.25em; text-transform:uppercase; cursor:pointer; transition:border-color 0.2s,background 0.2s; border-radius:6px; }
-      .rp-secondary:hover { border-color:#1B2A4A; background:#f8f9fb; }
-      .source-pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:12px; font-family:'Barlow Condensed',sans-serif; font-size:10px; font-weight:600; letter-spacing:1.5px; text-transform:uppercase; }
+      @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
+      @keyframes pulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+      .rsp-feature { display:flex; align-items:flex-start; gap:14px; padding:16px; border-radius:12px; border:1.5px solid #e2e6ed; background:#fff; transition:border-color 0.2s; }
+      .rsp-feature:hover { border-color:rgba(201,168,76,0.4); }
     `
     if (!document.getElementById('rp-rsp-styles')) document.head.appendChild(style)
     return () => document.getElementById('rp-rsp-styles')?.remove()
   }, [])
 
-  const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
-
-  // Sources we'll search
-  const SOURCES = [
-    { name:'Athlinks',  color:'#7c3aed', desc:'Verified race results from thousands of events', optional:false },
-    { name:'Strava',    color:'#FC4C02', desc:'We\'ll scan for activities that look like recorded races', optional:true },
-  ]
-
   return (
-    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 0' }}>
+    <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 20px' }}>
+
       {/* Ticker background */}
       <div style={{ position:'fixed', top:'50%', transform:'translateY(-55%)', left:0, whiteSpace:'nowrap', pointerEvents:'none', zIndex:0 }}>
         <div style={{ display:'inline-flex', alignItems:'center', animation:'tickerScroll 60s linear infinite' }}>
-          {TICKER.map((d,i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,24vw,340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.055)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>)}
+          {TICKER.map((d,i) => <span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,24vw,340px)', color:'transparent', WebkitTextStroke:'1px rgba(27,42,74,0.045)', lineHeight:1, padding:'0 40px', userSelect:'none', flexShrink:0 }}>{d}</span>)}
         </div>
       </div>
 
-      <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'40px 36px 36px', width:'100%', maxWidth:'420px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10),0 0 0 1px rgba(27,42,74,0.07)', opacity:visible?1:0, transform:visible?'translateY(0)':'translateY(16px)', transition:'opacity 0.4s ease, transform 0.4s ease' }}>
+      <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:'460px', opacity:visible?1:0, transform:visible?'translateY(0)':'translateY(20px)', transition:'opacity 0.45s ease, transform 0.45s ease' }}>
 
         {/* Brand mark */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'28px' }}>
-          <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'32px' }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
         </div>
 
-        {/* Icon */}
+        {/* Step indicator */}
+        <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'28px' }}>
+          <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+          <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
+          <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+        </div>
+
+        {/* Pacer icon */}
         <div style={{ display:'flex', justifyContent:'center', marginBottom:'20px' }}>
-          <div style={{ width:64, height:64, borderRadius:'50%', background:'rgba(201,168,76,0.08)', border:'1.5px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
-              <circle cx="11" cy="11" r="7" stroke="#C9A84C" strokeWidth="1.5"/>
-              <path d="M16.5 16.5L21 21" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
-              <path d="M8 11h6M11 8v6" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+          <div style={{ width:72, height:72, borderRadius:'18px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 32px rgba(27,42,74,0.2)', position:'relative' }}>
+            <span style={{ fontSize:'32px', lineHeight:1 }}>⚡</span>
+            {/* Pulse ring */}
+            <div style={{ position:'absolute', inset:-6, borderRadius:'24px', border:'1.5px solid rgba(201,168,76,0.25)', animation:'pulse 2s ease infinite' }} />
           </div>
         </div>
 
         {/* Headline */}
-        <div style={{ textAlign:'center', marginBottom:'24px' }}>
-          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 8px', letterSpacing:'1.5px', lineHeight:1 }}>
-            {firstName ? `LET'S FIND YOUR RACES, ${firstName.toUpperCase()}` : "LET'S FIND YOUR RACES"}
+        <div style={{ textAlign:'center', marginBottom:'28px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'10px' }}>
+            Meet Your AI Running Coach
+          </div>
+          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,8vw,52px)', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>
+            {firstName ? `${firstName.toUpperCase()}, MEET PACER` : 'MEET PACER'}
           </h1>
-          <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.7 }}>
-            We'll search your race history and automatically populate your Race Passport — no manual entry needed.
+          <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.75 }}>
+            Pacer is your personal AI running coach built into Race Passport. It learns your race history, celebrates your wins, and helps you figure out what's next.
           </p>
         </div>
 
-        {/* Sources */}
-        <div style={{ background:'#f8f9fb', border:'1px solid #e2e6ed', borderRadius:'8px', padding:'16px', marginBottom:'24px' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'12px' }}>We'll search</div>
-          <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-            {SOURCES.map(s => (
-              <div key={s.name} style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                <div style={{ width:32, height:32, borderRadius:'8px', background:`${s.color}15`, border:`1px solid ${s.color}30`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'10px', color:s.color, letterSpacing:'0.5px' }}>{s.name.slice(0,2).toUpperCase()}</span>
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#1B2A4A', letterSpacing:'0.5px' }}>{s.name}</div>
-                    {s.optional && <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', textTransform:'uppercase', border:'1px solid #e2e6ed', borderRadius:'4px', padding:'1px 5px' }}>Optional</span>}
-                  </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#9aa5b4' }}>{s.desc}</div>
-                </div>
-                <div style={{ marginLeft:'auto', flexShrink:0 }}>
-                  <div style={{ width:7, height:7, borderRadius:'50%', background:s.optional?'#e2e6ed':'#C9A84C' }} />
-                </div>
+        {/* Feature list */}
+        <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'28px' }}>
+
+          {/* Build your passport */}
+          <div className="rsp-feature">
+            <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <span style={{ fontSize:'18px' }}>🏅</span>
+            </div>
+            <div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Build Your Race Passport</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
+                Type any race name and Pacer instantly looks it up — date, location, distance, all filled in automatically.
               </div>
-            ))}
+            </div>
+          </div>
+
+          {/* Personalized insights */}
+          <div className="rsp-feature">
+            <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(27,42,74,0.07)', border:'1.5px solid rgba(27,42,74,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <span style={{ fontSize:'18px' }}>📊</span>
+            </div>
+            <div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Personalized Coaching Insights</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
+                Pacer analyzes your results, celebrates PRs, spots trends, and gives you one clear next step — always positive, always specific to you.
+              </div>
+            </div>
+          </div>
+
+          {/* Strava */}
+          <div className="rsp-feature" style={{ borderColor:'rgba(252,76,2,0.2)', background:'rgba(252,76,2,0.02)' }}>
+            <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.08)', border:'1.5px solid rgba(252,76,2,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            </div>
+            <div>
+              <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'4px' }}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1 }}>Connect Strava</div>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', background:'rgba(252,76,2,0.08)', border:'1px solid rgba(252,76,2,0.2)', borderRadius:'4px', padding:'2px 6px', textTransform:'uppercase' }}>Optional</span>
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
+                Link Strava on the next screen to pull in your activity data — maps, pace, elevation, and race matches added automatically.
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Privacy note */}
-        <div style={{ display:'flex', alignItems:'flex-start', gap:'8px', marginBottom:'24px' }}>
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" style={{ flexShrink:0, marginTop:'2px' }}>
-            <path d="M8 1.5L2 4v4c0 3.3 2.5 6.4 6 7.1C11.5 14.4 14 11.3 14 8V4L8 1.5z" stroke="#9aa5b4" strokeWidth="1.2" strokeLinejoin="round"/>
-          </svg>
-          <p style={{ fontSize:'11px', color:'#9aa5b4', margin:0, fontFamily:"'Barlow Condensed',sans-serif", lineHeight:1.5 }}>
-            We only search using your name and date of birth. No passwords or accounts are accessed. You'll review everything before it's added.
-          </p>
-        </div>
-
-        {/* CTAs */}
-        <button className="rp-primary" onClick={() => navigate('/race-import', { state:{ firstName } })} style={{ marginBottom:'10px' }}>
-          Search My Race History →
-        </button>
-        <button className="rp-secondary" onClick={() => navigate('/build-passport', { state:{ firstName } })}>
-          Not Now — Skip This Step
+        {/* CTA */}
+        <button
+          onClick={() => navigate('/race-import', { state:{ firstName } })}
+          style={{ width:'100%', padding:'17px', border:'none', borderRadius:'14px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', marginBottom:'10px', transition:'background 0.2s' }}
+          onMouseEnter={e => e.currentTarget.style.background='#C9A84C'}
+          onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>
+          Let's Build My Passport →
         </button>
 
-        <p style={{ textAlign:'center', fontSize:'11px', color:'#b0b8c4', margin:'16px 0 0', lineHeight:1.6, fontWeight:300 }}>
-          You can always import your races later from your Profile.
+        <button
+          onClick={() => navigate('/build-passport', { state:{ firstName } })}
+          style={{ width:'100%', padding:'14px', border:'1.5px solid #e2e6ed', borderRadius:'14px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+          onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
+          onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
+          Skip — I'll Add Races Later
+        </button>
+
+        <p style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#b0b8c4', margin:'16px 0 0', lineHeight:1.6 }}>
+          You can always add races anytime from your Passport page.
         </p>
+
       </div>
     </div>
   )
