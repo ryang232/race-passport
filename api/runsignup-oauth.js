@@ -136,7 +136,12 @@ export default async function handler(req, res) {
       }
 
       const data = await r.json()
-      const raw = data?.registered_races || []
+      // RunSignup may nest under different keys — try all common shapes
+      const raw = data?.registered_races
+        || data?.races
+        || data?.data?.registered_races
+        || data?.data?.races
+        || (Array.isArray(data) ? data : [])
 
       const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -201,7 +206,7 @@ export default async function handler(req, res) {
           return b.date_sort.localeCompare(a.date_sort)
         })
 
-      return res.status(200).json({ races, total: races.length })
+      return res.status(200).json({ races, total: races.length, _debug_keys: Object.keys(data || {}) })
     } catch (e) {
       return res.status(500).json({ error: e.message, races: [] })
     }
