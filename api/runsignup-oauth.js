@@ -125,7 +125,9 @@ export default async function handler(req, res) {
     if (!access_token) return res.status(400).json({ error: 'Missing access_token' })
 
     try {
-      const url = `https://runsignup.com/Rest/user/registered-races?format=json&results_per_page=100&include_past_races=T`
+      const API_KEY    = process.env.RUNSIGNUP_API_KEY
+      const API_SECRET = process.env.RUNSIGNUP_API_SECRET
+      const url = `https://api.runsignup.com/rest/user/registered-races?format=json&api_key=${API_KEY}&api_secret=${API_SECRET}`
       const r = await fetch(url, {
         headers: { Authorization: `Bearer ${access_token}` },
       })
