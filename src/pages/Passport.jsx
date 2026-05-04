@@ -21,16 +21,69 @@ const RYAN_RACES = [
 ]
 const MOCK_GOAL = { type:'distance', distance:'Half Marathon', label:'13.1', targetDate:'Sep 2026', suggestedRace:'Parks Half Marathon', suggestedRaceId:'d1' }
 
-function PassportCard({ race, index, onClick, t, compact }) {
+// ── Delete Confirmation Modal ─────────────────────────────────────────────────
+function DeleteConfirmModal({ race, onConfirm, onCancel }) {
+  const colors = getDistanceColor(race.distance)
+  return (
+    <div onClick={onCancel} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.65)', zIndex:200, display:'flex', alignItems:'flex-end', justifyContent:'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background:'#fff', borderRadius:'20px 20px 0 0', padding:'24px 24px 48px', width:'100%', maxWidth:'480px', boxShadow:'0 -8px 40px rgba(0,0,0,0.25)' }}>
+        <div style={{ width:36, height:4, borderRadius:2, background:'#e2e6ed', margin:'0 auto 20px' }} />
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:'#1B2A4A', letterSpacing:'1px', marginBottom:'4px' }}>Remove This Race?</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#9aa5b4', marginBottom:'18px', lineHeight:1.5 }}>
+          This will permanently delete this stamp from your Passport and Home page. This cannot be undone.
+        </div>
+        <div style={{ background:'#f8f9fb', borderLeft:`4px solid ${colors.stampBorder}`, borderRadius:'10px', padding:'14px 16px', marginBottom:'24px' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#1B2A4A', marginBottom:'2px' }}>{race.name}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#9aa5b4' }}>
+            {race.location} · {race.month} {race.year} · {race.distance}
+          </div>
+        </div>
+        <div style={{ display:'flex', gap:'10px' }}>
+          <button onClick={onCancel}
+            style={{ flex:1, padding:'14px', border:'1.5px solid #e2e6ed', borderRadius:'12px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase' }}>
+            Keep It
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex:1, padding:'14px', border:'none', borderRadius:'12px', background:'#c53030', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+            onMouseEnter={e => e.currentTarget.style.background='#b91c1c'}
+            onMouseLeave={e => e.currentTarget.style.background='#c53030'}>
+            Yes, Delete It
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Passport Card ─────────────────────────────────────────────────────────────
+function PassportCard({ race, index, onClick, onDelete, t, compact }) {
   const [hovered, setHovered] = useState(false)
+  const [showDeleteBtn, setShowDeleteBtn] = useState(false)
   const colors = getDistanceColor(race.distance)
   const cleaned = race.distance.replace(' mi','').replace(' miles','')
   const fs = cleaned.length>4 ? 14 : cleaned.length>2 ? 17 : 24
   const stampSize = compact ? 48 : 72
 
   return (
-    <div onClick={onClick} onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer', border:hovered?`2px solid #C9A84C`:`1.5px solid ${t.border}`, transition:'all 0.2s', transform:hovered&&!compact?'translateY(-6px)':'none', boxShadow:hovered?`0 16px 40px rgba(201,168,76,0.12)`:t.cardShadow, background:t.surface, animation:'fadeUp 0.4s ease both', animationDelay:`${index*60}ms` }}>
+    <div
+      onClick={onClick}
+      onMouseEnter={() => { setHovered(true); setShowDeleteBtn(true) }}
+      onMouseLeave={() => { setHovered(false); setShowDeleteBtn(false) }}
+      style={{ borderRadius:'14px', overflow:'hidden', cursor:'pointer', border:hovered?`2px solid #C9A84C`:`1.5px solid ${t.border}`, transition:'all 0.2s', transform:hovered&&!compact?'translateY(-6px)':'none', boxShadow:hovered?`0 16px 40px rgba(201,168,76,0.12)`:t.cardShadow, background:t.surface, animation:'fadeUp 0.4s ease both', animationDelay:`${index*60}ms`, position:'relative' }}>
+
+      {/* Delete button — appears on hover */}
+      {showDeleteBtn && (
+        <button
+          onClick={e => { e.stopPropagation(); onDelete(race) }}
+          style={{ position:'absolute', top:8, left:8, zIndex:20, width:26, height:26, borderRadius:'50%', background:'rgba(197,48,48,0.85)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s', boxShadow:'0 2px 8px rgba(0,0,0,0.2)' }}
+          onMouseEnter={e => { e.currentTarget.style.background='#c53030'; e.currentTarget.style.transform='scale(1.1)' }}
+          onMouseLeave={e => { e.currentTarget.style.background='rgba(197,48,48,0.85)'; e.currentTarget.style.transform='scale(1)' }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <path d="M2 2l6 6M8 2l-6 6" stroke="#fff" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+        </button>
+      )}
+
       {/* Navy header with stamp */}
       <div style={{ background:'#1B2A4A', padding: compact ? '10px 12px' : '20px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', position:'relative', minHeight: compact ? '60px' : '100px' }}>
         {!compact && <div style={{ position:'absolute', top:10, left:14, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.2)', textTransform:'uppercase' }}>PAGE {String(index+1).padStart(2,'0')}</div>}
@@ -45,9 +98,10 @@ function PassportCard({ race, index, onClick, t, compact }) {
         </div>
         {race.pr && <div style={{ position:'absolute', top: compact ? 6 : 10, right: compact ? 8 : 12, background:'#C9A84C', borderRadius:'4px', padding:'2px 6px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A' }}>PR</div>}
       </div>
+
       {/* Bottom: time */}
       <div style={{ padding: compact ? '8px 12px' : '12px 16px 14px', borderTop:`1px solid ${t.borderLight}` }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact ? '16px' : '20px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{race.time}</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact ? '16px' : '20px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{race.time || '—'}</div>
         <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'2px' }}>Finish Time</div>
         {!compact && (
           <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 10px', background:'rgba(201,168,76,0.08)', border:'1px dashed rgba(201,168,76,0.35)', borderRadius:'6px', marginTop:'8px' }}>
@@ -111,6 +165,8 @@ export default function Passport() {
   const [showDropdown, setShowDropdown]   = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
   const [filter, setFilter]               = useState('ALL')
+  const [deleteTarget, setDeleteTarget]   = useState(null) // race to confirm delete
+  const [deleting, setDeleting]           = useState(false)
   const dropdownRef = useRef(null)
 
   useEffect(() => {
@@ -122,7 +178,17 @@ export default function Passport() {
       if (praces && praces.length > 0) {
         setPassportRaces(praces.map(r => {
           const dp = (r.date||'').split(' ')
-          return { id:r.id, distance:r.distance||'', name:r.name, location:r.location||`${r.city||''}${r.city&&r.state?', ':''}${r.state||''}`, month:dp[0]||'', year:dp[dp.length-1]||'', time:r.time||'', pr:r.is_pr||false }
+          return {
+            id: r.id,
+            distance: r.distance||'',
+            name: r.name,
+            location: r.location||`${r.city||''}${r.city&&r.state?', ':''}${r.state||''}`,
+            month: dp[0]||'',
+            year: dp[dp.length-1]||'',
+            time: r.time||'',
+            pr: r.is_pr||false,
+            _supabase: true, // flag so we know to delete from DB
+          }
         }))
       }
     }
@@ -135,6 +201,20 @@ export default function Passport() {
     document.addEventListener('mousedown', handleClick)
     return () => { document.getElementById('rp-passport-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
+
+  // ── Delete handler ────────────────────────────────────────────────────────
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setDeleting(true)
+    try {
+      if (deleteTarget._supabase && user) {
+        await supabase.from('passport_races').delete().eq('id', deleteTarget.id)
+      }
+      setPassportRaces(p => p.filter(r => r.id !== deleteTarget.id))
+    } catch(e) { console.error('Delete error:', e) }
+    setDeleting(false)
+    setDeleteTarget(null)
+  }
 
   const firstName = profile?.full_name?.split(' ')[0] || 'Ryan'
   const lastName  = profile?.full_name?.split(' ').slice(1).join(' ') || 'Groene'
@@ -253,6 +333,11 @@ export default function Passport() {
 
       {/* GRID */}
       <div style={{ padding: isMobile ? '14px 16px 80px' : '28px 40px 80px' }}>
+        {/* Hint text */}
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginBottom:'10px', letterSpacing:'0.5px' }}>
+          Hover any stamp to delete it
+        </div>
+
         <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px', flexWrap:'wrap', gap:'8px' }}>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
             {FILTERS.map(f => (
@@ -268,11 +353,28 @@ export default function Passport() {
 
         <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(auto-fill,minmax(280px,1fr))', gap: isMobile ? '10px' : '20px' }}>
           {filteredRaces.map((race, i) => (
-            <PassportCard key={race.id} race={race} index={i} t={t} compact={isMobile} onClick={() => navigate(`/race/${race.id}`)} />
+            <PassportCard
+              key={race.id}
+              race={race}
+              index={i}
+              t={t}
+              compact={isMobile}
+              onClick={() => navigate(`/race/${race.id}`)}
+              onDelete={r => setDeleteTarget(r)}
+            />
           ))}
         </div>
         <GoalSection goal={MOCK_GOAL} navigate={navigate} t={t} isMobile={isMobile} />
       </div>
+
+      {/* Delete confirmation modal */}
+      {deleteTarget && (
+        <DeleteConfirmModal
+          race={deleteTarget}
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setDeleteTarget(null)}
+        />
+      )}
     </div>
   )
 }
