@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, useEffect } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 import { ThemeProvider } from './context/ThemeContext'
