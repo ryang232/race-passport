@@ -16,8 +16,7 @@ export default function RaceSearchPrompt() {
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       @keyframes tickerScroll { from{transform:translateX(0);} to{transform:translateX(-50%);} }
-      @keyframes fadeUp { from{opacity:0;transform:translateY(16px);} to{opacity:1;transform:translateY(0);} }
-      @keyframes pulse { 0%,100%{opacity:0.4;} 50%{opacity:1;} }
+      @keyframes pulse { 0%,100%{opacity:0.35;} 50%{opacity:1;} }
       .rsp-feature { display:flex; align-items:flex-start; gap:14px; padding:16px; border-radius:12px; border:1.5px solid #e2e6ed; background:#fff; transition:border-color 0.2s; }
       .rsp-feature:hover { border-color:rgba(201,168,76,0.4); }
     `
@@ -38,23 +37,25 @@ export default function RaceSearchPrompt() {
       <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:'460px', opacity:visible?1:0, transform:visible?'translateY(0)':'translateY(20px)', transition:'opacity 0.45s ease, transform 0.45s ease' }}>
 
         {/* Brand mark */}
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'32px' }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'24px' }}>
           <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
           <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
         </div>
 
         {/* Step indicator */}
-        <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'28px' }}>
+        <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'8px' }}>
           <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+        </div>
+        <div style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'28px' }}>
+          Step 2 — Build Your Passport
         </div>
 
         {/* Pacer icon */}
         <div style={{ display:'flex', justifyContent:'center', marginBottom:'20px' }}>
           <div style={{ width:72, height:72, borderRadius:'18px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 32px rgba(27,42,74,0.2)', position:'relative' }}>
             <span style={{ fontSize:'32px', lineHeight:1 }}>⚡</span>
-            {/* Pulse ring */}
             <div style={{ position:'absolute', inset:-6, borderRadius:'24px', border:'1.5px solid rgba(201,168,76,0.25)', animation:'pulse 2s ease infinite' }} />
           </div>
         </div>
@@ -62,17 +63,17 @@ export default function RaceSearchPrompt() {
         {/* Headline */}
         <div style={{ textAlign:'center', marginBottom:'28px' }}>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'10px' }}>
-            Meet Your AI Running Coach
+            Your AI Race Intelligence
           </div>
           <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,8vw,52px)', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>
             {firstName ? `${firstName.toUpperCase()}, MEET PACER` : 'MEET PACER'}
           </h1>
           <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:'#6b7a8d', margin:0, fontWeight:300, lineHeight:1.75 }}>
-            Pacer is your personal AI running coach built into Race Passport. It learns your race history, celebrates your wins, and helps you figure out what's next.
+            Pacer is built into Race Passport to analyze your race history, celebrate your achievements, and surface insights about your racing career — automatically.
           </p>
         </div>
 
-        {/* Feature list */}
+        {/* Feature cards */}
         <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'28px' }}>
 
           {/* Build your passport */}
@@ -83,36 +84,33 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Build Your Race Passport</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Type any race name and Pacer instantly looks it up — date, location, distance, all filled in automatically.
+                Search any race by name, year, and distance — Pacer looks it up and fills in location and date. You verify, then it's stamped to your Passport.
               </div>
             </div>
           </div>
 
-          {/* Personalized insights */}
+          {/* Race intelligence */}
           <div className="rsp-feature">
             <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(27,42,74,0.07)', border:'1.5px solid rgba(27,42,74,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <span style={{ fontSize:'18px' }}>📊</span>
             </div>
             <div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Personalized Coaching Insights</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Race Intelligence, Personalized</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Pacer analyzes your results, celebrates PRs, spots trends, and gives you one clear next step — always positive, always specific to you.
+                Pacer reads your results, spots trends across your race history, and gives you specific insights — always positive, always about you.
               </div>
             </div>
           </div>
 
-          {/* Strava */}
+          {/* Strava — no Optional badge */}
           <div className="rsp-feature" style={{ borderColor:'rgba(252,76,2,0.2)', background:'rgba(252,76,2,0.02)' }}>
             <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.08)', border:'1.5px solid rgba(252,76,2,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
             </div>
             <div>
-              <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'4px' }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1 }}>Connect Strava</div>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', background:'rgba(252,76,2,0.08)', border:'1px solid rgba(252,76,2,0.2)', borderRadius:'4px', padding:'2px 6px', textTransform:'uppercase' }}>Optional</span>
-              </div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Connect Strava</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Link Strava on the next screen to pull in your activity data — maps, pace, elevation, and race matches added automatically.
+                Link Strava on the next screen to add race maps, elevation, and pace data to your Passport automatically.
               </div>
             </div>
           </div>
