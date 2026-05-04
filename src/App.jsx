@@ -44,12 +44,14 @@ function RunSignupCallback() {
     }
 
     // Exchange code for token via our serverless function
-    fetch(`/api/runsignup-oauth?action=exchange&code=${encodeURIComponent(code)}`)
+    const verifier = sessionStorage.getItem('runsignup_code_verifier') || ''
+    fetch(`/api/runsignup-oauth?action=exchange&code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(verifier)}`)
       .then(r => r.json())
       .then(data => {
         if (data.access_token) {
           sessionStorage.setItem('runsignup_access_token', data.access_token)
           if (data.refresh_token) sessionStorage.setItem('runsignup_refresh_token', data.refresh_token)
+          sessionStorage.removeItem('runsignup_code_verifier')
         }
         const returnTo = sessionStorage.getItem('runsignup_return_to') || '/race-import'
         navigate(returnTo, { replace: true })
