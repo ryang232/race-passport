@@ -447,6 +447,7 @@ export default function RaceImport() {
     try {
       const r = await fetch(`/api/runsignup-oauth?action=auth_url${uid ? `&user_id=${uid}` : ''}`)
       const d = await r.json()
+      if (d.code_verifier) sessionStorage.setItem('runsignup_code_verifier', d.code_verifier)
       if (d.url) window.location.href = d.url
     } catch(e) { console.error('RunSignup auth error:', e) }
   }
@@ -454,15 +455,17 @@ export default function RaceImport() {
   const handleRunSignupCallback = async (code) => {
     setRunSignupLoading(true)
     try {
-      const r = await fetch(`/api/runsignup-oauth?action=exchange&code=${encodeURIComponent(code)}`)
+      const verifier = sessionStorage.getItem('runsignup_code_verifier') || ''
+      const r = await fetch(`/api/runsignup-oauth?action=exchange&code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(verifier)}`)
       const d = await r.json()
       if (d.access_token) {
         sessionStorage.setItem('runsignup_access_token', d.access_token)
+        if (d.refresh_token) sessionStorage.setItem('runsignup_refresh_token', d.refresh_token)
+        sessionStorage.removeItem('runsignup_code_verifier')
         setRunSignupConnected(true)
-        // Clean URL
         window.history.replaceState({}, '', '/race-import')
       }
-    } catch(e) {}
+    } catch(e) { console.error('RunSignup callback error:', e) }
     setRunSignupLoading(false)
   }
 
