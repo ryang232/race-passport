@@ -8,22 +8,88 @@ import { useStrava, looksLikeRace } from '../lib/useStrava'
 import { useIsMobile } from '../lib/useIsMobile'
 
 const RYAN_RACE_DATA = {
-  1:  { id:1,  distance:'10K',  name:'Sole of the City 10K',          location:'Baltimore, MD',   date:'October 16, 2021',   time:'47:49',   pace:'7:42/mi',  place:null, elevation:'190ft', weather:'64°F, Cloudy',       pr:true,  story:'', photos:[], gear:[], splits:[] },
-  2:  { id:2,  distance:'10K',  name:'Bay Bridge Run',                 location:'Annapolis, MD',   date:'November 7, 2021',   time:'50:57',   pace:'8:12/mi',  place:null, elevation:'140ft', weather:'52°F, Sunny',        pr:false, story:'', photos:[], gear:[], splits:[] },
-  3:  { id:3,  distance:'10K',  name:'Baltimore Running Festival 10K', location:'Baltimore, MD',   date:'October 9, 2021',    time:'58:03',   pace:'9:21/mi',  place:null, elevation:'185ft', weather:'58°F, Partly Cloudy', pr:false, story:'', photos:[], gear:[], splits:[] },
-  4:  { id:4,  distance:'13.1', name:'Holiday Half Marathon',          location:'Annandale, VA',   date:'December 4, 2021',   time:'2:19:05', pace:'10:37/mi', place:null, elevation:'350ft', weather:'41°F, Clear',        pr:false, story:'', photos:[], gear:[], splits:[] },
-  5:  { id:5,  distance:'26.2', name:'Marine Corps Marathon',          location:'Washington, DC',  date:'October 22, 2023',   time:'4:45:42', pace:'10:55/mi', place:null, elevation:'900ft', weather:null,                 pr:false, story:'', photos:[], gear:[], splits:[] },
-  6:  { id:6,  distance:'26.2', name:'LA Marathon',                    location:'Los Angeles, CA', date:'March 19, 2023',     time:'4:44:47', pace:'10:53/mi', place:null, elevation:'700ft', weather:null,                 pr:true,  story:'', photos:[], gear:[], splits:[] },
-  7:  { id:7,  distance:'5K',   name:'Downtown Columbia Turkey Trot',  location:'Columbia, MD',    date:'November 28, 2024',  time:'28:16',   pace:'9:06/mi',  place:null, elevation:'95ft',  weather:'38°F, Clear',        pr:true,  story:'', photos:[], gear:[], splits:[] },
-  8:  { id:8,  distance:'13.1', name:'Austin Half Marathon',           location:'Austin, TX',      date:'February 16, 2025',  time:'1:57:40', pace:'8:59/mi',  place:null, elevation:'290ft', weather:'55°F, Sunny',        pr:true,  story:'', photos:[], gear:[], splits:[] },
-  9:  { id:9,  distance:'70.3', name:'IRONMAN 70.3 Eagleman',          location:'Cambridge, MD',   date:'June 8, 2025',       time:'6:32:08', pace:null,       place:null, elevation:'Flat',  weather:'78°F, Humid',        pr:true,  story:'', photos:[], gear:[],
+  1:  { id:1,  distance:'10K',  name:'Sole of the City 10K',          location:'Baltimore, MD',   date:'October 16, 2021',   time:'47:49',   place:null, elevation:'190ft', weather:'64°F, Cloudy',       pr:true,  story:'', photos:[], gear:[], splits:[] },
+  2:  { id:2,  distance:'10K',  name:'Bay Bridge Run',                 location:'Annapolis, MD',   date:'November 7, 2021',   time:'50:57',   place:null, elevation:'140ft', weather:'52°F, Sunny',        pr:false, story:'', photos:[], gear:[], splits:[] },
+  3:  { id:3,  distance:'10K',  name:'Baltimore Running Festival 10K', location:'Baltimore, MD',   date:'October 9, 2021',    time:'58:03',   place:null, elevation:'185ft', weather:'58°F, Partly Cloudy', pr:false, story:'', photos:[], gear:[], splits:[] },
+  4:  { id:4,  distance:'13.1', name:'Holiday Half Marathon',          location:'Annandale, VA',   date:'December 4, 2021',   time:'2:19:05', place:null, elevation:'350ft', weather:'41°F, Clear',        pr:false, story:'', photos:[], gear:[], splits:[] },
+  5:  { id:5,  distance:'26.2', name:'Marine Corps Marathon',          location:'Washington, DC',  date:'October 22, 2023',   time:'4:45:42', place:null, elevation:'900ft', weather:null,                 pr:false, story:'', photos:[], gear:[], splits:[] },
+  6:  { id:6,  distance:'26.2', name:'LA Marathon',                    location:'Los Angeles, CA', date:'March 19, 2023',     time:'4:44:47', place:null, elevation:'700ft', weather:null,                 pr:true,  story:'', photos:[], gear:[], splits:[] },
+  7:  { id:7,  distance:'5K',   name:'Downtown Columbia Turkey Trot',  location:'Columbia, MD',    date:'November 28, 2024',  time:'28:16',   place:null, elevation:'95ft',  weather:'38°F, Clear',        pr:true,  story:'', photos:[], gear:[], splits:[] },
+  8:  { id:8,  distance:'13.1', name:'Austin Half Marathon',           location:'Austin, TX',      date:'February 16, 2025',  time:'1:57:40', place:null, elevation:'290ft', weather:'55°F, Sunny',        pr:true,  story:'', photos:[], gear:[], splits:[] },
+  9:  { id:9,  distance:'70.3', name:'IRONMAN 70.3 Eagleman',          location:'Cambridge, MD',   date:'June 8, 2025',       time:'6:32:08', place:null, elevation:'Flat',  weather:'78°F, Humid',        pr:true,  story:'', photos:[], gear:[],
     splits:[{ label:'Swim', time:'0:50:09' },{ label:'T1', time:'0:06:17' },{ label:'Bike', time:'3:15:09' },{ label:'T2', time:'0:07:09' },{ label:'Run', time:'2:13:24' },{ label:'Total', time:'6:32:08' }] },
-  10: { id:10, distance:'5K',   name:'Downtown Columbia Turkey Trot',  location:'Columbia, MD',    date:'November 27, 2025',  time:'35:09',   pace:'11:19/mi', place:null, elevation:'95ft',  weather:'44°F, Clear',        pr:false, story:'', photos:[], gear:[], splits:[] },
+  10: { id:10, distance:'5K',   name:'Downtown Columbia Turkey Trot',  location:'Columbia, MD',    date:'November 27, 2025',  time:'35:09',   place:null, elevation:'95ft',  weather:'44°F, Clear',        pr:false, story:'', photos:[], gear:[], splits:[] },
 }
 
 const ALL_IDS = [1,2,3,4,5,6,7,8,9,10]
 const STICKER_OPTIONS = ['🏅','🔥','💪','🎉','⚡','🏆','👟','💦','🌟','🎯','💯','🏃','🚴','🏊']
 const GEAR_CATEGORIES = ['Shoes','Watch','Outfit','Socks','Sunglasses','Hat','Headphones','Other']
+
+// ── Pace calculator ───────────────────────────────────────────────────────────
+function calcPace(timeStr, distance) {
+  if (!timeStr || !distance) return null
+  if (['70.3','140.6'].includes(distance)) return null
+  const MILES = { '5K':3.10559, '10K':6.21371, '10 mi':10, '13.1':13.1, '26.2':26.2, '50K':31.0686, 'Ultra':50 }
+  const miles = MILES[distance]
+  if (!miles) return null
+  const parts = timeStr.split(':').map(Number)
+  let secs = 0
+  if (parts.length === 3) secs = parts[0]*3600 + parts[1]*60 + parts[2]
+  else if (parts.length === 2) secs = parts[0]*60 + (parts[1]||0)
+  else return null
+  if (!secs) return null
+  const spm = secs / miles
+  const mm = Math.floor(spm / 60)
+  const ss = Math.round(spm % 60)
+  return `${mm}:${String(ss).padStart(2,'0')}/mi`
+}
+
+// ── Historical weather via Open-Meteo (free, no API key) ─────────────────────
+async function fetchWeather(location, dateStr) {
+  if (!location || !dateStr) return null
+  try {
+    // Geocode city
+    const city = location.split(',')[0]?.trim()
+    if (!city) return null
+    const geoResp = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=1&language=en&format=json`)
+    const geoData = await geoResp.json()
+    const loc = geoData.results?.[0]
+    if (!loc) return null
+
+    // Normalize date to YYYY-MM-DD
+    let date = dateStr
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      date = dateStr
+    } else {
+      const d = new Date(dateStr)
+      if (isNaN(d)) return null
+      date = d.toISOString().split('T')[0]
+    }
+
+    // Must be in the past for archive API
+    if (date >= new Date().toISOString().split('T')[0]) return null
+
+    const wxResp = await fetch(`https://archive-api.open-meteo.com/v1/archive?latitude=${loc.latitude}&longitude=${loc.longitude}&start_date=${date}&end_date=${date}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=auto&temperature_unit=fahrenheit`)
+    const wx = await wxResp.json()
+    const d = wx.daily
+    if (!d) return null
+
+    const high = Math.round(d.temperature_2m_max?.[0])
+    const low  = Math.round(d.temperature_2m_min?.[0])
+    const wc   = d.weathercode?.[0]
+    if (isNaN(high) || isNaN(low)) return null
+
+    const WC = {
+      0:'Clear', 1:'Mainly Clear', 2:'Partly Cloudy', 3:'Cloudy',
+      45:'Fog', 48:'Fog', 51:'Drizzle', 53:'Drizzle', 55:'Drizzle',
+      61:'Rain', 63:'Rain', 65:'Heavy Rain', 71:'Snow', 73:'Snow', 75:'Heavy Snow',
+      80:'Showers', 81:'Showers', 82:'Heavy Showers', 95:'Thunderstorm', 99:'Thunderstorm',
+    }
+    const desc = WC[wc] || 'Cloudy'
+    const avg = Math.round((high + low) / 2)
+    return `${avg}°F · ${desc} · Hi ${high}° Lo ${low}°`
+  } catch(e) { return null }
+}
 
 function AddGearForm({ onAdd, onCancel, t }) {
   const [cat, setCat] = useState(''), [brand, setBrand] = useState(''), [model, setModel] = useState('')
@@ -84,7 +150,6 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
   const getLabel = seg => SEG_LABELS[getType(seg)] || getType(seg)
   const getEmoji = seg => SEG_EMOJI[getType(seg)] || '🏅'
 
-  // Draw map for a segment when its ref is ready
   const drawMap = async (seg, el) => {
     if (!el || rendered.current[seg.id] || !seg?.map?.summary_polyline) return
     rendered.current[seg.id] = true
@@ -96,8 +161,7 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
       if (!window.polyline) {
         await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js'; s.onload=resolve; document.head.appendChild(s) })
       }
-      const L    = window.L
-      const poly = window.polyline
+      const L = window.L, poly = window.polyline
       if (!poly || !L) return
       const latlngs = poly.decode(seg.map.summary_polyline)
       if (!latlngs.length) return
@@ -108,7 +172,6 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
     } catch(e) {}
   }
 
-  // Draw map whenever active segment changes
   useEffect(() => {
     const seg = triActivities[activeIdx]
     const el  = mapRefs.current[activeIdx]
@@ -120,9 +183,7 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
 
   return (
     <div>
-      {/* Map carousel */}
       <div style={{ position:'relative', marginBottom:'12px' }}>
-        {/* Map panels — only active one visible */}
         <div style={{ position:'relative', height:'240px', borderRadius:'12px', overflow:'hidden', background:t.surfaceAlt }}>
           {triActivities.map((seg, i) => (
             <div key={seg.id}
@@ -131,53 +192,35 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
             />
           ))}
         </div>
-
-        {/* Prev arrow */}
         {activeIdx > 0 && (
-          <button onClick={prev}
-            style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}
-            onMouseEnter={e => e.currentTarget.style.background='#fff'}
-            onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.9)'}>
+          <button onClick={prev} style={{ position:'absolute', left:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 3L5 7l4 4" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         )}
-
-        {/* Next arrow */}
         {activeIdx < triActivities.length - 1 && (
-          <button onClick={next}
-            style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}
-            onMouseEnter={e => e.currentTarget.style.background='#fff'}
-            onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.9)'}>
+          <button onClick={next} style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', width:36, height:36, borderRadius:'50%', background:'rgba(255,255,255,0.9)', border:'none', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 2px 8px rgba(0,0,0,0.15)', zIndex:10 }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           </button>
         )}
-
-        {/* Dot indicators */}
         <div style={{ position:'absolute', bottom:10, left:'50%', transform:'translateX(-50%)', display:'flex', gap:'6px', zIndex:10 }}>
           {triActivities.map((seg, i) => (
             <div key={seg.id} onClick={() => setActiveIdx(i)}
               style={{ width: i === activeIdx ? 20 : 6, height:6, borderRadius:'3px', background: i === activeIdx ? getColor(triActivities[i]) : 'rgba(255,255,255,0.5)', transition:'all 0.25s', cursor:'pointer' }} />
           ))}
         </div>
-
-        {/* Active segment label overlay */}
         <div style={{ position:'absolute', top:12, left:12, display:'flex', alignItems:'center', gap:'6px', background:'rgba(255,255,255,0.92)', borderRadius:'8px', padding:'5px 10px', zIndex:10 }}>
           <div style={{ width:8, height:8, borderRadius:'50%', background: getColor(triActivities[activeIdx]), flexShrink:0 }} />
           <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#1B2A4A', textTransform:'uppercase' }}>{getLabel(triActivities[activeIdx])}</span>
         </div>
       </div>
-
-      {/* Segment rows — clickable, active one highlighted */}
       <div style={{ display:'flex', flexDirection:'column', gap:'8px' }}>
         {triActivities.map((seg, i) => {
-          const color     = getColor(seg)
-          const isActive  = i === activeIdx
+          const color = getColor(seg), isActive = i === activeIdx
           return (
             <div key={seg.id} onClick={() => setActiveIdx(i)}
               style={{ display:'grid', gridTemplateColumns:'70px 1fr 1fr 1fr 1fr', gap:'6px', alignItems:'center', borderRadius:'10px', padding:'10px 12px', borderLeft:`3px solid ${color}`, cursor:'pointer', transition:'all 0.2s',
                 background: isActive ? (color === '#0EA5E9' ? 'rgba(14,165,233,0.08)' : color === '#F97316' ? 'rgba(249,115,22,0.08)' : 'rgba(252,76,2,0.08)') : t.surfaceAlt,
-                boxShadow: isActive ? `0 0 0 1.5px ${color}33` : 'none',
-              }}>
+                boxShadow: isActive ? `0 0 0 1.5px ${color}33` : 'none' }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:700, color: isActive ? color : t.text, letterSpacing:'0.5px' }}>
                 {getEmoji(seg)} {getLabel(seg)}
               </div>
@@ -202,7 +245,7 @@ function TriCarousel({ triActivities, t, fmt, fmtTime, fmtPace }) {
 
 // ── Strava Activity Section ───────────────────────────────────────────────────
 function StravaActivitySection({ race, t }) {
-  const { user }                          = useAuth()
+  const { user } = useAuth()
   const [profile, setProfile]             = useState(null)
   const [userId, setUserId]               = useState(null)
   const [activity, setActivity]           = useState(null)
@@ -214,11 +257,8 @@ function StravaActivitySection({ race, t }) {
   const [locked, setLocked]               = useState(false)
   const mapRef = useRef(null)
 
-  const isTri = ['70.3','140.6','tri','triathlon'].some(k =>
-    (race.distance || '').toLowerCase().includes(k)
-  )
+  const isTri = ['70.3','140.6','tri','triathlon'].some(k => (race.distance || '').toLowerCase().includes(k))
 
-  // Save matched activity to passport_races permanently
   const saveActivity = async (act, triActs) => {
     if (!userId || !race.id) return
     try {
@@ -233,7 +273,6 @@ function StravaActivitySection({ race, t }) {
     } catch(e) {}
   }
 
-  // Remove locked activity
   const removeActivity = async () => {
     if (!userId || !race.id) return
     try {
@@ -242,7 +281,6 @@ function StravaActivitySection({ race, t }) {
     } catch(e) {}
   }
 
-  // Load profile + check for saved activity first
   useEffect(() => {
     const load = async () => {
       if (!user) { setLoading(false); return }
@@ -250,13 +288,10 @@ function StravaActivitySection({ race, t }) {
         const { data: { session } } = await supabase.auth.getSession()
         const uid = session?.user?.id || user.id
         setUserId(uid)
-
         const { data: prof } = await supabase.from('profiles')
           .select('strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
           .eq('id', uid).single()
         setProfile(prof)
-
-        // Check for saved/locked activity
         if (race.id) {
           const { data: prace } = await supabase.from('passport_races')
             .select('strava_activity_id,strava_activity_data')
@@ -271,7 +306,7 @@ function StravaActivitySection({ race, t }) {
             }
             setLocked(true)
             setLoading(false)
-            return // Already saved — no need to hit Strava API
+            return
           }
         }
       } catch(e) {}
@@ -282,7 +317,6 @@ function StravaActivitySection({ race, t }) {
 
   const { connected, getActivities } = useStrava(profile, userId)
 
-  // Auto-match from Strava — only runs if not already locked
   useEffect(() => {
     if (!connected || !race.date || !profile || locked || activity) return
     const find = async () => {
@@ -290,14 +324,8 @@ function StravaActivitySection({ race, t }) {
       try {
         const raceDate = new Date(race.date)
         if (isNaN(raceDate)) { setLoading(false); return }
-
-        // isMonthOnly = true when we only know month+year, not the exact day
-        // ISO format (2023-10-22) and "October 22, 2023" both have a specific day
-        // "Oct 2023" / "2023-10-01" from a month-only date_sort do not
         const isISO = /^\d{4}-\d{2}-\d{2}$/.test(race.date)
-        const hasSpecificDay = isISO
-          ? raceDate.getDate() !== 1  // ISO: not the 1st means it's a real day
-          : race.date.match(/\w+ \d{1,2},/) // "October 22, 2023" style
+        const hasSpecificDay = isISO ? raceDate.getDate() !== 1 : race.date.match(/\w+ \d{1,2},/)
         const isMonthOnly = !hasSpecificDay
         let afterTs, beforeTs
         if (isMonthOnly) {
@@ -306,11 +334,9 @@ function StravaActivitySection({ race, t }) {
           afterTs  = Math.floor(startOfMonth.getTime() / 1000)
           beforeTs = Math.floor(endOfMonth.getTime() / 1000)
         } else {
-          // For standard races, search ±14 days so distance matching can find the right activity
           afterTs  = Math.floor(raceDate.getTime() / 1000) - 14 * 86400
           beforeTs = Math.floor(raceDate.getTime() / 1000) + 14 * 86400
         }
-
         const acts = await getActivities({ per_page: 60, after: afterTs })
         const inWindow = acts.filter(a => {
           const ts = Math.floor(new Date(a.start_date_local).getTime() / 1000)
@@ -323,59 +349,28 @@ function StravaActivitySection({ race, t }) {
 
         if (isTri) {
           const SWIM = ['swim'], BIKE = ['ride','virtualride','ebikeride','mountainbikeride'], RUN = ['run','virtualrun']
-          // For tri matching, require reasonable distances to avoid warmups/cooldowns
-          // 70.3: swim ~1.2mi, bike ~56mi, run ~13.1mi
-          // 140.6: swim ~2.4mi, bike ~112mi, run ~26.2mi
           const is140 = (race.distance||'').includes('140')
-          const swimPool = pool.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
-            .filter(a => (a.distance||0) > 500) // must be > 500m to be a race swim
-            .sort((a,b) => b.distance - a.distance) // longest first
-          const bikePool = pool.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
-            .filter(a => (a.distance||0)/1609.34 > (is140 ? 80 : 40)) // must be a real ride
-            .sort((a,b) => b.distance - a.distance)
-          const runPool = pool.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
-            .filter(a => (a.distance||0)/1609.34 > (is140 ? 20 : 8)) // must be a real run
-            .sort((a,b) => b.distance - a.distance)
+          const swimPool = pool.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase())).filter(a => (a.distance||0) > 500).sort((a,b) => b.distance - a.distance)
+          const bikePool = pool.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase())).filter(a => (a.distance||0)/1609.34 > (is140 ? 80 : 40)).sort((a,b) => b.distance - a.distance)
+          const runPool  = pool.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase())).filter(a => (a.distance||0)/1609.34 > (is140 ? 20 : 8)).sort((a,b) => b.distance - a.distance)
           const swim = swimPool[0], bike = bikePool[0], run = runPool[0]
           const segs = [swim, bike, run].filter(Boolean)
-          if (segs.length > 0) {
-            setTriActivities(segs); setActivity(bike || run || swim)
-            await saveActivity(null, segs)
-          } else {
-            setCandidates(inWindow.filter(a => ['run','virtualrun','swim','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
-          }
+          if (segs.length > 0) { setTriActivities(segs); setActivity(bike || run || swim); await saveActivity(null, segs) }
+          else setCandidates(inWindow.filter(a => ['run','virtualrun','swim','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
         } else {
-          // Standard race — match by distance first (most reliable), then date
-          const distMi = {
-            '5K': 3.1, '10K': 6.2, '10 mi': 10, '13.1': 13.1,
-            '26.2': 26.2, '50K': 31, '50 mi': 50, '100K': 62, '100 mi': 100,
-          }[race.distance] || null
-
+          const distMi = { '5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31,'50 mi':50,'100K':62,'100 mi':100 }[race.distance] || null
           let match = null
-
           if (distMi) {
-            // Find activity within 2% of expected distance, prefer closest to race date
             const byDist = acts.filter(a => {
               const aMi = (a.distance || 0) / 1609.34
               const type = (a.type || a.sport_type || '').toLowerCase()
               return ['run','virtualrun','walk'].includes(type) && Math.abs(aMi - distMi) / distMi <= 0.02
-            }).sort((a, b) => {
-              // Sort by proximity to race date
-              const raceTs = raceDate.getTime()
-              return Math.abs(new Date(a.start_date_local) - raceTs) - Math.abs(new Date(b.start_date_local) - raceTs)
-            })
+            }).sort((a, b) => Math.abs(new Date(a.start_date_local) - raceDate) - Math.abs(new Date(b.start_date_local) - raceDate))
             match = byDist[0]
           }
-
-          // Fallback: same-day or window match
           if (!match) match = pool.find(a => looksLikeRace(a)) || pool[0]
-
-          if (match) {
-            setActivity(match)
-            await saveActivity(match, null)
-          } else {
-            setCandidates(inWindow.filter(a => ['run','virtualrun','walk','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
-          }
+          if (match) { setActivity(match); await saveActivity(match, null) }
+          else setCandidates(inWindow.filter(a => ['run','virtualrun','walk','ride'].includes((a.type||a.sport_type||'').toLowerCase())).slice(0,10))
         }
       } catch(e) {}
       setLoading(false)
@@ -383,11 +378,9 @@ function StravaActivitySection({ race, t }) {
     find()
   }, [connected, race.date, profile, locked])
 
-  // Draw Leaflet map — handles both single activity and triathlon multi-segment
   useEffect(() => {
     const hasActivity = isTri ? triActivities.length > 0 : !!activity?.map?.summary_polyline
     if (!hasActivity || !mapRef.current || mapRendered) return
-
     const draw = async () => {
       try {
         if (!window.L) {
@@ -397,47 +390,27 @@ function StravaActivitySection({ race, t }) {
         if (!window.polyline) {
           await new Promise(resolve => { const s=document.createElement('script'); s.src='https://unpkg.com/@mapbox/polyline@1.1.1/src/polyline.js'; s.onload=resolve; document.head.appendChild(s) })
         }
-        const L    = window.L
-        const poly = window.polyline || window.Polyline
+        const L = window.L, poly = window.polyline || window.Polyline
         if (!poly || !L) return
-
         const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
-
         const allBounds = []
-
         if (isTri && triActivities.length > 0) {
-          // Color-coded segments: swim=blue, bike=orange, run=red
-          const SEGMENT_COLORS = {
-            swim:           '#0EA5E9', // sky blue
-            ride:           '#F97316', // orange
-            virtualride:    '#F97316',
-            mountainbikeride:'#F97316',
-            run:            '#FC4C02', // strava orange-red
-            virtualrun:     '#FC4C02',
-          }
-
+          const SEGMENT_COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', mountainbikeride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
           triActivities.forEach(seg => {
             if (!seg?.map?.summary_polyline) return
-            const type   = (seg.type || seg.sport_type || '').toLowerCase()
-            const color  = SEGMENT_COLORS[type] || '#1B2A4A'
+            const type = (seg.type || seg.sport_type || '').toLowerCase()
+            const color = SEGMENT_COLORS[type] || '#1B2A4A'
             const latlngs = poly.decode(seg.map.summary_polyline)
             if (!latlngs.length) return
-            const line = L.polyline(latlngs, { color, weight:3, opacity:0.9 }).addTo(map)
+            L.polyline(latlngs, { color, weight:3, opacity:0.9 }).addTo(map)
             allBounds.push(...latlngs)
           })
         } else if (activity?.map?.summary_polyline) {
           const latlngs = poly.decode(activity.map.summary_polyline)
-          if (latlngs.length) {
-            L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
-            allBounds.push(...latlngs)
-          }
+          if (latlngs.length) { L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map); allBounds.push(...latlngs) }
         }
-
-        if (allBounds.length) {
-          map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16] })
-        }
-
+        if (allBounds.length) map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16] })
         setMapRendered(true)
       } catch(e) {}
     }
@@ -449,7 +422,6 @@ function StravaActivitySection({ race, t }) {
   const fmtPace = (s,m) => { if (!s||!m) return '—'; const spm=s/(m/1609.34),mm=Math.floor(spm/60),ss=Math.round(spm%60); return `${mm}:${String(ss).padStart(2,'0')}/mi` }
   const fmtDate = d  => d ? new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''
 
-  // ── Not connected ──
   if (!loading && !connected) return (
     <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
@@ -458,12 +430,8 @@ function StravaActivitySection({ race, t }) {
           <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         </div>
         <div style={{ flex:1 }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px' }}>
-            {profile?.strava_connected ? 'Strava session expired' : 'Connect Strava to see your activity'}
-          </div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-            {profile?.strava_connected ? 'Your Strava token expired — reconnect to restore your activity data.' : "We'll match this race to your Strava activity and show your map and stats."}
-          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px' }}>Connect Strava to see your activity</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>We'll match this race to your Strava activity and show your map, pace, and elevation.</div>
         </div>
         <button onClick={async () => {
             const { data: { session } } = await supabase.auth.getSession()
@@ -477,13 +445,12 @@ function StravaActivitySection({ race, t }) {
           style={{ padding:'8px 18px', border:'1.5px solid rgba(252,76,2,0.5)', borderRadius:'8px', background:'rgba(252,76,2,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FC4C02', cursor:'pointer', textTransform:'uppercase', flexShrink:0 }}
           onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.18)'}
           onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.08)'}>
-          {profile?.strava_connected ? 'Reconnect Strava' : 'Connect Strava'}
+          Connect Strava
         </button>
       </div>
     </div>
   )
 
-  // ── Loading ──
   if (loading) return (
     <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px', marginBottom:'16px' }}>Strava Activity</div>
@@ -491,7 +458,6 @@ function StravaActivitySection({ race, t }) {
     </div>
   )
 
-  // ── No match found — manual picker ──
   if (!activity) return (
     <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}` }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
@@ -504,14 +470,11 @@ function StravaActivitySection({ race, t }) {
         </div>
         {candidates.length > 0 && (
           <button onClick={() => setShowPicker(!showPicker)}
-            style={{ padding:'7px 14px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:t.surfaceAlt, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
-            onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+            style={{ padding:'7px 14px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:t.surfaceAlt, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
             Select Manually
           </button>
         )}
       </div>
-
       {!showPicker ? (
         <div style={{ textAlign:'center', padding:'28px', border:`2px dashed ${t.border}`, borderRadius:'10px', background:t.surfaceAlt }}>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.border, letterSpacing:'1px', marginBottom:'6px' }}>NO AUTO-MATCH FOUND</div>
@@ -538,9 +501,7 @@ function StravaActivitySection({ race, t }) {
               </div>
               <div style={{ flex:1, minWidth:0 }}>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'2px', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{a.name}</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-                  {fmtDate(a.start_date_local)} · {fmt(a.distance)} · {fmtTime(a.moving_time)}
-                </div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{fmtDate(a.start_date_local)} · {fmt(a.distance)} · {fmtTime(a.moving_time)}</div>
               </div>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
@@ -550,7 +511,6 @@ function StravaActivitySection({ race, t }) {
     </div>
   )
 
-  // ── Activity matched — show map + stats ──
   return (
     <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease both' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
@@ -563,27 +523,20 @@ function StravaActivitySection({ race, t }) {
         </div>
         <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
           <button onClick={() => { removeActivity(); setShowPicker(false) }}
-            style={{ padding:'6px 12px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}
-            onMouseEnter={e => e.currentTarget.style.borderColor=t.text}
-            onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+            style={{ padding:'6px 12px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }}>
             Change
           </button>
           <a href={`https://www.strava.com/activities/${activity.id}`} target="_blank" rel="noreferrer"
-            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', border:'1.5px solid rgba(252,76,2,0.3)', borderRadius:'8px', background:'rgba(252,76,2,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textDecoration:'none', textTransform:'uppercase' }}
-            onMouseEnter={e => e.currentTarget.style.background='rgba(252,76,2,0.14)'}
-            onMouseLeave={e => e.currentTarget.style.background='rgba(252,76,2,0.06)'}>
+            style={{ display:'flex', alignItems:'center', gap:'6px', padding:'7px 14px', border:'1.5px solid rgba(252,76,2,0.3)', borderRadius:'8px', background:'rgba(252,76,2,0.06)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#FC4C02', textDecoration:'none', textTransform:'uppercase' }}>
             View on Strava →
           </a>
         </div>
       </div>
-
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'14px' }}>
         {isTri && triActivities.length > 0
           ? `${triActivities.length} segments · ${fmtDate(triActivities[0].start_date_local)}`
           : `${activity.name} · ${fmtDate(activity.start_date_local)}`}
       </div>
-
-      {/* Tri carousel map + stats */}
       {isTri && triActivities.length > 0 ? (
         <TriCarousel triActivities={triActivities} t={t} fmt={fmt} fmtTime={fmtTime} fmtPace={fmtPace} mapRendered={mapRendered} setMapRendered={setMapRendered} />
       ) : (
@@ -614,49 +567,44 @@ export default function RacePage() {
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
   const isMobile = useIsMobile()
-  const numId = parseInt(id) || 1  // legacy fallback for old numeric links
+  const numId = parseInt(id) || 1
 
   const [editMode, setEditMode]         = useState(false)
   const [race, setRace]                 = useState(null)
   const [allPassportRaces, setAllPassportRaces] = useState([])
   const [currentIdx, setCurrentIdx]     = useState(0)
-  const [story, setStory]           = useState('')
-  const [gear, setGear]             = useState([])
-  const [stickers, setStickers]     = useState([])
+  const [story, setStory]               = useState('')
+  const [gear, setGear]                 = useState([])
+  const [stickers, setStickers]         = useState([])
   const [showStickerPicker, setShowStickerPicker] = useState(false)
-  const [showSplits, setShowSplits] = useState(true)
-  const [showAddGear, setShowAddGear] = useState(false)
-  const [saving, setSaving]         = useState(false)
-  const [activePhoto, setActivePhoto] = useState(null)
-  const [localPhotos, setLocalPhotos] = useState([])
+  const [showSplits, setShowSplits]     = useState(true)
+  const [showAddGear, setShowAddGear]   = useState(false)
+  const [saving, setSaving]             = useState(false)
+  const [activePhoto, setActivePhoto]   = useState(null)
+  const [localPhotos, setLocalPhotos]   = useState([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [pacerReflection, setPacerReflection] = useState(null)
   const [pacerReflectionLoading, setPacerReflectionLoading] = useState(false)
-  const [reportCard, setReportCard]   = useState(null)
+  const [reportCard, setReportCard]     = useState(null)
   const [reportCardLoading, setReportCardLoading] = useState(false)
   const [showReportCard, setShowReportCard] = useState(false)
   const [checklistSections, setChecklistSections] = useState(null)
   const [checklistLoading, setChecklistLoading] = useState(false)
   const [checklistSaved, setChecklistSaved] = useState(false)
   const [showChecklist, setShowChecklist] = useState(false)
-  const [newItemText, setNewItemText] = useState('')
+  const [newItemText, setNewItemText]   = useState('')
   const [activeChecklistTab, setActiveChecklistTab] = useState(null)
   const [editingItemId, setEditingItemId] = useState(null)
-  const [editingText, setEditingText] = useState('')
+  const [editingText, setEditingText]   = useState('')
+  const [weatherData, setWeatherData]   = useState(null)
   const fileInputRef = useRef(null)
   const dropdownRef  = useRef(null)
 
   const handlePhotoUpload = (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    const newPhotos = files.map(f => ({
-      id:      `local_${Date.now()}_${Math.random()}`,
-      url:     URL.createObjectURL(f),
-      caption: f.name.replace(/\.[^.]+$/, ''),
-      name:    f.name,
-    }))
+    const newPhotos = files.map(f => ({ id:`local_${Date.now()}_${Math.random()}`, url:URL.createObjectURL(f), caption:f.name.replace(/\.[^.]+$/, ''), name:f.name }))
     setLocalPhotos(prev => [...prev, ...newPhotos])
-    // Reset input so same file can be re-selected
     e.target.value = ''
   }
 
@@ -670,45 +618,36 @@ export default function RacePage() {
 
   useEffect(() => {
     const loadRace = async () => {
-      // Try to load from Supabase passport_races first
       try {
         const { data: { session } } = await supabase.auth.getSession()
         const userId = session?.user?.id
         if (userId) {
-          // id param is now a UUID from passport_races
-          const { data: praces } = await supabase
-            .from('passport_races')
-            .select('*')
-            .eq('user_id', userId)
-            .order('date_sort', { ascending: false })
-
+          const { data: praces } = await supabase.from('passport_races').select('*').eq('user_id', userId).order('date_sort', { ascending: false })
           if (praces && praces.length > 0) {
-            // Match by UUID first (new links), fall back to numeric index (old links)
             const isUUID = id && id.includes('-')
-            const raceData = isUUID
-              ? (praces.find(r => r.id === id) || praces[0])
-              : (praces[numId - 1] || praces[0])
+            const raceData = isUUID ? (praces.find(r => r.id === id) || praces[0]) : (praces[numId - 1] || praces[0])
             const idx = praces.findIndex(r => r.id === raceData.id)
             setAllPassportRaces(praces)
             setCurrentIdx(idx >= 0 ? idx : 0)
-
-            // Map to race page format — use date_sort for Strava matching if available
             const mapped = {
-              id:        raceData.id,
-              name:      raceData.name,
-              date:      raceData.date_sort || raceData.date, // prefer date_sort (exact) for Strava matching
-              location:  raceData.location || `${raceData.city || ''}${raceData.city && raceData.state ? ', ' : ''}${raceData.state || ''}`,
-              distance:  raceData.distance,
-              time:      raceData.time,
-              pace:      raceData.pace || '',
-              pr:        raceData.is_pr || false,
-              story:     raceData.story || '',
-              photos:    [],
-              gear:      [],
-              stickers:  [],
+              id:       raceData.id,
+              name:     raceData.name,
+              date:     raceData.date_sort || raceData.date,
+              date_display: raceData.date || raceData.date_sort,
+              location: raceData.location || `${raceData.city || ''}${raceData.city && raceData.state ? ', ' : ''}${raceData.state || ''}`,
+              city:     raceData.city || '',
+              state:    raceData.state || '',
+              distance: raceData.distance,
+              time:     raceData.time,
+              pr:       raceData.is_pr || false,
+              story:    raceData.story || '',
+              photos:   [],
+              gear:     [],
+              stickers: [],
               elevation: null,
-              weather:   null,
-              place:     null,
+              weather:  null,
+              place:    null,
+              splits:   [],
             }
             setRace(mapped)
             setStory(mapped.story)
@@ -718,14 +657,11 @@ export default function RacePage() {
           }
         }
       } catch(e) {}
-
-      // Fallback to hardcoded data
       const data = RYAN_RACE_DATA[numId] || RYAN_RACE_DATA[1]
       const idx  = ALL_IDS.indexOf(data.id)
       setCurrentIdx(idx >= 0 ? idx : 0)
       setRace(data); setStory(data.story||''); setGear(data.gear||[]); setStickers(data.stickers||[])
     }
-
     loadRace()
 
     const style = document.createElement('style')
@@ -745,13 +681,25 @@ export default function RacePage() {
       .edit-toolbar-btn span { font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:600;letter-spacing:1px;color:rgba(255,255,255,0.5);text-transform:uppercase; }
     `
     if (!document.getElementById('rp-racepage-styles')) document.head.appendChild(style)
-
     const handleClick = e => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
     document.addEventListener('mousedown', handleClick)
     return () => { document.getElementById('rp-racepage-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
-  }, [numId])
+  }, [numId, id])
 
-  // Load Pacer reflection once race is ready
+  // ── Fetch historical weather ──────────────────────────────────────────────
+  useEffect(() => {
+    if (!race || race.weather) return // already have weather from hardcoded data
+    const load = async () => {
+      const dateStr = race.date || race.date_sort
+      const location = race.location
+      if (!dateStr || !location) return
+      const wx = await fetchWeather(location, dateStr)
+      if (wx) setWeatherData(wx)
+    }
+    load()
+  }, [race?.id])
+
+  // ── Pacer reflection ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!race || !race.name) return
     const cacheKey = `pacer_reflection_${race.id||race.name}`
@@ -768,32 +716,18 @@ export default function RacePage() {
       }),
     })
     .then(r => r.json())
-    .then(data => {
-      if (data.headline) {
-        setPacerReflection(data)
-        sessionStorage.setItem(cacheKey, JSON.stringify(data))
-      }
-    })
+    .then(data => { if (data.headline) { setPacerReflection(data); sessionStorage.setItem(cacheKey, JSON.stringify(data)) } })
     .catch(() => {})
     .finally(() => setPacerReflectionLoading(false))
   }, [race?.id])
 
-  // Load checklist from Supabase
+  // ── Checklist loader ──────────────────────────────────────────────────────
   useEffect(() => {
     if (!race?.id || !user) return
     const isUpcoming = race.date_sort ? new Date(race.date_sort) > new Date() : false
     if (!isUpcoming) return
-    supabase.from('race_checklists')
-      .select('sections')
-      .eq('user_id', user.id)
-      .eq('race_id', race.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.sections?.length) {
-          setChecklistSections(data.sections)
-          setActiveChecklistTab(data.sections[0]?.id)
-        }
-      })
+    supabase.from('race_checklists').select('sections').eq('user_id', user.id).eq('race_id', race.id).single()
+      .then(({ data }) => { if (data?.sections?.length) { setChecklistSections(data.sections); setActiveChecklistTab(data.sections[0]?.id) } })
   }, [race?.id, user])
 
   if (!race) return (
@@ -802,6 +736,10 @@ export default function RacePage() {
     </div>
   )
 
+  // ── Derived values ────────────────────────────────────────────────────────
+  const isTri       = ['70.3','140.6'].includes(race.distance)
+  const computedPace = isTri ? null : calcPace(race.time, race.distance)
+  const displayWeather = race.weather || weatherData
   const colors  = getDistanceColor(race.distance)
   const cleaned = race.distance.replace(' mi','').replace(' miles','')
   const fs      = cleaned.length>4 ? 22 : cleaned.length>2 ? 28 : 40
@@ -815,24 +753,29 @@ export default function RacePage() {
   const addGear     = item => { setGear(prev => [...prev, item]); setShowAddGear(false) }
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
 
-  // Initials from auth user
   const meta = user?.user_metadata || {}
   const fullName = meta.full_name || `${meta.first_name||''} ${meta.last_name||''}`.trim() || 'RG'
   const initials = fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) || 'RG'
+
+  // ── Header stat boxes ─────────────────────────────────────────────────────
+  const headerStats = [
+    { label:'Finish Time',   value: race.time || '—' },
+    { label:'Avg Pace',      value: isTri ? 'See Splits' : (computedPace || '—') },
+    { label:'Overall Place', value: race.place || '—' },
+    { label:'Elevation',     value: race.elevation || '—' },
+  ]
 
   return (
     <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s' }}>
 
       {/* TOP NAV */}
       <div style={{ position:'sticky', top:0, zIndex:50, background:t.navBg, backdropFilter:'blur(8px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow, display:'flex', alignItems:'center', justifyContent:'space-between', padding: isMobile ? '0 12px' : '0 40px', height:'52px' }}>
-        {/* Back to passport */}
         <button onClick={() => navigate('/passport')}
           style={{ display:'flex', alignItems:'center', gap:'6px', background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:0, flexShrink:0 }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           {isMobile ? '' : 'Passport'}
         </button>
 
-        {/* Page navigation */}
         <div style={{ display:'flex', alignItems:'center', gap: isMobile ? '8px' : '16px' }}>
           <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
             style={{ display:'flex', alignItems:'center', gap:'4px', background:'none', border:'none', cursor:prevRace?'pointer':'default', color:prevRace?t.textMuted:t.borderLight, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', textTransform:'uppercase', padding:'4px 6px', borderRadius:'6px' }}>
@@ -849,7 +792,6 @@ export default function RacePage() {
           </button>
         </div>
 
-        {/* Right: edit + avatar dropdown */}
         <div style={{ display:'flex', alignItems:'center', gap:'8px', flexShrink:0 }}>
           {!editMode ? (
             <>
@@ -864,7 +806,6 @@ export default function RacePage() {
               <button onClick={handleSave} disabled={saving} style={{ padding:'5px 14px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase', opacity:saving?0.7:1 }}>{saving?'Saving...':'Save'}</button>
             </>
           )}
-          {/* Avatar dropdown */}
           <div ref={dropdownRef} style={{ position:'relative' }}>
             <div onClick={() => setShowDropdown(!showDropdown)}
               style={{ width:30, height:30, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', border:`2px solid ${t.border}` }}>
@@ -903,7 +844,9 @@ export default function RacePage() {
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'8px' }}>Race Passport · Page {currentIdx+1}</div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? 'clamp(26px,7vw,42px)' : 'clamp(40px,6vw,72px)', color:'#fff', letterSpacing:'2px', lineHeight:0.95, marginBottom:'8px' }}>{race.name}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile ? '13px' : '16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'12px' }}>{race.date} · {race.location}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: isMobile ? '13px' : '16px', color:'rgba(255,255,255,0.5)', letterSpacing:'1px', marginBottom:'12px' }}>
+                {race.date_display || race.date} · {race.location}
+              </div>
               {race.pr && (
                 <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:'rgba(201,168,76,0.15)', border:'1px solid rgba(201,168,76,0.35)', borderRadius:'8px', padding:'5px 12px' }}>
                   <div style={{ width:6, height:6, borderRadius:'50%', background:'#C9A84C' }} />
@@ -918,9 +861,11 @@ export default function RacePage() {
             </div>
           </div>
         </div>
+
+        {/* Stat boxes */}
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.08)', position:'relative', zIndex:1 }}>
           <div style={{ maxWidth:'1200px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', padding: isMobile ? '0 16px' : '0 40px' }}>
-            {[{ label:'Finish Time', value:race.time },{ label:'Avg Pace', value:race.pace||'Multi-sport' },{ label:'Overall Place', value:race.place||'—' },{ label:'Elevation', value:race.elevation }].map((s,i) => (
+            {headerStats.map((s, i) => (
               <div key={i} style={{ padding: isMobile ? '14px 0' : '20px 0', textAlign:'center', borderRight: isMobile ? (i%2===0?'1px solid rgba(255,255,255,0.08)':'none') : (i<3?'1px solid rgba(255,255,255,0.08)':'none'), borderBottom: isMobile && i<2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '20px' : '26px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.35)', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
@@ -928,11 +873,19 @@ export default function RacePage() {
             ))}
           </div>
         </div>
-        {race.weather && (
-          <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 16px' : '10px 40px', position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto' }}>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)' }}>Race day: {race.weather}</span>
-          </div>
-        )}
+
+        {/* Weather + Strava callout bar */}
+        <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 16px' : '10px 40px', position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'8px' }}>
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', display:'flex', alignItems:'center', gap:'5px' }}>
+            {displayWeather ? `☁️  ${displayWeather}` : '☁️  Loading race day weather...'}
+          </span>
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(252,76,2,0.75)', display:'flex', alignItems:'center', gap:'5px' }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+            Connect Strava below for elevation, map &amp; pace data
+          </span>
+        </div>
+
+        {/* Edit toolbar */}
         {editMode && (
           <div style={{ borderTop:'1px solid rgba(255,255,255,0.1)', padding: isMobile ? '8px 16px' : '8px 40px', display:'flex', alignItems:'center', gap:'4px', background:'rgba(0,0,0,0.2)', position:'relative', zIndex:6 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.3)', textTransform:'uppercase', marginRight:'8px' }}>Edit:</div>
@@ -994,41 +947,28 @@ export default function RacePage() {
               )}
             </div>
             <button onClick={() => fileInputRef.current?.click()}
-              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 18px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-              onMouseEnter={e => { e.currentTarget.style.background='rgba(201,168,76,0.16)' }}
-              onMouseLeave={e => { e.currentTarget.style.background='rgba(201,168,76,0.08)' }}>
+              style={{ display:'flex', alignItems:'center', gap:'6px', padding:'8px 18px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase' }}
+              onMouseEnter={e => e.currentTarget.style.background='rgba(201,168,76,0.16)'}
+              onMouseLeave={e => e.currentTarget.style.background='rgba(201,168,76,0.08)'}>
               + Add Photos
             </button>
           </div>
-
-          {/* Hidden file input — wired up */}
           <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display:'none' }} onChange={handlePhotoUpload} />
-
           {localPhotos.length > 0 ? (
             <div style={{ columns:'3 220px', gap:'12px' }}>
-              {localPhotos.map((photo, i) => (
-                <div key={photo.id}
-                  style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', overflow:'hidden', position:'relative', cursor:'pointer', display:'block' }}
+              {localPhotos.map((photo) => (
+                <div key={photo.id} style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', overflow:'hidden', position:'relative', cursor:'pointer', display:'block' }}
                   onClick={() => setActivePhoto(photo)}
                   onMouseEnter={e => { e.currentTarget.querySelector('.photo-overlay').style.opacity='1' }}
                   onMouseLeave={e => { e.currentTarget.querySelector('.photo-overlay').style.opacity='0' }}>
-                  <img src={photo.url} alt={photo.caption}
-                    style={{ width:'100%', display:'block', borderRadius:'12px', objectFit:'cover', transition:'transform 0.3s' }}
-                    onMouseEnter={e => e.currentTarget.style.transform='scale(1.02)'}
-                    onMouseLeave={e => e.currentTarget.style.transform='scale(1)'} />
-                  {/* Hover overlay */}
+                  <img src={photo.url} alt={photo.caption} style={{ width:'100%', display:'block', borderRadius:'12px', objectFit:'cover' }} />
                   <div className="photo-overlay" style={{ position:'absolute', inset:0, background:'rgba(0,0,0,0.45)', borderRadius:'12px', opacity:0, transition:'opacity 0.2s', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'12px' }}>
                     <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.8)', fontWeight:600 }}>View</span>
-                    <button onClick={e => { e.stopPropagation(); removePhoto(photo.id) }}
-                      style={{ width:28, height:28, borderRadius:'50%', background:'rgba(197,48,48,0.8)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', lineHeight:1 }}>
-                      ✕
-                    </button>
+                    <button onClick={e => { e.stopPropagation(); removePhoto(photo.id) }} style={{ width:28, height:28, borderRadius:'50%', background:'rgba(197,48,48,0.8)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'14px', lineHeight:1 }}>✕</button>
                   </div>
                 </div>
               ))}
-              {/* Add more tile */}
-              <div onClick={() => fileInputRef.current?.click()}
-                style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', border:`2px dashed rgba(201,168,76,0.35)`, aspectRatio:'4/3', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:t.surfaceAlt, transition:'border-color 0.15s' }}
+              <div onClick={() => fileInputRef.current?.click()} style={{ breakInside:'avoid', marginBottom:'12px', borderRadius:'12px', border:'2px dashed rgba(201,168,76,0.35)', aspectRatio:'4/3', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'8px', cursor:'pointer', background:t.surfaceAlt }}
                 onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
                 onMouseLeave={e => e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'}>
                 <div style={{ width:32, height:32, borderRadius:'50%', background:'rgba(201,168,76,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
@@ -1038,18 +978,14 @@ export default function RacePage() {
               </div>
             </div>
           ) : (
-            /* Empty state — big inviting drop zone */
-            <div onClick={() => fileInputRef.current?.click()}
-              style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'16px', padding:'56px 40px', textAlign:'center', background:t.surfaceAlt, cursor:'pointer', transition:'all 0.2s' }}
-              onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.background=t.isDark?'rgba(201,168,76,0.05)':'rgba(201,168,76,0.04)' }}
-              onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(201,168,76,0.35)'; e.currentTarget.style.background=t.surfaceAlt }}>
+            <div onClick={() => fileInputRef.current?.click()} style={{ border:'2px dashed rgba(201,168,76,0.35)', borderRadius:'16px', padding:'56px 40px', textAlign:'center', background:t.surfaceAlt, cursor:'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor='rgba(201,168,76,0.35)' }}>
               <div style={{ width:56, height:56, borderRadius:'50%', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 16l4-4 4 4 4-6 4 6" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><rect x="3" y="3" width="18" height="18" rx="3" stroke="#C9A84C" strokeWidth="1.5"/></svg>
               </div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'8px' }}>Add Your Race Photos</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.6 }}>
-                Bring this race page to life — finish line moments, pre-race photos, anything that captures the day.
-              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.6 }}>Bring this race page to life with finish line moments and pre-race photos.</div>
               <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', padding:'10px 24px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)' }}>
                 <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3-4 3 4" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/><path d="M1 10h10" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase' }}>Upload Photos</span>
@@ -1117,12 +1053,12 @@ export default function RacePage() {
         {race.splits && race.splits.length > 0 && (
           <div style={{ background:t.surface, borderRadius:'16px', padding:'28px', border:`1px solid ${t.border}`, marginBottom:'24px', animation:'fadeIn 0.4s ease 0.2s both', transition:'background 0.25s' }}>
             <button onClick={() => setShowSplits(!showSplits)} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', background:'none', border:'none', cursor:'pointer', padding:0 }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>{race.distance==='70.3'?'Triathlon Splits':'Splits'}</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>{isTri ? 'Triathlon Splits' : 'Splits'}</div>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showSplits?'rotate(180deg)':'rotate(0)' }}><path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </button>
             {showSplits && (
               <div style={{ marginTop:'18px', display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(130px,1fr))', gap:'12px' }}>
-                {race.splits.map((split,i) => (
+                {race.splits.map((split, i) => (
                   <div key={i} style={{ background:t.surfaceAlt, borderRadius:'8px', padding:'14px', textAlign:'center', borderTop:'3px solid #C9A84C' }}>
                     <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>{split.time}</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>{split.label}</div>
@@ -1136,7 +1072,7 @@ export default function RacePage() {
         {/* STRAVA ACTIVITY */}
         <StravaActivitySection race={race} t={t} />
 
-        {/* PACER REPORT CARD — Training Log */}
+        {/* PACER REPORT CARD */}
         <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.22s both', transition:'background 0.25s' }}>
           <button onClick={() => {
             setShowReportCard(p => !p)
@@ -1145,11 +1081,7 @@ export default function RacePage() {
               fetch('/api/pacer', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'report_card',
-                  race: { name:race.name, distance:race.distance, time:race.time, splits:race.splits||[], strava_activities:[] },
-                  races: allPassportRaces.slice(0,15),
-                }),
+                body: JSON.stringify({ action:'report_card', race:{ name:race.name, distance:race.distance, time:race.time, splits:race.splits||[], strava_activities:[] }, races:allPassportRaces.slice(0,15) }),
               })
               .then(r => r.json())
               .then(data => { if (data.grades) setReportCard(data) })
@@ -1166,11 +1098,10 @@ export default function RacePage() {
               </div>
             </div>
             <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
-              <button
-                onClick={e => { e.stopPropagation(); navigate(`/race/${race.id}/training`, { state:{ race } }) }}
-                style={{ padding:'7px 14px', border:`1.5px solid #C9A84C`, borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap', transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background='rgba(201,168,76,0.18)' }}
-                onMouseLeave={e => { e.currentTarget.style.background='rgba(201,168,76,0.08)' }}>
+              <button onClick={e => { e.stopPropagation(); navigate(`/race/${race.id}/training`, { state:{ race } }) }}
+                style={{ padding:'7px 14px', border:'1.5px solid #C9A84C', borderRadius:'8px', background:'rgba(201,168,76,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap' }}
+                onMouseEnter={e => e.currentTarget.style.background='rgba(201,168,76,0.18)'}
+                onMouseLeave={e => e.currentTarget.style.background='rgba(201,168,76,0.08)'}>
                 View My Training →
               </button>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showReportCard?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
@@ -1178,13 +1109,10 @@ export default function RacePage() {
               </svg>
             </div>
           </button>
-
           {showReportCard && (
             reportCardLoading ? (
               <div style={{ display:'flex', flexDirection:'column', gap:'10px' }}>
-                {[1,2,3,4].map(i => (
-                  <div key={i} style={{ height:52, borderRadius:'8px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }} />
-                ))}
+                {[1,2,3,4].map(i => <div key={i} style={{ height:52, borderRadius:'8px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }} />)}
               </div>
             ) : reportCard ? (
               <div>
@@ -1206,11 +1134,11 @@ export default function RacePage() {
                   })}
                 </div>
                 <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'12px' }}>
-                  <div style={{ padding:'14px 16px', background:`rgba(22,163,74,0.06)`, borderRadius:'10px', border:'1px solid rgba(22,163,74,0.2)' }}>
+                  <div style={{ padding:'14px 16px', background:'rgba(22,163,74,0.06)', borderRadius:'10px', border:'1px solid rgba(22,163,74,0.2)' }}>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#16a34a', textTransform:'uppercase', marginBottom:'4px' }}>🏆 Top Win</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.5 }}>{reportCard.top_win}</div>
                   </div>
-                  <div style={{ padding:'14px 16px', background:`rgba(201,168,76,0.06)`, borderRadius:'10px', border:'1px solid rgba(201,168,76,0.2)' }}>
+                  <div style={{ padding:'14px 16px', background:'rgba(201,168,76,0.06)', borderRadius:'10px', border:'1px solid rgba(201,168,76,0.2)' }}>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>⚡ Next Focus</div>
                     <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.text, lineHeight:1.5 }}>{reportCard.next_focus}</div>
                   </div>
@@ -1224,261 +1152,6 @@ export default function RacePage() {
           )}
         </div>
 
-        {/* RACE DAY CHECKLIST — upcoming races only */}
-        {race && (() => {
-          const isUpcoming = race.date_sort ? new Date(race.date_sort) > new Date() : false
-          if (!isUpcoming) return null
-
-          const totalItems = (checklistSections||[]).reduce((s,sec) => s + sec.items.length, 0)
-          const checkedItems = (checklistSections||[]).reduce((s,sec) => s + sec.items.filter(i=>i.checked).length, 0)
-          const pct = totalItems > 0 ? Math.round((checkedItems/totalItems)*100) : 0
-          const activeSection = (checklistSections||[]).find(s => s.id === activeChecklistTab)
-
-          const generateChecklist = async () => {
-            setChecklistLoading(true)
-            try {
-              const resp = await fetch('/api/pacer', {
-                method:'POST',
-                headers:{'Content-Type':'application/json'},
-                body:JSON.stringify({
-                  action:'checklist',
-                  race:{ name:race.name, distance:race.distance, city:race.city, state:race.state, date:race.date, date_sort:race.date_sort },
-                  profile:{ state:profile?.state, city:profile?.city },
-                }),
-              })
-              const data = await resp.json()
-              if (data.sections?.length) {
-                setChecklistSections(data.sections)
-                setActiveChecklistTab(data.sections[0]?.id)
-                // Save to Supabase
-                await supabase.from('race_checklists').upsert({
-                  user_id:user.id, race_id:race.id, sections:data.sections, updated_at:new Date().toISOString()
-                }, { onConflict:'user_id,race_id' })
-              }
-            } catch(e) {}
-            setChecklistLoading(false)
-          }
-
-          const saveChecklist = async (sections) => {
-            if (!user || !race?.id) return
-            await supabase.from('race_checklists').upsert({
-              user_id:user.id, race_id:race.id, sections, updated_at:new Date().toISOString()
-            }, { onConflict:'user_id,race_id' })
-            setChecklistSaved(true)
-            setTimeout(() => setChecklistSaved(false), 2000)
-          }
-
-          const toggleItem = (sectionId, itemId) => {
-            const updated = (checklistSections||[]).map(s =>
-              s.id === sectionId ? { ...s, items: s.items.map(i => i.id===itemId?{...i,checked:!i.checked}:i) } : s
-            )
-            setChecklistSections(updated)
-            saveChecklist(updated)
-          }
-
-          const addItem = (sectionId) => {
-            if (!newItemText.trim()) return
-            const updated = (checklistSections||[]).map(s =>
-              s.id === sectionId ? { ...s, items:[...s.items,{id:`item_${Date.now()}`,text:newItemText.trim(),checked:false}] } : s
-            )
-            setChecklistSections(updated)
-            setNewItemText('')
-            saveChecklist(updated)
-          }
-
-          const deleteItem = (sectionId, itemId) => {
-            const updated = (checklistSections||[]).map(s =>
-              s.id === sectionId ? { ...s, items:s.items.filter(i=>i.id!==itemId) } : s
-            )
-            setChecklistSections(updated)
-            saveChecklist(updated)
-          }
-
-          const saveEditItem = (sectionId, itemId) => {
-            if (!editingText.trim()) return
-            const updated = (checklistSections||[]).map(s =>
-              s.id === sectionId ? { ...s, items:s.items.map(i=>i.id===itemId?{...i,text:editingText}:i) } : s
-            )
-            setChecklistSections(updated)
-            setEditingItemId(null)
-            saveChecklist(updated)
-          }
-
-          const checkAll = (sectionId) => {
-            const updated = (checklistSections||[]).map(s =>
-              s.id === sectionId ? { ...s, items:s.items.map(i=>({...i,checked:true})) } : s
-            )
-            setChecklistSections(updated)
-            saveChecklist(updated)
-          }
-
-          return (
-            <div style={{ background:t.surface, borderRadius:'16px', marginBottom:'16px', border:`1px solid ${t.border}`, overflow:'hidden', animation:'fadeIn 0.4s ease 0.23s both', transition:'background 0.25s' }}>
-              {/* Header */}
-              <button onClick={() => setShowChecklist(p=>!p)}
-                style={{ display:'flex', alignItems:'center', justifyContent:'space-between', width:'100%', padding:'20px 24px', background:'none', border:'none', cursor:'pointer' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                  <span style={{ fontSize:'22px' }}>📋</span>
-                  <div style={{ textAlign:'left' }}>
-                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Race Day Checklist</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'2px' }}>
-                      {checklistSections ? `${checkedItems}/${totalItems} packed · ${pct}% ready` : 'Pacer will build your list'}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:'12px' }}>
-                  {/* Progress ring */}
-                  {checklistSections && totalItems > 0 && (
-                    <div style={{ position:'relative', width:44, height:44, flexShrink:0 }}>
-                      <svg width="44" height="44" viewBox="0 0 44 44" style={{ transform:'rotate(-90deg)' }}>
-                        <circle cx="22" cy="22" r="18" fill="none" stroke={t.isDark?'rgba(201,168,76,0.12)':'rgba(27,42,74,0.1)'} strokeWidth="3.5" />
-                        <circle cx="22" cy="22" r="18" fill="none" stroke="#C9A84C" strokeWidth="3.5"
-                          strokeDasharray={`${2*Math.PI*18}`}
-                          strokeDashoffset={`${2*Math.PI*18*(1-pct/100)}`}
-                          strokeLinecap="round" style={{ transition:'stroke-dashoffset 0.5s ease' }} />
-                      </svg>
-                      <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:t.text, letterSpacing:'0.5px' }}>{pct}%</span>
-                      </div>
-                    </div>
-                  )}
-                  {checklistSaved && <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#16a34a' }}>✓ Saved</span>}
-                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ transition:'transform 0.2s', transform:showChecklist?'rotate(180deg)':'rotate(0)', flexShrink:0 }}>
-                    <path d="M4 6l4 4 4-4" stroke={t.textMuted} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                </div>
-              </button>
-
-              {showChecklist && (
-                <div style={{ borderTop:`1px solid ${t.borderLight}` }}>
-                  {!checklistSections ? (
-                    /* Empty state — generate */
-                    <div style={{ padding:'40px 24px', textAlign:'center' }}>
-                      <div style={{ fontSize:'32px', marginBottom:'12px' }}>📋</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', marginBottom:'8px' }}>
-                        Let Pacer Build Your Checklist
-                      </div>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.6, maxWidth:'380px', margin:'0 auto 20px' }}>
-                        Pacer will generate a personalized race day packing list for your {race.distance} — organized by segment. You can edit, add, and remove anything.
-                      </div>
-                      <button onClick={generateChecklist} disabled={checklistLoading}
-                        style={{ padding:'12px 28px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', display:'inline-flex', alignItems:'center', gap:'10px', transition:'background 0.2s' }}
-                        onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'}
-                        onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
-                        {checklistLoading ? (
-                          <><div style={{ width:16, height:16, border:'2px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 0.8s linear infinite' }} /><span style={{ color:'#fff' }}>Pacer is building your list...</span></>
-                        ) : <span style={{ color:'#fff' }}>Generate My Checklist →</span>}
-                      </button>
-                    </div>
-                  ) : (
-                    <div>
-                      {/* Segment tabs */}
-                      <div style={{ display:'flex', overflowX:'auto', borderBottom:`1px solid ${t.borderLight}` }}>
-                        {checklistSections.map(s => {
-                          const sChecked = s.items.filter(i=>i.checked).length
-                          const isActive = s.id === activeChecklistTab
-                          return (
-                            <button key={s.id} onClick={()=>setActiveChecklistTab(s.id)}
-                              style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:3, padding:'10px 18px', background:'none', border:'none', borderBottom:`3px solid ${isActive?s.color:'transparent'}`, cursor:'pointer', flexShrink:0, position:'relative', transition:'border-color 0.15s' }}>
-                              <span style={{ fontSize:'16px' }}>{s.emoji}</span>
-                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:isActive?'#fff':t.textMuted, textTransform:'uppercase', transition:'color 0.15s' }}>{s.label}</span>
-                              {sChecked > 0 && (
-                                <div style={{ position:'absolute', top:6, right:8, width:14, height:14, borderRadius:'50%', background:s.color, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                                  <span style={{ fontSize:'8px', color:'#fff', fontWeight:700 }}>{sChecked}</span>
-                                </div>
-                              )}
-                            </button>
-                          )
-                        })}
-                      </div>
-
-                      {/* Active section */}
-                      {activeSection && (
-                        <div style={{ padding:'16px 20px' }}>
-                          {/* Section header */}
-                          <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-                            <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                              <span style={{ fontSize:'16px' }}>{activeSection.emoji}</span>
-                              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>
-                                {activeSection.items.filter(i=>i.checked).length} of {activeSection.items.length} packed
-                              </span>
-                            </div>
-                            <button onClick={()=>checkAll(activeSection.id)}
-                              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, background:'none', border:'none', cursor:'pointer', textTransform:'uppercase' }}>
-                              Check All
-                            </button>
-                          </div>
-
-                          {/* Items */}
-                          <div style={{ display:'flex', flexDirection:'column', gap:'4px', marginBottom:'12px' }}>
-                            {activeSection.items.map(item => (
-                              <div key={item.id}
-                                style={{ display:'flex', alignItems:'center', gap:'10px', padding:'9px 12px', borderRadius:'8px', background:item.checked?'rgba(255,255,255,0.02)':t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.02)', border:`1px solid ${item.checked?t.borderLight:t.border}`, transition:'all 0.15s', position:'relative' }}
-                                onMouseEnter={e=>e.currentTarget.querySelector('.del-btn').style.opacity='1'}
-                                onMouseLeave={e=>e.currentTarget.querySelector('.del-btn').style.opacity='0'}>
-                                {/* Checkbox */}
-                                <div onClick={()=>toggleItem(activeSection.id,item.id)}
-                                  style={{ width:20, height:20, borderRadius:'5px', border:`2px solid ${item.checked?activeSection.color:t.border}`, background:item.checked?activeSection.color:'none', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', flexShrink:0, transition:'all 0.15s' }}>
-                                  {item.checked && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M1.5 5l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                                </div>
-                                {/* Text */}
-                                {editingItemId === item.id ? (
-                                  <input autoFocus value={editingText}
-                                    onChange={e=>setEditingText(e.target.value)}
-                                    onKeyDown={e=>{ if(e.key==='Enter') saveEditItem(activeSection.id,item.id); if(e.key==='Escape') setEditingItemId(null) }}
-                                    onBlur={()=>saveEditItem(activeSection.id,item.id)}
-                                    style={{ flex:1, background:'none', border:'none', color:t.text, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:500, outline:'none', caretColor:'#C9A84C' }} />
-                                ) : (
-                                  <span onDoubleClick={()=>{ setEditingItemId(item.id); setEditingText(item.text) }}
-                                    style={{ flex:1, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:500, color:item.checked?t.textMuted:t.text, textDecoration:item.checked?'line-through':'none', cursor:'text', transition:'all 0.15s', letterSpacing:'0.3px' }}>
-                                    {item.text}
-                                  </span>
-                                )}
-                                {/* Delete */}
-                                <button className="del-btn" onClick={()=>deleteItem(activeSection.id,item.id)}
-                                  style={{ opacity:0, background:'none', border:'none', color:t.textMuted, cursor:'pointer', fontSize:'14px', padding:'0 2px', transition:'opacity 0.15s', flexShrink:0 }}>✕</button>
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Add item */}
-                          <div style={{ display:'flex', gap:'8px' }}>
-                            <input value={newItemText} onChange={e=>setNewItemText(e.target.value)}
-                              onKeyDown={e=>{ if(e.key==='Enter') addItem(activeSection.id) }}
-                              placeholder={`Add to ${activeSection.label}...`}
-                              style={{ flex:1, padding:'9px 12px', borderRadius:'8px', border:`1.5px solid ${t.border}`, background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.03)', color:t.text, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', outline:'none', transition:'border-color 0.15s' }}
-                              onFocus={e=>e.target.style.borderColor='#C9A84C'}
-                              onBlur={e=>e.target.style.borderColor=t.border} />
-                            <button onClick={()=>addItem(activeSection.id)}
-                              style={{ padding:'9px 16px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'background 0.15s', whiteSpace:'nowrap' }}
-                              onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'}
-                              onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
-                              + Add
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Footer */}
-                      <div style={{ padding:'10px 20px 14px', borderTop:`1px solid ${t.borderLight}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-                          Double-tap any item to edit
-                        </span>
-                        <button onClick={generateChecklist} disabled={checklistLoading}
-                          style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, background:'none', border:`1px solid ${t.border}`, borderRadius:'6px', padding:'5px 12px', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                          onMouseEnter={e=>{ e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
-                          onMouseLeave={e=>{ e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
-                          {checklistLoading ? 'Regenerating...' : '↺ Reset to Pacer List'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )
-        })()}
-
         {/* MUSIC */}
         <div style={{ background:t.surface, borderRadius:'16px', padding:'20px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.25s both', transition:'background 0.25s' }}>
           <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
@@ -1488,40 +1161,27 @@ export default function RacePage() {
             </div>
           </div>
           <div style={{ display:'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap:'14px' }}>
-            {/* Spotify */}
-            <div style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center', transition:'border-color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor='#1DB954'}
-              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
-              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(29,185,84,0.1)', border:'1.5px solid rgba(29,185,84,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>
+            {[
+              { name:'Spotify', color:'#1DB954', icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg> },
+              { name:'Apple Music', color:'#FA2D55', icon:<svg width="24" height="24" viewBox="0 0 24 24" fill="#FA2D55"><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.816.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.55.053 1.1.06 1.65.06h11.033c.49 0 .978-.034 1.466-.1.837-.105 1.622-.351 2.295-.849 1.013-.741 1.651-1.731 1.917-2.952.133-.613.17-1.238.17-1.864l.003-12.16z"/></svg> },
+            ].map(svc => (
+              <div key={svc.name} style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center' }}
+                onMouseEnter={e => e.currentTarget.style.borderColor=svc.color}
+                onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+                <div style={{ width:52, height:52, borderRadius:'50%', background:`${svc.color}18`, border:`1.5px solid ${svc.color}40`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  {svc.icon}
+                </div>
+                <div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>{svc.name}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>Connect to show what you played on race day</div>
+                </div>
+                <button style={{ padding:'8px 20px', border:`1.5px solid ${svc.color}`, borderRadius:'8px', background:`${svc.color}14`, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:svc.color, cursor:'pointer', textTransform:'uppercase' }}
+                  onMouseEnter={e => { e.currentTarget.style.background=svc.color; e.currentTarget.style.color='#fff' }}
+                  onMouseLeave={e => { e.currentTarget.style.background=`${svc.color}14`; e.currentTarget.style.color=svc.color }}>
+                  Connect {svc.name}
+                </button>
               </div>
-              <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>Spotify</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>Connect to show what you played on race day</div>
-              </div>
-              <button style={{ padding:'8px 20px', border:'1.5px solid #1DB954', borderRadius:'8px', background:'rgba(29,185,84,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1DB954', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background='#1DB954'; e.currentTarget.style.color='#fff' }}
-                onMouseLeave={e => { e.currentTarget.style.background='rgba(29,185,84,0.08)'; e.currentTarget.style.color='#1DB954' }}>
-                Connect Spotify
-              </button>
-            </div>
-            {/* Apple Music */}
-            <div style={{ border:`1.5px dashed ${t.border}`, borderRadius:'14px', padding:'28px 20px', display:'flex', flexDirection:'column', alignItems:'center', gap:'14px', textAlign:'center', transition:'border-color 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.borderColor='#FA2D55'}
-              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
-              <div style={{ width:52, height:52, borderRadius:'50%', background:'rgba(250,45,85,0.1)', border:'1.5px solid rgba(250,45,85,0.3)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="#FA2D55"><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208c-.192.448-.292.925-.363 1.408-.056.392-.088.785-.1 1.18 0 .032-.007.062-.01.093v12.223c.01.14.017.283.027.424.05.816.154 1.624.497 2.373.65 1.42 1.738 2.353 3.234 2.801.42.127.856.187 1.293.228.55.053 1.1.06 1.65.06h11.033c.49 0 .978-.034 1.466-.1.837-.105 1.622-.351 2.295-.849 1.013-.741 1.651-1.731 1.917-2.952.133-.613.17-1.238.17-1.864l.003-12.16zm-6.17 3.38l-4.577 7.83a.78.78 0 01-.672.39.802.802 0 01-.413-.113l-2.155-1.328a.78.78 0 01-.27-1.07l4.576-7.83a.782.782 0 011.345 0l1.94 3.12h.227z"/></svg>
-              </div>
-              <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, color:t.text, marginBottom:'3px' }}>Apple Music</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>Connect to show what you played on race day</div>
-              </div>
-              <button style={{ padding:'8px 20px', border:'1.5px solid #FA2D55', borderRadius:'8px', background:'rgba(250,45,85,0.08)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#FA2D55', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
-                onMouseEnter={e => { e.currentTarget.style.background='#FA2D55'; e.currentTarget.style.color='#fff' }}
-                onMouseLeave={e => { e.currentTarget.style.background='rgba(250,45,85,0.08)'; e.currentTarget.style.color='#FA2D55' }}>
-                Connect Apple Music
-              </button>
-            </div>
+            ))}
           </div>
         </div>
 
@@ -1537,16 +1197,12 @@ export default function RacePage() {
           </div>
           <div style={{ background:t.surface, borderRadius:'16px', padding:'20px 24px', border:`1px solid ${t.border}`, display:'flex', alignItems:'center', justifyContent:'space-between' }}>
             <button onClick={() => prevRace && navigate(`/race/${prevRace.id}`)} disabled={!prevRace}
-              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', cursor:prevRace?'pointer':'default', opacity:prevRace?1:0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.text, textTransform:'uppercase' }}
-              onMouseEnter={e => prevRace && (e.currentTarget.style.borderColor='#C9A84C')}
-              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', cursor:prevRace?'pointer':'default', opacity:prevRace?1:0.4, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.text, textTransform:'uppercase' }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>Prev
             </button>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, letterSpacing:'1px' }}>{currentIdx+1} / {ALL_IDS.length}</div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, letterSpacing:'1px' }}>{currentIdx+1} / {allPassportRaces.length || ALL_IDS.length}</div>
             <button onClick={() => nextRace && navigate(`/race/${nextRace.id}`)} disabled={!nextRace}
-              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', cursor:nextRace?'pointer':'default', opacity:nextRace?1:0.4, transition:'all 0.15s', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.text, textTransform:'uppercase' }}
-              onMouseEnter={e => nextRace && (e.currentTarget.style.borderColor='#C9A84C')}
-              onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+              style={{ display:'flex', alignItems:'center', gap:'8px', padding:'10px 16px', border:`1.5px solid ${t.border}`, borderRadius:'10px', background:'transparent', cursor:nextRace?'pointer':'default', opacity:nextRace?1:0.4, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.text, textTransform:'uppercase' }}>
               Next<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </button>
           </div>
@@ -1559,45 +1215,20 @@ export default function RacePage() {
         const prev = idx > 0 ? localPhotos[idx-1] : null
         const next = idx < localPhotos.length-1 ? localPhotos[idx+1] : null
         return (
-          <div onClick={() => setActivePhoto(null)}
-            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.94)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
-
-            {/* Close */}
-            <button onClick={() => setActivePhoto(null)}
-              style={{ position:'fixed', top:24, right:24, width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10 }}>
+          <div onClick={() => setActivePhoto(null)} style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.94)', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:'24px' }}>
+            <button onClick={() => setActivePhoto(null)} style={{ position:'fixed', top:24, right:24, width:44, height:44, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10 }}>
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
             </button>
-
-            {/* Prev */}
-            {prev && (
-              <button onClick={e => { e.stopPropagation(); setActivePhoto(prev) }}
-                style={{ position:'fixed', left:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            )}
-
-            {/* Image */}
+            {prev && <button onClick={e => { e.stopPropagation(); setActivePhoto(prev) }} style={{ position:'fixed', left:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>}
             <div onClick={e => e.stopPropagation()} style={{ maxWidth:'900px', width:'100%', display:'flex', flexDirection:'column', gap:'12px' }}>
-              <img src={activePhoto.url} alt={activePhoto.caption}
-                style={{ width:'100%', display:'block', borderRadius:'12px', maxHeight:'80vh', objectFit:'contain' }} />
-              {activePhoto.caption && (
-                <div style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.5)', letterSpacing:'0.5px' }}>
-                  {activePhoto.caption} · {idx+1} of {localPhotos.length}
-                </div>
-              )}
+              <img src={activePhoto.url} alt={activePhoto.caption} style={{ width:'100%', display:'block', borderRadius:'12px', maxHeight:'80vh', objectFit:'contain' }} />
+              {activePhoto.caption && <div style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.5)' }}>{activePhoto.caption} · {idx+1} of {localPhotos.length}</div>}
             </div>
-
-            {/* Next */}
-            {next && (
-              <button onClick={e => { e.stopPropagation(); setActivePhoto(next) }}
-                style={{ position:'fixed', right:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.15s' }}
-                onMouseEnter={e => e.currentTarget.style.background='rgba(255,255,255,0.2)'}
-                onMouseLeave={e => e.currentTarget.style.background='rgba(255,255,255,0.1)'}>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              </button>
-            )}
+            {next && <button onClick={e => { e.stopPropagation(); setActivePhoto(next) }} style={{ position:'fixed', right:24, top:'50%', transform:'translateY(-50%)', width:48, height:48, borderRadius:'50%', background:'rgba(255,255,255,0.1)', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M6 3l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </button>}
           </div>
         )
       })()}
