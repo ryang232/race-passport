@@ -37,6 +37,7 @@ export default function BuildPassport() {
   const importedCount = location.state?.imported || 0
   const firstName     = location.state?.firstName || ''
 
+  const [checking, setChecking]         = useState(true) // checking for returning user
   const [phone, setPhone]               = useState('')
   const [gender, setGender]             = useState('')
   const [address, setAddress]           = useState('')
@@ -49,8 +50,6 @@ export default function BuildPassport() {
   const [shirtSize, setShirtSize]       = useState('')
   const [experience, setExperience]     = useState('')
   const [goalDistance, setGoalDistance] = useState('')
-  const [doneMarathon, setDoneMarathon] = useState(null)
-  const [doneIronman, setDoneIronman]   = useState(null)
   const [error, setError]               = useState(null)
   const [saving, setSaving]             = useState(false)
 
@@ -59,20 +58,47 @@ export default function BuildPassport() {
 
   useEffect(() => {
     const loadProfile = async () => {
-      if (!user) return
+      if (!user) { setChecking(false); return }
+
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
+
+      // ── Returning user check ──────────────────────────────────────────────
+      // If profile already has full_name, this is an existing user — skip onboarding
+      if (data?.full_name) {
+        navigate('/home', { replace: true })
+        return
+      }
+
+      // ── Google OAuth new user — save name from auth metadata ──────────────
+      // Google passes full_name through user_metadata, save it to profile now
+      const meta = user.user_metadata || {}
+      const googleName = meta.full_name || meta.name || ''
+      if (googleName && !data?.full_name) {
+        await supabase.from('profiles').update({
+          full_name:  googleName,
+          first_name: meta.given_name  || googleName.split(' ')[0] || '',
+          last_name:  meta.family_name || googleName.split(' ').slice(1).join(' ') || '',
+        }).eq('id', user.id)
+      }
+      // ─────────────────────────────────────────────────────────────────────
+
+      // Pre-fill any existing profile fields
       if (data) {
-        setPhone(data.phone || ''); setGender(data.gender || '')
-        setAddress(data.address || ''); setCity(data.city || '')
-        setState(data.state || ''); setZip(data.zip_code || '')
+        setPhone(data.phone || '')
+        setGender(data.gender || '')
+        setAddress(data.address || '')
+        setCity(data.city || '')
+        setState(data.state || '')
+        setZip(data.zip_code || '')
         setCountry(data.country || 'United States')
         setContactName(data.emergency_contact_name || '')
         setContactPhone(data.emergency_contact_phone || '')
-        setShirtSize(data.shirt_size || ''); setExperience(data.experience_level || '')
+        setShirtSize(data.shirt_size || '')
+        setExperience(data.experience_level || '')
         setGoalDistance(data.favorite_distance || '')
-        if (data.done_marathon != null) setDoneMarathon(data.done_marathon)
-        if (data.done_ironman  != null) setDoneIronman(data.done_ironman)
       }
+
+      setChecking(false)
     }
     loadProfile()
   }, [user])
@@ -83,6 +109,7 @@ export default function BuildPassport() {
     style.textContent = `
       @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow:wght@300;400;500;600&family=Barlow+Condensed:wght@400;600;700&display=swap');
       @keyframes tickerScroll { from{transform:translateX(0);}to{transform:translateX(-50%);} }
+      @keyframes spin { to{transform:rotate(360deg);} }
       .rp-input { width:100%; padding:11px 14px; border-radius:6px; border:1.5px solid #e2e6ed; background:#fafbfc; color:#1B2A4A; font-size:14px; font-family:'Barlow',sans-serif; outline:none; box-sizing:border-box; transition:border-color 0.15s,background 0.15s; }
       .rp-input:focus { border-color:#C9A84C; background:#fff; }
       .rp-input::placeholder { color:#b0b8c4; }
@@ -127,10 +154,17 @@ export default function BuildPassport() {
       }).eq('id', user?.id)
     } catch(e) {}
     setSaving(false)
-    navigate('/home', { state:{ imported: importedCount } })
+    navigate('/race-search-prompt', { state:{ firstName: firstName || user?.user_metadata?.given_name || '' } })
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
+
+  // Show spinner while checking if returning user
+  if (checking) return (
+    <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff' }}>
+      <div style={{ width:36, height:36, border:'3px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
+    </div>
+  )
 
   return (
     <div style={{ minHeight:'100vh', background:'#fff', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', overflow:'hidden', fontFamily:"'Barlow',sans-serif", padding:'40px 0' }}>
@@ -148,15 +182,19 @@ export default function BuildPassport() {
             <div style={{ width:'7px', height:'7px', borderRadius:'50%', background:'#C9A84C' }} />
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
-          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 4px', letterSpacing:'1.5px', lineHeight:1 }}>FINISH YOUR PASSPORT</h1>
-          <p style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'2.5px', color:'#9aa5b4', margin:'0 0 12px', textTransform:'uppercase' }}>Step 3 of 3 — Race Passport Info</p>
-          <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'14px' }}>
-            <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
-            <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
-            <div style={{ height:'3px', width:'40px', background:'#C9A84C', borderRadius:'2px' }} />
+
+          {/* Step indicator */}
+          <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'8px' }}>
+            <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
+            <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
+            <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
+          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'12px' }}>
+            Step 3 — Race Passport Info
           </div>
 
-          {/* Success note if races were imported */}
+          <h1 style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'34px', color:'#1B2A4A', margin:'0 0 12px', letterSpacing:'1.5px', lineHeight:1 }}>FINISH YOUR PASSPORT</h1>
+
           {importedCount > 0 && (
             <div style={{ display:'flex', alignItems:'center', gap:'8px', background:'rgba(22,163,74,0.06)', border:'1px solid rgba(22,163,74,0.2)', borderRadius:'6px', padding:'10px 14px', marginBottom:'14px', textAlign:'left' }}>
               <div style={{ width:7, height:7, borderRadius:'50%', background:'#16a34a', flexShrink:0 }} />
@@ -177,35 +215,30 @@ export default function BuildPassport() {
 
         {error && <ErrorBox>{error}</ErrorBox>}
 
-        {/* Address */}
+        {/* Location */}
         <div className="section-header">Location</div>
         <div style={{ marginBottom:'10px' }}>
           <label className="field-label">Street Address</label>
-          <input className="rp-input" type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St"
-            onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+          <input className="rp-input" type="text" value={address} onChange={e => setAddress(e.target.value)} placeholder="123 Main St" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">City</label>
-            <input className="rp-input" type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Highland"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="text" value={city} onChange={e => setCity(e.target.value)} placeholder="Highland" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
           <div>
             <label className="field-label">State</label>
-            <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="MD"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="text" value={state} onChange={e => setState(e.target.value)} placeholder="MD" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">Zip Code</label>
-            <input className="rp-input" type="text" value={zip} onChange={e => setZip(e.target.value)} placeholder="20777"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="text" value={zip} onChange={e => setZip(e.target.value)} placeholder="20777" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
           <div>
             <label className="field-label">Country</label>
-            <input className="rp-input" type="text" value={country} onChange={e => setCountry(e.target.value)} placeholder="United States"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="text" value={country} onChange={e => setCountry(e.target.value)} placeholder="United States" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
         </div>
 
@@ -214,13 +247,11 @@ export default function BuildPassport() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'10px' }}>
           <div>
             <label className="field-label">Phone Number</label>
-            <input className="rp-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (555) 000-0000" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
           <div>
             <label className="field-label">Gender</label>
-            <select className="rp-select" value={gender} onChange={e => setGender(e.target.value)}
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
+            <select className="rp-select" value={gender} onChange={e => setGender(e.target.value)} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
               <option value="">Select</option>
               <option value="male">Male</option>
               <option value="female">Female</option>
@@ -232,9 +263,7 @@ export default function BuildPassport() {
         <div style={{ marginBottom:'16px' }}>
           <label className="field-label">Shirt Size</label>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-            {SIZES.map(s => (
-              <button key={s} className={`size-btn ${shirtSize===s?'selected':''}`} onClick={() => setShirtSize(s===shirtSize?'':s)}>{s}</button>
-            ))}
+            {SIZES.map(s => <button key={s} className={`size-btn ${shirtSize===s?'selected':''}`} onClick={() => setShirtSize(s===shirtSize?'':s)}>{s}</button>)}
           </div>
         </div>
 
@@ -243,13 +272,11 @@ export default function BuildPassport() {
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', marginBottom:'16px' }}>
           <div>
             <label className="field-label">Contact Name</label>
-            <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="text" value={contactName} onChange={e => setContactName(e.target.value)} placeholder="Full name" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
           <div>
             <label className="field-label">Contact Phone</label>
-            <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000"
-              onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
+            <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
           </div>
         </div>
 
@@ -257,8 +284,7 @@ export default function BuildPassport() {
         <div className="section-header">Running Background</div>
         <div style={{ marginBottom:'14px' }}>
           <label className="field-label">Experience Level</label>
-          <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)}
-            onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
+          <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
             <option value="">Select your level</option>
             <option value="beginner">Beginner — just getting started</option>
             <option value="recreational">Recreational — run for fun</option>
@@ -268,13 +294,12 @@ export default function BuildPassport() {
           </select>
         </div>
         <div style={{ marginBottom:'14px' }}>
-          <label className="field-label">Goal Distance <span style={{ fontWeight:400, color:'#b0b8c4', textTransform:'none', letterSpacing:0 }}>(optional — sets your Passport goal)</span></label>
+          <label className="field-label">Goal Distance <span style={{ fontWeight:400, color:'#b0b8c4', textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
           <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-            {DISTANCES.map(d => (
-              <button key={d} className={`dist-btn ${goalDistance===d?'selected':''}`} onClick={() => setGoalDistance(d===goalDistance?'':d)}>{d}</button>
-            ))}
+            {DISTANCES.map(d => <button key={d} className={`dist-btn ${goalDistance===d?'selected':''}`} onClick={() => setGoalDistance(d===goalDistance?'':d)}>{d}</button>)}
           </div>
         </div>
+
         {/* Payment stub */}
         <div className="section-header">Payment Method</div>
         <div style={{ background:'#f8f9fb', border:'1.5px dashed #e2e6ed', borderRadius:'8px', padding:'16px', marginBottom:'20px', display:'flex', alignItems:'center', gap:'12px' }}>
@@ -290,9 +315,11 @@ export default function BuildPassport() {
 
         <div style={{ height:'1px', background:'#f0f2f5', margin:'8px 0 20px' }} />
         <button className="rp-primary" onClick={handleSaveAndContinue} disabled={saving} style={{ marginBottom:'10px' }}>
-          {saving ? 'Saving...' : "Finish & Go to My Passport →"}
+          {saving ? 'Saving...' : 'Finish & Go to My Passport →'}
         </button>
-        <button className="rp-secondary" onClick={() => navigate('/home', { state:{ imported: importedCount } })}>Skip for Now</button>
+        <button className="rp-secondary" onClick={() => navigate('/home', { state:{ imported: importedCount } })}>
+          Skip for Now
+        </button>
       </div>
     </div>
   )
