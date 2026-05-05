@@ -7,38 +7,22 @@ export default function AuthCallback() {
 
   useEffect(() => {
     const handle = async () => {
-      // Supabase automatically parses the hash fragment and establishes the session
       const { data: { session }, error } = await supabase.auth.getSession()
 
       if (error || !session) {
-        // Something went wrong — send to login
         navigate('/login', { replace: true })
         return
       }
 
-      const userId = session.user.id
+      // Detect new vs returning user by comparing created_at and last_sign_in_at
+      // If they're within 10 seconds of each other, this is a brand new account
+      const createdAt  = new Date(session.user.created_at).getTime()
+      const lastSignIn = new Date(session.user.last_sign_in_at).getTime()
+      const isNewUser  = Math.abs(lastSignIn - createdAt) < 10000
 
-      // Check if this is a new user (no full_name in profile yet)
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('full_name')
-        .eq('id', userId)
-        .single()
-
-      if (!profile?.full_name) {
-        // New user — save name from Google metadata then send to onboarding
-        const meta = session.user.user_metadata || {}
-        const googleName = meta.full_name || meta.name || ''
-        if (googleName) {
-          await supabase.from('profiles').update({
-            full_name:  googleName,
-            first_name: meta.given_name  || googleName.split(' ')[0] || '',
-            last_name:  meta.family_name || googleName.split(' ').slice(1).join(' ') || '',
-          }).eq('id', userId)
-        }
+      if (isNewUser) {
         navigate('/build-passport', { replace: true })
       } else {
-        // Returning user — go straight to home
         navigate('/home', { replace: true })
       }
     }
