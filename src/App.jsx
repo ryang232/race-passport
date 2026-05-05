@@ -26,6 +26,7 @@ import Wall from './pages/Wall'
 import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import TrainingBlock from './pages/TrainingBlock'
+import AuthCallback from './pages/AuthCallback'
 
 // ── RunSignup OAuth callback handler ─────────────────────────────────────────
 function RunSignupCallback() {
@@ -38,12 +39,10 @@ function RunSignupCallback() {
     const error = params.get('error')
 
     if (error || !code) {
-      // Auth denied or failed — go back to race import
       navigate('/race-import', { replace: true })
       return
     }
 
-    // Exchange code for token via our serverless function
     const verifier = sessionStorage.getItem('runsignup_code_verifier') || ''
     fetch(`/api/runsignup-oauth?action=exchange&code=${encodeURIComponent(code)}&code_verifier=${encodeURIComponent(verifier)}`)
       .then(r => r.json())
@@ -59,7 +58,6 @@ function RunSignupCallback() {
       .catch(() => navigate('/race-import', { replace: true }))
   }, [])
 
-  // Brief loading state while exchanging token
   return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff', flexDirection:'column', gap:'16px' }}>
       <div style={{ display:'flex', gap:'8px' }}>
@@ -80,6 +78,7 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/"                        element={<Landing />} />
+            <Route path="/auth/callback"           element={<AuthCallback />} />
             <Route path="/login"                   element={<Login />} />
             <Route path="/signup"                  element={<SignUp />} />
             <Route path="/create-account"          element={<CreateAccount />} />
