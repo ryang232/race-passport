@@ -45,11 +45,10 @@ export default function SignUp() {
   const handleGoogleSignUp = async () => {
     setError(null)
     setGoogleLoading(true)
-    // New users go straight to onboarding
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/build-passport`,
+        redirectTo: `${window.location.origin}/auth/callback`,
       },
     })
     if (error) {
