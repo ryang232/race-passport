@@ -45,11 +45,11 @@ export default function SignUp() {
   const handleGoogleSignUp = async () => {
     setError(null)
     setGoogleLoading(true)
-    // redirectTo goes to /home — AuthContext will detect new user and route to onboarding
+    // New users go straight to onboarding
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/home`,
+        redirectTo: `${window.location.origin}/build-passport`,
       },
     })
     if (error) {
