@@ -14,11 +14,20 @@ export default function AuthCallback() {
         return
       }
 
-      // Detect new vs returning user by comparing created_at and last_sign_in_at
-      // If they're within 10 seconds of each other, this is a brand new account
       const createdAt  = new Date(session.user.created_at).getTime()
       const lastSignIn = new Date(session.user.last_sign_in_at).getTime()
-      const isNewUser  = Math.abs(lastSignIn - createdAt) < 10000
+      const diffSecs   = Math.abs(lastSignIn - createdAt) / 1000
+
+      // Debug — visible in browser console
+      console.log('AuthCallback debug:', {
+        created_at:       session.user.created_at,
+        last_sign_in_at:  session.user.last_sign_in_at,
+        diff_seconds:     diffSecs,
+        isNewUser:        diffSecs < 60,
+      })
+
+      // New user if created_at and last_sign_in_at are within 60 seconds
+      const isNewUser = diffSecs < 60
 
       if (isNewUser) {
         navigate('/build-passport', { replace: true })
