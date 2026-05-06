@@ -17,19 +17,29 @@ export default function AuthCallback() {
       const createdAt  = new Date(session.user.created_at).getTime()
       const lastSignIn = new Date(session.user.last_sign_in_at).getTime()
       const diffSecs   = Math.abs(lastSignIn - createdAt) / 1000
-
-      // Debug — visible in browser console
-      console.log('AuthCallback debug:', {
-        created_at:       session.user.created_at,
-        last_sign_in_at:  session.user.last_sign_in_at,
-        diff_seconds:     diffSecs,
-        isNewUser:        diffSecs < 60,
-      })
-
-      // New user if created_at and last_sign_in_at are within 60 seconds
-      const isNewUser = diffSecs < 60
+      const isNewUser  = diffSecs < 60
 
       if (isNewUser) {
+        // Save geolocation for new Google OAuth users so RunSignup radius search works
+        const saveGeo = () => new Promise(resolve => {
+          if (!navigator.geolocation) return resolve()
+          navigator.geolocation.getCurrentPosition(
+            async pos => {
+              try {
+                await supabase.from('profiles').update({
+                  signup_lat: pos.coords.latitude,
+                  signup_lng: pos.coords.longitude,
+                }).eq('id', session.user.id)
+              } catch(e) {}
+              resolve()
+            },
+            () => resolve(),
+            { timeout: 5000 }
+          )
+        })
+
+        // Fire geolocation in background — don't block navigation
+        saveGeo()
         navigate('/race-search-prompt', { replace: true })
       } else {
         navigate('/home', { replace: true })
