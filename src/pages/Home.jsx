@@ -275,9 +275,9 @@ function PacerDashboard({ races, profile, t, isMobile }) {
     if (!profile) return
     const safeRaces = Array.isArray(races) ? races : []
     const firstName = (profile?.full_name||'').split(' ')[0]
-    const cacheKey = `pacer_v4_${firstName||'user'}_${safeRaces.length}`
+    const cacheKey = 'pacer_v4_' + (firstName||'user') + '_' + safeRaces.length
 
-    // Clear any stale/broken caches from previous versions
+    // Clear stale caches
     for (let i = 0; i < sessionStorage.length; i++) {
       const k = sessionStorage.key(i)
       if (k && (k.startsWith('pacer_insight_') || k.startsWith('pacer_dashboard_'))) {
@@ -300,54 +300,44 @@ function PacerDashboard({ races, profile, t, isMobile }) {
       body: JSON.stringify({
         action: 'insight',
         races: safeRaces.slice(0, 15),
-        profile: {
-          first_name: firstName,
-          state: profile?.state,
-          favorite_distance: profile?.favorite_distance,
-        }
+        profile: { first_name: firstName, state: profile?.state, favorite_distance: profile?.favorite_distance }
       })
     })
-    .then(r => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`)
-      return r.json()
+    .then(resp => {
+      if (!resp.ok) throw new Error('HTTP ' + resp.status)
+      return resp.json()
     })
     .then(d => {
-      console.log('[Pacer] insight response:', d)
       if (d?.insight) {
         setPacerData(d)
         sessionStorage.setItem(cacheKey, JSON.stringify(d))
       } else {
-        // Use fallback so something always shows
+        const msg = safeRaces.length > 0 ? (safeRaces.length + ' races and counting') : 'Every champion starts somewhere'
         setPacerData({
-          insight: `${safeRaces.length > 0 ? safeRaces.length + ' races in your Passport' : 'Your race journey starts here'} — Pacer is ready to coach you every step of the way!`,
+          insight: msg + ' — your Race Passport is building something special.',
           next_step: safeRaces.length > 0 ? 'Keep adding races to unlock deeper insights.' : 'Import your race history to get started.'
         })
       }
       setLoading(false)
     })
-    .catch(err => {
-      console.error('[Pacer] fetch error:', err)
+    .catch(() => {
+      const msg = safeRaces.length > 0 ? (safeRaces.length + ' races and counting') : 'Every champion starts somewhere'
       setPacerData({
-        insight: `${safeRaces.length > 0 ? safeRaces.length + ' races and counting' : 'Every champion starts somewhere'} — your Race Passport is building something special.`,
+        insight: msg + ' — your Race Passport is building something special.',
         next_step: 'Discover your next race on the Discover page.'
       })
       setLoading(false)
     })
   }, [profile?.full_name, races?.length])
 
-  // Career score from race scores
-  const scoredRaces = races?.filter(r => r.pacer_score) || []
+  // Career score from stored race scores
+  const scoredRaces = (Array.isArray(races) ? races : []).filter(rc => rc.pacer_score)
   const careerScore = scoredRaces.length
-    ? Math.round(scoredRaces.reduce((s,r) => s + r.pacer_score, 0) / scoredRaces.length)
+    ? Math.round(scoredRaces.reduce((s, rc) => s + rc.pacer_score, 0) / scoredRaces.length)
     : null
-  const careerGrade = careerScore ? gradeFromScore(careerScore) : null
-
-  // Circumference for score ring
-  const r = 38, circ = 2 * Math.PI * r
-  const dash = careerScore ? (careerScore / 100) * circ : 0
 
   if (!pacerData && (loading || !profile)) return (
-    <div className={'rp-section-card rp-section-gold-tint'} style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid rgba(201,168,76,0.4)', padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
+    <div className="rp-section-card rp-section-gold-tint" style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid rgba(201,168,76,0.4)', padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
       <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3px', color:'#C9A84C', marginBottom:'10px' }}>PACER · YOUR AI RACE INTELLIGENCE</div>
@@ -358,26 +348,27 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   )
   if (!pacerData) return null
 
-  // Derive runner type from race history even without pacer_score
-  const safeRaces2 = Array.isArray(races) ? races : []
-  const distCounts = {}
-  safeRaces2.forEach(r => { distCounts[r.distance] = (distCounts[r.distance]||0)+1 })
-  const topDist = Object.entries(distCounts).sort((a,b)=>b[1]-a[1])[0]?.[0] || null
-  const hasTri = safeRaces2.some(r => ['70.3','140.6','Triathlon'].includes(r.distance))
-  const hasMarathon = safeRaces2.some(r => ['26.2','Marathon'].includes(r.distance))
-  const hasUltra = safeRaces2.some(r => r.distance?.includes('50') || r.distance?.includes('100') || r.distance?.toLowerCase().includes('ultra'))
+  // Runner type from race history
+  const allRaces = Array.isArray(races) ? races : []
+  const distMap = {}
+  allRaces.forEach(rc => { distMap[rc.distance] = (distMap[rc.distance]||0)+1 })
+  const topDist = Object.entries(distMap).sort((a,b)=>b[1]-a[1])[0]?.[0] || null
+  const hasTri     = allRaces.some(rc => ['70.3','140.6','Triathlon'].includes(rc.distance))
+  const hasMarathon= allRaces.some(rc => ['26.2','Marathon'].includes(rc.distance))
+  const hasUltra   = allRaces.some(rc => rc.distance?.includes('50') || rc.distance?.includes('100') || (rc.distance||'').toLowerCase().includes('ultra'))
   const runnerType = hasTri ? 'Triathlete' : hasUltra ? 'Ultra Runner' : hasMarathon ? 'Marathoner' : topDist?.includes('13') ? 'Half Marathoner' : topDist ? 'Road Runner' : null
 
-  // Derive a simple activity score from race volume + diversity if no stored scores
-  const derivedScore = safeRaces2.length > 0 && !careerScore
-    ? Math.min(99, 60 + Math.min(20, safeRaces2.length * 4) + Math.min(10, Object.keys(distCounts).length * 2) + (hasTri ? 6 : 0) + (hasMarathon ? 3 : 0))
+  // Display score — use stored career score or derive from race history
+  const derivedScore = allRaces.length > 0 && !careerScore
+    ? Math.min(99, 60 + Math.min(20, allRaces.length * 4) + Math.min(10, Object.keys(distMap).length * 2) + (hasTri ? 6 : 0) + (hasMarathon ? 3 : 0))
     : careerScore
   const displayScore = derivedScore
   const displayGrade = displayScore ? gradeFromScore(displayScore) : null
-  const displayDash = displayScore ? (displayScore / 100) * circ : 0
+  const dashLen = displayScore ? ((displayScore / 100) * 251.3).toFixed(2) : '0'
+  const gradedRaces = allRaces.filter(rc => rc.pacer_grade)
 
   return (
-    <div className={'rp-section-card rp-section-gold-tint'} style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
+    <div className="rp-section-card rp-section-gold-tint" style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
       <div style={{ display:'flex', alignItems:'flex-start', gap:'16px', flexWrap:isMobile?'wrap':'nowrap' }}>
         <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
         <div style={{ flex:1, minWidth:0 }}>
@@ -399,49 +390,47 @@ function PacerDashboard({ races, profile, t, isMobile }) {
               </div>
             )}
           </div>
-          {/* Individual race grade pills */}
-          {safeRaces2.filter(r => r.pacer_grade).length > 0 && (
+          {gradedRaces.length > 0 && (
             <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:'1px solid ' + (t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)') }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Individual Race Grades</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                {safeRaces2.filter(r => r.pacer_grade).slice(0,6).map(r => {
-                  const isPartial = r.pacer_score_partial !== false
-                  const gradeColor = isPartial ? t.textMuted : (r.pacer_grade?.startsWith('A') ? '#16a34a' : r.pacer_grade?.startsWith('B') ? '#C9A84C' : '#9aa5b4')
+                {gradedRaces.slice(0,6).map(rc => {
+                  const partial = rc.pacer_score_partial !== false
+                  const gColor = partial ? t.textMuted : (rc.pacer_grade?.startsWith('A') ? '#16a34a' : rc.pacer_grade?.startsWith('B') ? '#C9A84C' : '#9aa5b4')
+                  const borderVal = partial ? t.border : 'rgba(201,168,76,0.25)'
                   return (
-                    <div key={r.id}
-                      onClick={()=>navigate(`/race/${r.id}`)}
-                      title={isPartial ? 'Partial grade - add training for full score' : ('Full grade: ' + r.pacer_grade)}
-                      style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:isPartial?t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)':'rgba(201,168,76,0.08)', border:'1px solid ' + (isPartial?t.border:'rgba(201,168,76,0.25)'), borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
-                      onMouseEnter={e=>e.currentTarget.style.borderColor='#C9A84C'}
-                      onMouseLeave={e=>{e.currentTarget.style.borderColor=isPartial?t.border:'rgba(201,168,76,0.25)'}}>
+                    <div key={rc.id}
+                      onClick={() => navigate('/race/' + rc.id)}
+                      title={partial ? 'Partial grade - add training for full score' : ('Full grade: ' + rc.pacer_grade)}
+                      style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:partial ? (t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)') : 'rgba(201,168,76,0.08)', border:'1px solid ' + borderVal, borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = borderVal }}>
                       <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {r.name?.split(' ').slice(0,2).join(' ')}
+                        {(rc.name||'').split(' ').slice(0,2).join(' ')}
                       </span>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:gradeColor, letterSpacing:'0.5px' }}>
-                        {isPartial ? '~' : ''}{r.pacer_grade}
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:gColor, letterSpacing:'0.5px' }}>
+                        {partial ? '~' : ''}{rc.pacer_grade}
                       </span>
-                      {isPartial && <span style={{ fontSize:'8px', color:t.textMuted }}>*</span>}
+                      {partial && <span style={{ fontSize:'8px', color:t.textMuted }}>*</span>}
                     </div>
                   )
                 })}
               </div>
-              {safeRaces2.some(r => r.pacer_score_partial !== false) && (
+              {allRaces.some(rc => rc.pacer_score_partial !== false) && (
                 <div style={{ marginTop:'6px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>
-                  * Partial grade — add Strava activity + training on your race page for a full score
+                  * Partial grade — add Strava + training on your race page for a full score
                 </div>
               )}
             </div>
           )}
-          </div>
         </div>
-        {/* Career Score Ring — hidden on mobile to keep Pacer card compact */}
-        {safeRaces2.length > 0 && displayScore && !isMobile && (
+        {allRaces.length > 0 && displayScore && !isMobile && (
           <div style={{ flexShrink:0, textAlign:'center' }}>
             <div style={{ position:'relative', width:96, height:96 }}>
               <svg viewBox="0 0 96 96" width="96" height="96">
                 <circle cx="48" cy="48" r="40" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="8"/>
                 <circle cx="48" cy="48" r="40" fill="none" stroke="#C9A84C" strokeWidth="8"
-                  strokeDasharray={((displayScore/100)*251.3).toFixed(2) + ' 251.3'}
+                  strokeDasharray={dashLen + ' 251.3'}
                   strokeLinecap="round" transform="rotate(-90 48 48)"/>
               </svg>
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
@@ -456,6 +445,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
     </div>
   )
 }
+
 
 // ── Race Timeline ─────────────────────────────────────────────────────────────
 function RaceTimeline({ races, t, isMobile }) {
