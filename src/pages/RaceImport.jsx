@@ -805,7 +805,7 @@ export default function RaceImport() {
       }
     } catch(e) { console.error('Save error:', e) }
     setSaving(false)
-    navigate('/build-passport', { state:{ imported:races.length, firstName } })
+    navigate('/goal-races', { state:{ imported:races.length, firstName } })
   }
 
   const closePopup = () => {
@@ -969,7 +969,7 @@ export default function RaceImport() {
             onMouseLeave={e=>{if(races.length>0)e.currentTarget.style.background='#1B2A4A'}}>
             {saving?'Saving...':`${races.length>0?`Save ${races.length} Race${races.length!==1?'s':''} to My Passport →`:'Add races above to continue'}`}
           </button>
-          <p onClick={()=>navigate('/build-passport',{state:{firstName}})}
+          <p onClick={()=>navigate('/goal-races',{state:{firstName}})}
             style={{textAlign:'center',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',color:'#b0b8c4',cursor:'pointer',margin:0}}>
             Skip — I'll add races later
           </p>
