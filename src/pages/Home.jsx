@@ -1213,46 +1213,38 @@ export default function Home() {
 
         // Silent background auto-scoring — covers existing races, new imports,
         // and any race that somehow missed scoring. Fires whenever Home loads.
-        const unscored = praces.filter(rc => rc.time && !rc.pacer_score)
+        // Score if: has time AND (no score, score is 0, or score was never written)
+        const unscored = praces.filter(rc => rc.time && rc.pacer_score == null)
         if (unscored.length > 0) {
           const autoScore = async () => {
             const updated = []
             for (const rc of unscored) {
               try {
-                // Use Strava data if linked (better pace + elevation accuracy)
-                let stravaCtx = null
-                if (rc.strava_activity_data) {
-                  const sd = typeof rc.strava_activity_data === 'string'
-                    ? JSON.parse(rc.strava_activity_data)
-                    : rc.strava_activity_data
-                  const seg = sd && sd.segments
-                    ? sd.segments.find(s => ['run','virtualrun'].includes((s.type||'').toLowerCase()))
-                    : sd
-                  if (seg) stravaCtx = { moving_time: seg.moving_time, distance_m: seg.distance, elevation_gain: seg.total_elevation_gain }
+                const isPartialScore = !rc.strava_activity_id
+                const payload = {
+                  action: 'race_score',
+                  is_partial: isPartialScore,
+                  race: { id: rc.id, name: rc.name, distance: rc.distance, time: rc.time, is_pr: rc.is_pr || false },
+                  all_races: praces,
                 }
-                const resp = await fetch('/api/pacer', {
+                const fetchResp = await fetch('/api/pacer', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'race_score',
-                    is_partial: !rc.strava_activity_id,
-                    race: { id: rc.id, name: rc.name, distance: rc.distance, time: rc.time, is_pr: rc.is_pr || false },
-                    all_races: praces,
-                    strava_data: stravaCtx,
-                  }),
+                  body: JSON.stringify(payload),
                 })
-                const scoreData = await resp.json()
-                if (scoreData.score) {
-                  await supabase.from('passport_races').update({
-                    pacer_score: scoreData.score,
-                    pacer_grade: scoreData.grade,
-                    pacer_score_partial: !rc.strava_activity_id,
-                  }).eq('id', rc.id)
-                  updated.push({ id: rc.id, pacer_score: scoreData.score, pacer_grade: scoreData.grade, pacer_score_partial: !rc.strava_activity_id })
+                if (!fetchResp.ok) continue
+                const scoreData = await fetchResp.json()
+                const scoreVal = scoreData && scoreData.score ? Number(scoreData.score) : 0
+                const gradeVal = scoreData && scoreData.grade ? scoreData.grade : null
+                if (scoreVal > 0 && gradeVal) {
+                  await supabase
+                    .from('passport_races')
+                    .update({ pacer_score: scoreVal, pacer_grade: gradeVal, pacer_score_partial: isPartialScore })
+                    .eq('id', rc.id)
+                  updated.push({ id: rc.id, pacer_score: scoreVal, pacer_grade: gradeVal, pacer_score_partial: isPartialScore })
                 }
-              } catch(e) { /* silent — never interrupt the UI */ }
+              } catch(e) { /* non-blocking */ }
             }
-            // Merge scores back into state so grade pills appear without reload
             if (updated.length > 0) {
               setPassportRaces(prev => prev.map(rc => {
                 const u = updated.find(x => x.id === rc.id)
@@ -1260,7 +1252,7 @@ export default function Home() {
               }))
             }
           }
-          autoScore()  // fire and forget — non-blocking
+          autoScore()
         }
       }
     }
