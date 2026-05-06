@@ -198,7 +198,7 @@ function RaceCard({ race, t, compact }) {
   return (
     <div ref={ref} onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onClick={()=>navigate(`/race-detail/${race.id}`)}
-      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, cursor:'pointer', transition:'transform 0.2s', transform:hov?'translateY(-4px)':'none', flexShrink:0, width:compact?'clamp(200px,60vw,260px)':'clamp(240px,24vw,340px)' }}>
+      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, cursor:'pointer', transition:'transform 0.2s', transform:hov?'translateY(-4px)':'none', flexShrink:0, width:compact?'clamp(150px,40vw,240px)':'clamp(200px,40vw,320px)' }}>
       <div style={{ position:'relative', height:h, overflow:'hidden', background:'#1B2A4A' }}>
         {isLogo ? (
           <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'12px', background:'#1B2A4A' }}>
@@ -377,8 +377,8 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const displayDash = displayScore ? (displayScore / 100) * circ : 0
 
   return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:'24px 28px' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', gap:'20px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', gap:'16px', flexWrap:isMobile?'wrap':'nowrap' }}>
         <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
@@ -400,8 +400,8 @@ function PacerDashboard({ races, profile, t, isMobile }) {
             )}
           </div>
         </div>
-        {/* Career Score Ring — shows for all athletes with any races */}
-        {safeRaces2.length > 0 && displayScore && (
+        {/* Career Score Ring — hidden on mobile to keep Pacer card compact */}
+        {safeRaces2.length > 0 && displayScore && !isMobile && (
           <div style={{ flexShrink:0, textAlign:'center' }}>
             <div style={{ position:'relative', width:96, height:96 }}>
               <svg viewBox="0 0 96 96" width="96" height="96">
@@ -674,7 +674,7 @@ function MajorCard({ m, done, t }) {
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onClick={()=>window.open(m.url,'_blank')}
-      style={{ borderRadius:'14px', background:cardBg, border:`1px solid ${hov?(done?'rgba(201,168,76,0.6)':'rgba(255,255,255,0.16)'):accentColor}`, padding:'18px 16px', cursor:'pointer', transition:'all 0.25s', position:'relative', transform:hov?'translateY(-4px)':'none', boxShadow:hov?`0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)`:'none', display:'flex', flexDirection:'column' }}>
+      style={{ borderRadius:'14px', background:cardBg, border:`1px solid ${hov?(done?'rgba(201,168,76,0.6)':'rgba(255,255,255,0.16)'):accentColor}`, padding:'clamp(12px,2vw,18px) clamp(10px,2vw,16px)', cursor:'pointer', transition:'all 0.25s', position:'relative', transform:hov?'translateY(-4px)':'none', boxShadow:hov?`0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)`:'none', display:'flex', flexDirection:'column' }}>
       {/* Top glow line on hover */}
       <div style={{ position:'absolute', top:0, left:'20%', right:'20%', height:'1px', background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.5),transparent)', opacity:hov?1:0, transition:'opacity 0.25s', borderRadius:'1px' }} />
 
@@ -785,7 +785,7 @@ function WorldMajors({ races, t }) {
   const completedCount = earned.size
 
   return (
-    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'26px 26px 22px', position:'relative', overflow:'hidden' }}>
+    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'clamp(16px,3vw,26px) clamp(14px,3vw,26px) 22px', position:'relative', overflow:'hidden' }}>
       {/* Ambient gradient top-left */}
       <div style={{ position:'absolute', top:-60, left:-60, width:200, height:200, borderRadius:'50%', background:'rgba(201,168,76,0.04)', filter:'blur(40px)', pointerEvents:'none' }} />
       {/* Ghost text */}
@@ -804,7 +804,7 @@ function WorldMajors({ races, t }) {
         </div>
       </div>
       {/* 3×2 equal-height grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', position:'relative', zIndex:1, gridAutoRows:'1fr' }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(200px,1fr))', gap:'10px', position:'relative', zIndex:1 }}>
         {WORLD_MAJORS.map(m => (
           <MajorCard key={m.key} m={m} done={earned.has(m.key)} t={t} />
         ))}
@@ -821,10 +821,10 @@ const PARTNER_SLOTS = [
   { id:4, label:'Recovery Partner' },
 ]
 
-function PartnersCard({ t }) {
+function PartnersCard({ t, isMobile }) {
   const navigate = useNavigate()
   return (
-    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'24px 22px', position:'relative', overflow:'hidden', height:'100%', boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'20px', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column' }}>
       {/* Ambient glow */}
       <div style={{ position:'absolute', bottom:-40, right:-40, width:160, height:160, borderRadius:'50%', background:'rgba(201,168,76,0.03)', filter:'blur(30px)', pointerEvents:'none' }} />
       <div style={{ position:'absolute', top:-30, left:-30, width:120, height:120, borderRadius:'50%', background:'rgba(201,168,76,0.02)', filter:'blur(25px)', pointerEvents:'none' }} />
@@ -1011,7 +1011,7 @@ function LogoRaceCard({ race, t }) {
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onClick={()=>navigate(`/race-detail/${race.id}`)}
-      style={{ flexShrink:0, width:'clamp(220px,20vw,280px)', borderRadius:'16px', overflow:'hidden', background:t.surface, border:`1.5px solid ${hov?c.stampBorder:t.border}`, cursor:'pointer', transition:'all 0.2s', transform:hov?'translateY(-4px)':'none' }}>
+      style={{ flexShrink:0, width:'clamp(160px,42vw,280px)', borderRadius:'16px', overflow:'hidden', background:t.surface, border:`1.5px solid ${hov?c.stampBorder:t.border}`, cursor:'pointer', transition:'all 0.2s', transform:hov?'translateY(-4px)':'none' }}>
       <div style={{ height:160, background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
         {race.logo_url ? (
           <img src={race.logo_url} alt={race.name} style={{ maxWidth:'78%', maxHeight:'78%', objectFit:'contain', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} />
@@ -1449,7 +1449,7 @@ export default function Home() {
                 <div style={{ overflowX:'auto', scrollbarWidth:'none' }}>
                   <div style={{ display:'flex', gap:'20px', paddingBottom:'8px', paddingTop:'4px', minWidth:'min-content' }}>
                     {stamps.slice(0,8).map(s=>(
-                      <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={90} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
+                      <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={isMobile?75:90} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
                     ))}
                     <div onClick={()=>navigate('/passport')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'8px', cursor:'pointer', justifyContent:'flex-start', paddingTop:'4px' }}>
                       <div style={{ width:90, height:90, borderRadius:'50%', border:`1.5px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
@@ -1473,7 +1473,7 @@ export default function Home() {
             {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
 
             {/* Partners */}
-            <PartnersCard t={t} />
+            <PartnersCard t={t} isMobile={isMobile} />
 
           </div>
 
