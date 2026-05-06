@@ -550,7 +550,7 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
 
     const isPR      = race.is_pr || false
     const prBonus   = isPR ? 8 : 0
-    const perfScore = Math.min(100, Math.max(40, Math.round((timePercentile * 0.5 + paceScore * 0.5) + prBonus)))
+    const perfScore = Math.min(100, Math.max(60, Math.round((timePercentile * 0.5 + paceScore * 0.5) + prBonus)))
 
     // ── Full score: 60% report card + 40% performance ────────────────────────
     let finalScore = perfScore
