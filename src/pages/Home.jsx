@@ -28,14 +28,7 @@ const RACE_STAT_ITEMS = [
   { label:'70.3 PR', value:'6:32:08' },
 ]
 
-const WORLD_MAJORS = [
-  { key:'tokyo',   name:'Tokyo Marathon',         keywords:['tokyo'],                       url:'https://www.marathon.tokyo/en/' },
-  { key:'boston',  name:'Boston Marathon',        keywords:['boston'],                      url:'https://www.baa.org/' },
-  { key:'london',  name:'London Marathon',        keywords:['london'],                      url:'https://www.londonmarathonevents.co.uk/london-marathon' },
-  { key:'berlin',  name:'Berlin Marathon',        keywords:['berlin'],                      url:'https://www.bmw-berlin-marathon.com/en/' },
-  { key:'chicago', name:'Chicago Marathon',       keywords:['chicago'],                     url:'https://www.chicagomarathon.com/' },
-  { key:'nyc',     name:'New York City Marathon', keywords:['new york','nyc','tcs new york'], url:'https://www.nyrr.org/tcsnycmarathon' },
-]
+// WORLD_MAJORS defined in WorldMajors section below with full lottery data
 
 function gradeFromScore(s) {
   if (s >= 100) return 'A+'
@@ -554,8 +547,6 @@ function Milestones({ races, t }) {
 }
 
 // ── World Majors ──────────────────────────────────────────────────────────────
-// Major logos — hosted in Supabase Storage > assets > majors/
-// Upload each PNG to that path to activate
 const SUPABASE_ASSETS = 'https://xwngrbzvqhioklfvaizm.supabase.co/storage/v1/object/public/assets/majors'
 const MAJOR_LOGOS = {
   tokyo:   `${SUPABASE_ASSETS}/tokyo.png`,
@@ -566,8 +557,202 @@ const MAJOR_LOGOS = {
   nyc:     `${SUPABASE_ASSETS}/nyc.png`,
 }
 
+// All dates in local time — update annually
+const WORLD_MAJORS = [
+  {
+    key:'boston', name:'Boston Marathon', url:'https://www.baa.org/',
+    keywords:['boston'],
+    raceDate: new Date('2027-04-19'),
+    entry: {
+      type: 'qualifying',  // no lottery
+      label: 'No Lottery — Qualifying Time Required',
+      detail: 'The 2027 qualifying window opened Sep 13, 2025',
+      qualifyUrl: 'https://www.baa.org/races/boston-marathon/qualify',
+      statusColor: '#4ade80', // green — window open
+      statusLabel: 'Qualifying Window Open',
+    },
+  },
+  {
+    key:'nyc', name:'New York City Marathon', url:'https://www.nyrr.org/tcsnycmarathon',
+    keywords:['new york','nyc','tcs new york'],
+    raceDate: new Date('2026-11-01'),
+    entry: {
+      type: 'lottery',
+      label: 'Lottery Closed',
+      detail: 'Feb 4–25, 2026 · Results announced Mar 4, 2026',
+      statusColor: '#9aa5b4', // grey — closed, results already out
+      statusLabel: 'Results Announced',
+    },
+  },
+  {
+    key:'tokyo', name:'Tokyo Marathon', url:'https://www.marathon.tokyo/en/',
+    keywords:['tokyo'],
+    raceDate: new Date('2027-03-07'),
+    entry: {
+      type: 'lottery',
+      label: 'Lottery Opening Soon',
+      detail: 'General entry expected Aug 14–28, 2026*',
+      disclaimer: '* Date unconfirmed — based on prior year patterns',
+      lotteryOpenDate: new Date('2026-08-14'),
+      statusColor: '#f59e0b', // amber — opening soon
+      statusLabel: 'Opening Soon (Expected)',
+    },
+  },
+  {
+    key:'london', name:'London Marathon', url:'https://www.londonmarathonevents.co.uk/london-marathon',
+    keywords:['london'],
+    raceDate: new Date('2027-04-25'),
+    entry: {
+      type: 'lottery',
+      label: 'Lottery Closed',
+      detail: 'Apr 24–May 1, 2026 · Results expected early July 2026',
+      statusColor: '#9aa5b4', // grey — closed, results pending
+      statusLabel: 'Results Pending',
+    },
+  },
+  {
+    key:'berlin', name:'Berlin Marathon', url:'https://www.bmw-berlin-marathon.com/en/',
+    keywords:['berlin'],
+    raceDate: new Date('2026-09-27'),
+    entry: {
+      type: 'lottery',
+      label: 'Lottery Closed',
+      detail: 'Sep 25–Nov 6, 2025 · Results announced Nov 27, 2025',
+      statusColor: '#9aa5b4',
+      statusLabel: 'Results Announced',
+    },
+  },
+  {
+    key:'chicago', name:'Chicago Marathon', url:'https://www.chicagomarathon.com/',
+    keywords:['chicago'],
+    raceDate: new Date('2026-10-11'),
+    entry: {
+      type: 'lottery',
+      label: 'Lottery Closed',
+      detail: 'Oct 21–Nov 18, 2025 · Results announced Dec 11, 2025',
+      statusColor: '#9aa5b4',
+      statusLabel: 'Results Announced',
+    },
+  },
+]
+
+function useMajorCountdown(targetDate) {
+  const [cd, setCd] = useState({ days:0, hours:0, mins:0, past:false })
+  useEffect(() => {
+    const calc = () => {
+      const diff = targetDate - new Date()
+      if (diff <= 0) { setCd({ days:0, hours:0, mins:0, past:true }); return }
+      setCd({ days:Math.floor(diff/86400000), hours:Math.floor((diff%86400000)/3600000), mins:Math.floor((diff%3600000)/60000), past:false })
+    }
+    calc(); const ti = setInterval(calc, 60000); return () => clearInterval(ti)
+  }, [targetDate])
+  return cd
+}
+
+function MajorCard({ m, done, t }) {
+  const [hov, setHov] = useState(false)
+  const [imgErr, setImgErr] = useState(false)
+  const raceCountdown = useMajorCountdown(m.raceDate)
+  const lotteryCountdown = m.entry.lotteryOpenDate ? useMajorCountdown(m.entry.lotteryOpenDate) : null
+  const logo = MAJOR_LOGOS[m.key]
+  const daysToRace = raceCountdown.days
+  const past = raceCountdown.past
+
+  const accentColor = done ? '#C9A84C' : 'rgba(255,255,255,0.12)'
+  const cardBg = done ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)'
+
+  return (
+    <div
+      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      onClick={()=>window.open(m.url,'_blank')}
+      style={{ borderRadius:'14px', background:cardBg, border:`1.5px solid ${hov?(done?'#C9A84C':'rgba(255,255,255,0.22)'):accentColor}`, padding:'16px 14px', cursor:'pointer', transition:'all 0.2s', position:'relative', transform:hov?'translateY(-2px)':'none' }}>
+      {/* Earned checkmark */}
+      {done && (
+        <div style={{ position:'absolute', top:8, right:8, width:18, height:18, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+          <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2L7.5 2" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        </div>
+      )}
+
+      {/* Logo */}
+      <div style={{ height:56, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'10px' }}>
+        {!imgErr ? (
+          <img src={logo} alt={m.name}
+            style={{ maxHeight:52, maxWidth:'88%', objectFit:'contain', opacity:done?1:0.55, filter:done?'none':'grayscale(0.4)' }}
+            onError={()=>setImgErr(true)} />
+        ) : (
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:done?'#C9A84C':'rgba(255,255,255,0.35)', textAlign:'center', letterSpacing:'1px', lineHeight:1.2 }}>
+            {m.name.replace(' Marathon','').replace('New York City','NYC')}
+          </div>
+        )}
+      </div>
+
+      {/* Race name */}
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, color:done?'#C9A84C':'rgba(255,255,255,0.5)', textAlign:'center', letterSpacing:'0.5px', marginBottom:'10px', lineHeight:1.2 }}>
+        {m.name.replace('New York City','NYC')}
+      </div>
+
+      {/* Divider */}
+      <div style={{ height:'1px', background:'rgba(255,255,255,0.07)', marginBottom:'10px' }} />
+
+      {/* Race countdown */}
+      <div style={{ marginBottom:'8px' }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.3)', textTransform:'uppercase', marginBottom:'3px' }}>
+          {past ? 'Race Complete' : 'Race Day'}
+        </div>
+        {past ? (
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>
+            {m.raceDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+          </div>
+        ) : (
+          <div style={{ display:'flex', alignItems:'baseline', gap:'4px' }}>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{daysToRace}</span>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)', fontWeight:600 }}>days</span>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', marginLeft:'2px' }}>
+              · {m.raceDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Lottery / Entry status */}
+      <div style={{ background:'rgba(0,0,0,0.2)', borderRadius:'8px', padding:'7px 9px' }}>
+        <div style={{ display:'flex', alignItems:'center', gap:'5px', marginBottom:'3px' }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:m.entry.statusColor, flexShrink:0 }} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, color:m.entry.statusColor, letterSpacing:'0.5px' }}>
+            {m.entry.statusLabel}
+          </span>
+        </div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.35)', lineHeight:1.4 }}>
+          {m.entry.detail}
+        </div>
+        {/* Lottery countdown if opening soon */}
+        {lotteryCountdown && !lotteryCountdown.past && (
+          <div style={{ marginTop:'5px', display:'flex', alignItems:'center', gap:'4px' }}>
+            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#f59e0b', letterSpacing:'0.5px' }}>{lotteryCountdown.days}d {lotteryCountdown.hours}h</span>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.3)' }}>until expected open</span>
+          </div>
+        )}
+        {/* Boston qualifying link */}
+        {m.entry.qualifyUrl && (
+          <div style={{ marginTop:'5px' }}>
+            <span onClick={e=>{e.stopPropagation();window.open(m.entry.qualifyUrl,'_blank')}}
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#C9A84C', cursor:'pointer', textDecoration:'underline', letterSpacing:'0.3px' }}>
+              View Qualifying Standards →
+            </span>
+          </div>
+        )}
+        {/* Tokyo disclaimer */}
+        {m.entry.disclaimer && (
+          <div style={{ marginTop:'3px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.2)', lineHeight:1.4, fontStyle:'italic' }}>
+            {m.entry.disclaimer}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 function WorldMajors({ races, t }) {
-  const navigate = useNavigate()
   const earned = new Set()
   races?.forEach(r => {
     const name = (r.name||'').toLowerCase()
@@ -576,59 +761,28 @@ function WorldMajors({ races, t }) {
   const completedCount = earned.size
 
   return (
-    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:'24px 28px', position:'relative', overflow:'hidden' }}>
+    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:'22px 24px', position:'relative', overflow:'hidden' }}>
       {/* Ghost text */}
-      <div style={{ position:'absolute', bottom:-20, right:-10, fontFamily:"'Bebas Neue',sans-serif", fontSize:'100px', color:'rgba(201,168,76,0.05)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
+      <div style={{ position:'absolute', bottom:-10, right:-10, fontFamily:"'Bebas Neue',sans-serif", fontSize:'80px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'24px' }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'18px', position:'relative', zIndex:1 }}>
         <div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Abbott World Majors</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>World Majors</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'3px' }}>Abbott World Majors</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>World Majors</div>
         </div>
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'52px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{completedCount}<span style={{ fontSize:'28px', color:'rgba(255,255,255,0.3)' }}>/6</span></div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', letterSpacing:'1px' }}>COMPLETED</div>
-        </div>
-      </div>
-      {/* Majors grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px' }}>
-        {WORLD_MAJORS.map(m => {
-          const done = earned.has(m.key)
-          const logo = MAJOR_LOGOS[m.key]
-          return (
-            <div key={m.key} onClick={()=>window.open(m.url,'_blank')}
-              style={{ borderRadius:'14px', background:done?'rgba(201,168,76,0.1)':'rgba(255,255,255,0.04)', border:`1.5px solid ${done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}`, padding:'16px 12px', cursor:'pointer', transition:'all 0.2s', position:'relative', overflow:'hidden', filter:done?'none':'grayscale(0.7) opacity(0.5)' }}
-              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.borderColor=done?'#C9A84C':'rgba(255,255,255,0.2)'}}
-              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.borderColor=done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}}>
-              {done && (
-                <div style={{ position:'absolute', top:8, right:8, width:20, height:20, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                </div>
-              )}
-              <div style={{ height:52, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'10px' }}>
-                <img src={logo} alt={m.name} style={{ maxHeight:48, maxWidth:'90%', objectFit:'contain', opacity:done?1:0.6 }}
-                  onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} />
-                <div style={{ display:'none', fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:done?'#C9A84C':'rgba(255,255,255,0.4)', textAlign:'center', lineHeight:1.2 }}>26.2</div>
-              </div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:done?'#C9A84C':'rgba(255,255,255,0.4)', textAlign:'center', letterSpacing:'0.5px', lineHeight:1.3 }}>
-                {m.name.replace(' Marathon','').replace('New York City','NYC')}
-              </div>
-              {!done && (
-                <div style={{ textAlign:'center', marginTop:'4px' }}>
-                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.2)', letterSpacing:'1px', textTransform:'uppercase' }}>Locked</span>
-                </div>
-              )}
-            </div>
-          )
-        })}
-      </div>
-      {completedCount === 0 && (
-        <div style={{ marginTop:'16px', padding:'12px 16px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:'10px' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:1.5 }}>
-            Run any of the 6 Abbott World Marathon Majors and unlock them here. Add your races to track your progress.
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'44px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>
+            {completedCount}<span style={{ fontSize:'24px', color:'rgba(255,255,255,0.25)' }}>/6</span>
           </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.3)', letterSpacing:'1.5px', textTransform:'uppercase' }}>Completed</div>
         </div>
-      )}
+      </div>
+      {/* 3×2 grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', position:'relative', zIndex:1 }}>
+        {WORLD_MAJORS.map(m => (
+          <MajorCard key={m.key} m={m} done={earned.has(m.key)} t={t} />
+        ))}
+      </div>
     </div>
   )
 }
