@@ -279,25 +279,67 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Wait until we at least have profile data before firing
     if (!profile) return
     const safeRaces = Array.isArray(races) ? races : []
     const firstName = (profile?.full_name||'').split(' ')[0]
-    const cacheKey = `pacer_insight_v3_${firstName||'user'}_${safeRaces.length}`
+    const cacheKey = `pacer_v4_${firstName||'user'}_${safeRaces.length}`
+
+    // Clear any stale/broken caches from previous versions
+    for (let i = 0; i < sessionStorage.length; i++) {
+      const k = sessionStorage.key(i)
+      if (k && (k.startsWith('pacer_insight_') || k.startsWith('pacer_dashboard_'))) {
+        sessionStorage.removeItem(k); i--
+      }
+    }
+
     const cached = sessionStorage.getItem(cacheKey)
-    if (cached) { try { setPacerData(JSON.parse(cached)); return } catch(e) {} }
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached)
+        if (parsed?.insight) { setPacerData(parsed); return }
+      } catch(e) { sessionStorage.removeItem(cacheKey) }
+    }
+
     setLoading(true)
     fetch('/api/pacer', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action:'insight',
-        races: safeRaces.slice(0,15),
-        profile: { first_name: firstName, state: profile?.state, favorite_distance: profile?.favorite_distance }
+        action: 'insight',
+        races: safeRaces.slice(0, 15),
+        profile: {
+          first_name: firstName,
+          state: profile?.state,
+          favorite_distance: profile?.favorite_distance,
+        }
       })
-    }).then(r=>r.json()).then(d => {
-      if (d.insight) { setPacerData(d); sessionStorage.setItem(cacheKey, JSON.stringify(d)) }
+    })
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`)
+      return r.json()
+    })
+    .then(d => {
+      console.log('[Pacer] insight response:', d)
+      if (d?.insight) {
+        setPacerData(d)
+        sessionStorage.setItem(cacheKey, JSON.stringify(d))
+      } else {
+        // Use fallback so something always shows
+        setPacerData({
+          insight: `${safeRaces.length > 0 ? safeRaces.length + ' races in your Passport' : 'Your race journey starts here'} — Pacer is ready to coach you every step of the way!`,
+          next_step: safeRaces.length > 0 ? 'Keep adding races to unlock deeper insights.' : 'Import your race history to get started.'
+        })
+      }
       setLoading(false)
-    }).catch(()=>setLoading(false))
+    })
+    .catch(err => {
+      console.error('[Pacer] fetch error:', err)
+      setPacerData({
+        insight: `${safeRaces.length > 0 ? safeRaces.length + ' races and counting' : 'Every champion starts somewhere'} — your Race Passport is building something special.`,
+        next_step: 'Discover your next race on the Discover page.'
+      })
+      setLoading(false)
+    })
   }, [profile?.full_name, races?.length])
 
   // Career score from race scores
@@ -312,7 +354,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const dash = careerScore ? (careerScore / 100) * circ : 0
 
   if (!pacerData && (loading || !profile)) return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', border:`1px solid ${t.isDark?'rgba(201,168,76,0.15)':'rgba(201,168,76,0.25)'}`, padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid rgba(201,168,76,0.4)', padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
       <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3px', color:'#C9A84C', marginBottom:'10px' }}>PACER · YOUR AI RACE INTELLIGENCE</div>
@@ -324,7 +366,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   if (!pacerData) return null
 
   return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', border:`1.5px solid ${t.isDark?'rgba(201,168,76,0.25)':'rgba(201,168,76,0.4)'}`, padding:'24px 28px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:'24px 28px' }}>
       <div style={{ display:'flex', alignItems:'flex-start', gap:'20px' }}>
         <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
         <div style={{ flex:1, minWidth:0 }}>
@@ -368,7 +410,7 @@ function RaceTimeline({ races, t, isMobile }) {
   const DOT_SPACING = 220
   const totalW = Math.max(sorted.length * DOT_SPACING + 200, 600)
   return (
-    <div style={{ borderRadius:'20px', background:'#1B2A4A', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
+    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
       {/* Ghost text */}
       <div style={{ position:'absolute', top:'50%', right:-20, transform:'translateY(-50%)', fontFamily:"'Bebas Neue',sans-serif", fontSize:'120px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>TIMELINE</div>
       {/* Header */}
@@ -464,7 +506,7 @@ function Milestones({ races, t }) {
 
   if (!milestones.length) return null
   return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(201,168,76,0.08)':'#FFF8E7', border:`1.5px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.3)'}`, padding:'20px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.08)':'#FFF8E7', padding:'20px' }}>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'3px' }}>Your Journey</div>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.isDark?'#fff':t.text, letterSpacing:'1px', marginBottom:'12px' }}>Milestones</div>
       <div style={{ display:'flex', flexDirection:'column', gap:'8px', maxHeight:'280px', overflowY:'auto', scrollbarWidth:'none' }}>
@@ -505,7 +547,7 @@ function WorldMajors({ races, t }) {
   const completedCount = earned.size
 
   return (
-    <div style={{ borderRadius:'20px', background:'#1B2A4A', padding:'28px 32px', position:'relative', overflow:'hidden' }}>
+    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:'24px 28px', position:'relative', overflow:'hidden' }}>
       {/* Ghost text */}
       <div style={{ position:'absolute', bottom:-20, right:-10, fontFamily:"'Bebas Neue',sans-serif", fontSize:'100px', color:'rgba(201,168,76,0.05)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
       {/* Header */}
@@ -565,7 +607,7 @@ function WorldMajors({ races, t }) {
 // ── Goal card ─────────────────────────────────────────────────────────────────
 function GoalCard({ profile, t, navigate }) {
   if (!profile?.goal_distance) return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1.5px dashed ${t.border}`, padding:'20px', textAlign:'center' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px', textAlign:'center' }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>No Goal Set</div>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'12px' }}>Set a goal race or distance and Pacer will find races to match.</div>
       <button onClick={()=>navigate('/goal-races')} style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
@@ -577,10 +619,14 @@ function GoalCard({ profile, t, navigate }) {
   const c = getDistanceColor(profile.goal_distance)
   const label = profile.goal_distance
   return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1px solid ${t.border}`, padding:'20px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Your Goal</span>
+        <div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>Training</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Your Goal</div>
+        </div>
         <button onClick={()=>navigate('/goal-races')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>Change →</button>
+        </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px', background:`${c.stampBorder}08`, border:`1px solid ${c.stampBorder}25`, borderRadius:'10px' }}>
         <div style={{ width:48, height:48, borderRadius:'50%', border:`2px solid ${c.stampBorder}`, background:`${c.stampBorder}12`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
@@ -623,7 +669,7 @@ function MyLists({ userId, t, navigate }) {
   }
 
   return (
-    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1px solid ${t.border}`, padding:'20px' }}>
+    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
         <button onClick={()=>setCreating(p=>!p)} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>
@@ -777,7 +823,7 @@ function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, nav
   )
 
   return (
-    <div style={{ borderRadius:'20px', background:t.surface, border:`1px solid ${t.border}`, padding:'24px 28px', overflow:'hidden', width:'100%', minWidth:0 }}>
+    <div style={{ borderRadius:'16px', background:t.surface, padding:'24px 24px', overflow:'hidden', width:'100%', minWidth:0 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'44px', color:t.text, letterSpacing:'1px' }}>Find Your Next Race</span>
         <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>See All →</button>
@@ -1081,65 +1127,82 @@ export default function Home() {
             }} />}
       </div>
 
-      {/* Dashboard content */}
-      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'12px 10px 80px':'20px 20px 80px', boxSizing:'border-box' }}>
-        <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:'16px' }}>
+      {/* Dashboard — asymmetric layout: 70% main / 30% sidebar */}
+      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'16px 12px 100px':'32px 28px 80px', boxSizing:'border-box' }}>
+        <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'minmax(0,1.65fr) minmax(0,0.85fr)', gap:'20px', alignItems:'start' }}>
 
-          {/* ROW 1: Hero + Stamps side by side */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'minmax(0,2fr) minmax(0,1fr)', gap:'16px', alignItems:'start' }}>
-            <div>
+          {/* ─── LEFT MAIN COLUMN ────────────────────────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'20px', minWidth:0 }}>
+
+            {/* 1. Pacer insight — hero coaching card */}
+            <PacerDashboard races={passportRaces} profile={profile} t={t} isMobile={isMobile} />
+
+            {/* 2. Race discovery / Next race hero */}
+            <div style={{ minWidth:0, overflow:'hidden', borderRadius:'20px' }}>
               {upcomingRace
                 ? <NextRaceHero race={upcomingRace} t={t} isMobile={isMobile} />
                 : <DiscoverSection nearbyRaces={nearbyRaces} nearbyLoading={nearbyLoading} profile={profile} t={t} isMobile={isMobile} navigate={navigate} />
               }
             </div>
-            {/* Stamps compact box */}
-            <div style={{ borderRadius:'20px', background:t.surface, border:`1px solid ${t.border}`, padding:'20px' }}>
+
+            {/* 3. Timeline */}
+            <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
+
+            {/* 4. World Majors */}
+            <WorldMajors races={passportRaces} t={t} />
+
+          </div>
+
+          {/* ─── RIGHT SIDEBAR ────────────────────────────────────── */}
+          <div style={{ display:'flex', flexDirection:'column', gap:'16px', minWidth:0 }}>
+
+            {/* Stamps */}
+            <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'20px 20px 16px' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
+                <div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>Passport</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Your Stamps</div>
+                </div>
                 <button onClick={()=>navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View All →</button>
               </div>
               {stamps.length === 0 ? (
-                <div style={{ padding:'24px', textAlign:'center', border:`1.5px dashed ${t.border}`, borderRadius:'12px' }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'12px' }}>Add your first race to start building your Passport.</div>
-                  <button onClick={()=>navigate('/race-import')} style={{ padding:'8px 18px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+                <div style={{ padding:'20px', textAlign:'center', border:`1px dashed ${t.border}`, borderRadius:'10px' }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'10px' }}>Add your first race to start building your Passport.</div>
+                  <button onClick={()=>navigate('/race-import')} style={{ padding:'7px 16px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
                     onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>Add Races →</button>
                 </div>
               ) : (
-                <div style={{ overflowX:'auto', scrollbarWidth:'none', marginLeft:'-4px', paddingLeft:'4px' }}>
-                  <div style={{ display:'flex', gap:'14px', paddingBottom:'8px', paddingTop:'4px' }}>
+                <>
+                  <div style={{ display:'flex', flexWrap:'wrap', gap:'12px', paddingBottom:'4px' }}>
                     {stamps.slice(0,6).map(s=>(
-                      <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={90} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
+                      <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={80} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
                     ))}
-                    <div onClick={()=>navigate('/passport')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'8px', cursor:'pointer' }}>
-                      <div style={{ width:90, height:90, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'border-color 0.15s' }}
-                        onMouseEnter={e=>e.currentTarget.style.borderColor='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.borderColor=t.border}>
-                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    <div onClick={()=>navigate('/passport')} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'6px', cursor:'pointer' }}>
+                      <div style={{ width:80, height:80, borderRadius:'50%', border:`1.5px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.15s' }}
+                        onMouseEnter={e=>{e.currentTarget.style.borderColor='#C9A84C';e.currentTarget.style.transform='scale(1.05)'}} onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform='scale(1)'}}>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 3v14M3 10h14" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
                       </div>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', textAlign:'center' }}>More</div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:'#C9A84C' }}>More</div>
                     </div>
                   </div>
-                </div>
+                  {stamps.length > 6 && (
+                    <div style={{ marginTop:'10px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
+                      +{stamps.length - 6} more in your passport
+                    </div>
+                  )}
+                </>
               )}
             </div>
-          </div>
 
-          {/* ROW 2: Pacer full width */}
-          <div>
-            <PacerDashboard races={passportRaces} profile={profile} t={t} isMobile={isMobile} />
-          </div>
-
-          {/* ROW 3: Timeline full width */}
-          <div>
-            <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
-          </div>
-
-          {/* ROW 4: 4-column — Milestones | World Majors | My Lists | Goal */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr 1fr':'minmax(0,1fr) minmax(0,2fr) minmax(0,1fr) minmax(0,1fr)', gap:'16px', marginBottom:'0', alignItems:'start' }}>
-            <Milestones races={passportRaces} t={t} />
-            <WorldMajors races={passportRaces} t={t} />
-            {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
+            {/* Goal */}
             <GoalCard profile={profile} t={t} navigate={navigate} />
+
+            {/* Milestones */}
+            <Milestones races={passportRaces} t={t} />
+
+            {/* My Lists */}
+            {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
+
           </div>
 
         </div>
