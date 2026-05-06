@@ -500,15 +500,6 @@ export default function Home() {
 
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-      // ── New user detection ──────────────────────────────────────────────────
-      // Google/Apple OAuth users skip CreateAccount so their profile has no
-      // full_name. Detect this and send them to onboarding instead of Home.
-      if (!data || !data.full_name) {
-        navigate('/build-passport', { replace: true })
-        return
-      }
-      // ───────────────────────────────────────────────────────────────────────
-
       setProfile(data)
       loadNearbyAndSuggested(data?.state, data?.favorite_distance)
 
