@@ -441,7 +441,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
               <svg viewBox="0 0 96 96" width="96" height="96">
                 <circle cx="48" cy="48" r="40" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="8"/>
                 <circle cx="48" cy="48" r="40" fill="none" stroke="#C9A84C" strokeWidth="8"
-                  strokeDasharray={`${(displayScore/100)*251.3} 251.3`}
+                  strokeDasharray={((displayScore/100)*251.3).toFixed(2) + ' 251.3'}
                   strokeLinecap="round" transform="rotate(-90 48 48)"/>
               </svg>
               <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
@@ -498,7 +498,7 @@ function RaceTimeline({ races, t, isMobile }) {
           })}
           {/* Timeline line */}
           <div style={{ position:'absolute', top:'50%', left:0, right:0, height:6, background:'rgba(201,168,76,0.15)', borderRadius:'3px', transform:'translateY(-50%)' }}>
-            <div style={{ height:'100%', background:'linear-gradient(to right,rgba(201,168,76,0.4),#C9A84C)', borderRadius:'3px', width: sorted.length > 1 ? `${((sorted.length-1)*DOT_SPACING+100)/totalW*100}%` : '30%', marginLeft:'100px' }} />
+            <div style={{ height:'100%', background:'linear-gradient(to right,rgba(201,168,76,0.4),#C9A84C)', borderRadius:'3px', width: sorted.length > 1 ? (((sorted.length-1)*DOT_SPACING+100)/totalW*100).toFixed(1)+'%' : '30%', marginLeft:'100px' }} />
           </div>
           {/* Race dots */}
           {sorted.map((race,i) => {
