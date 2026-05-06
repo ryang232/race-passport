@@ -411,9 +411,9 @@ function PacerDashboard({ races, profile, t, isMobile }) {
                     <div key={r.id}
                       onClick={()=>navigate(`/race/${r.id}`)}
                       title={isPartial ? 'Partial grade — add training for full score' : `Full grade: ${r.pacer_grade}`}
-                      style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:isPartial?t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)':'rgba(201,168,76,0.08)', border:`1px solid ${isPartial?t.border:'rgba(201,168,76,0.25)'}`, borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
+                      style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:isPartial?t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)':'rgba(201,168,76,0.08)', border:'1px solid ' + (isPartial?t.border:'rgba(201,168,76,0.25)'), borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
                       onMouseEnter={e=>e.currentTarget.style.borderColor='#C9A84C'}
-                      onMouseLeave={e=>e.currentTarget.style.borderColor=isPartial?t.border:'rgba(201,168,76,0.25)'}>
+                      onMouseLeave={e=>{e.currentTarget.style.borderColor=isPartial?t.border:'rgba(201,168,76,0.25)'}}>
                       <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {r.name?.split(' ').slice(0,2).join(' ')}
                       </span>
@@ -1520,6 +1520,50 @@ export default function Home() {
 
             {/* My Lists */}
             {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
+
+            {/* The Wall — Featured Story */}
+            <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-light'}`}
+              style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#ffffff', padding:'20px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
+                <div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>Featured Story</div>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>The Wall</div>
+                </div>
+                <button onClick={()=>navigate('/wall')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0, flexShrink:0 }}>See All →</button>
+              </div>
+              {/* Featured post card */}
+              <div onClick={()=>navigate('/wall')}
+                style={{ border:`1px solid ${t.isDark?'rgba(255,255,255,0.08)':'rgba(27,42,74,0.1)'}`, borderRadius:'12px', padding:'14px', cursor:'pointer', transition:'all 0.2s' }}
+                onMouseEnter={e=>{ e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.background=t.isDark?'rgba(201,168,76,0.05)':'rgba(201,168,76,0.04)' }}
+                onMouseLeave={e=>{ e.currentTarget.style.borderColor=t.isDark?'rgba(255,255,255,0.08)':'rgba(27,42,74,0.1)'; e.currentTarget.style.background='transparent' }}>
+                {/* Author row */}
+                <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
+                  <div style={{ width:28, height:28, borderRadius:'50%', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'11px', color:'#C9A84C' }}>RG</span>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.text, lineHeight:1 }}>Ryan Groene</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>IRONMAN 70.3 Eagleman · Jun 2025</div>
+                  </div>
+                </div>
+                {/* Story title */}
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:t.text, letterSpacing:'0.5px', lineHeight:1.3, marginBottom:'10px' }}>
+                  My dad lost nearly 100 pounds and finished a 5K. That's my why.
+                </div>
+                {/* Reactions preview */}
+                <div style={{ display:'flex', alignItems:'center', gap:'10px' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="#e24b4a" stroke="#e24b4a" strokeWidth="1.5"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>847</span>
+                  </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:'4px' }}>
+                    <svg width="12" height="12" viewBox="0 0 20 20" fill="#FC4C02" stroke="#FC4C02" strokeWidth="1.2" strokeLinejoin="round"><path d="M10 2c0 4-5 6-5 10a5 5 0 0 0 10 0c0-4-5-6-5-10z"/></svg>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>412</span>
+                  </div>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, marginLeft:'auto' }}>3 min read</span>
+                </div>
+              </div>
+            </div>
 
             {/* Partners */}
             <PartnersCard t={t} isMobile={isMobile} />
