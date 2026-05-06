@@ -812,10 +812,18 @@ export default function RacePage() {
   const initials = fullName.split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2) || 'RG'
 
   // ── Header stat boxes ─────────────────────────────────────────────────────
+  const gradeDisplay = raceScore?.grade || race.pacer_grade || null
+  const gradeIsPartial = raceScore ? raceScore.is_partial : race.pacer_score_partial !== false
+  const gradeColor = gradeDisplay
+    ? (gradeIsPartial ? 'rgba(154,165,180,0.9)' : (gradeDisplay.startsWith('A') ? '#4ade80' : gradeDisplay.startsWith('B') ? '#C9A84C' : '#9aa5b4'))
+    : null
+
   const headerStats = [
     { label:'Finish Time',   value: race.time || '—' },
     { label:'Avg Pace',      value: isTri ? 'See Splits' : (computedPace || '—') },
-    { label:'Overall Place', value: race.place || '—' },
+    { label: gradeDisplay ? (gradeIsPartial ? 'Race Grade*' : 'Race Grade') : 'Overall Place',
+      value: gradeDisplay || race.place || '—',
+      color: gradeColor },
     { label:'Elevation',     value: race.elevation || '—' },
   ]
 
@@ -921,12 +929,21 @@ export default function RacePage() {
           <div style={{ maxWidth:'1200px', margin:'0 auto', display:'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : 'repeat(4,1fr)', padding: isMobile ? '0 16px' : '0 40px' }}>
             {headerStats.map((s, i) => (
               <div key={i} style={{ padding: isMobile ? '14px 0' : '20px 0', textAlign:'center', borderRight: isMobile ? (i%2===0?'1px solid rgba(255,255,255,0.08)':'none') : (i<3?'1px solid rgba(255,255,255,0.08)':'none'), borderBottom: isMobile && i<2 ? '1px solid rgba(255,255,255,0.08)' : 'none' }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '20px' : '26px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile ? '20px' : (s.color ? '32px' : '26px'), color: s.color || '#fff', letterSpacing:'1px', lineHeight:1 }}>{s.value}</div>
                 <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.35)', textTransform:'uppercase', marginTop:'4px' }}>{s.label}</div>
               </div>
             ))}
           </div>
         </div>
+
+        {/* Partial grade footnote */}
+        {gradeDisplay && gradeIsPartial && (
+          <div style={{ borderTop:'1px solid rgba(255,255,255,0.04)', padding: isMobile ? '6px 16px' : '6px 40px', maxWidth:'1200px', margin:'0 auto' }}>
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'0.5px' }}>
+              * Partial grade — connect Strava and add training below for your full score
+            </span>
+          </div>
+        )}
 
         {/* Weather + Strava callout bar */}
         <div style={{ borderTop:'1px solid rgba(255,255,255,0.06)', padding: isMobile ? '8px 16px' : '10px 40px', position:'relative', zIndex:1, maxWidth:'1200px', margin:'0 auto', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:'8px' }}>
@@ -1125,68 +1142,6 @@ export default function RacePage() {
 
         {/* STRAVA ACTIVITY */}
         <StravaActivitySection race={race} t={t} />
-
-        {/* PACER RACE GRADE */}
-        {(raceScore || scoreLoading) && (
-          <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'20px 24px', marginBottom:'16px', animation:'fadeIn 0.4s ease both' }}>
-            {scoreLoading ? (
-              <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
-                <div style={{ width:80, height:80, borderRadius:'50%', background:t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)', animation:'pulse 1.5s ease infinite', flexShrink:0 }} />
-                <div style={{ flex:1 }}>
-                  <div style={{ height:12, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)', marginBottom:10, width:'40%', animation:'pulse 1.5s ease infinite' }} />
-                  <div style={{ height:11, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.05)', width:'70%', animation:'pulse 1.5s ease infinite' }} />
-                </div>
-              </div>
-            ) : raceScore && (
-              <div style={{ display:'flex', alignItems:'center', gap:'20px', flexWrap:'wrap' }}>
-                {/* Score ring */}
-                <div style={{ flexShrink:0, textAlign:'center' }}>
-                  <div style={{ position:'relative', width:88, height:88 }}>
-                    <svg viewBox="0 0 88 88" width="88" height="88">
-                      <circle cx="44" cy="44" r="38" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="7"/>
-                      <circle cx="44" cy="44" r="38" fill="none"
-                        stroke={raceScore.is_partial?'rgba(154,165,180,0.7)':'#C9A84C'}
-                        strokeWidth="7"
-                        strokeDasharray={((raceScore.score/100)*238.76).toFixed(2) + ' 238.76'}
-                        strokeLinecap="round"
-                        transform="rotate(-90 44 44)"/>
-                    </svg>
-                    <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:raceScore.is_partial?t.textMuted:t.text, lineHeight:1 }}>{raceScore.score}</div>
-                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:raceScore.is_partial?'rgba(154,165,180,0.8)':'#C9A84C', lineHeight:1 }}>{raceScore.grade}</div>
-                    </div>
-                  </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>
-                    {raceScore.is_partial ? 'Partial Grade' : 'Race Grade'}
-                  </div>
-                </div>
-                {/* Text */}
-                <div style={{ flex:1, minWidth:200 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'8px' }}>
-                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
-                    <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Race Grade</span>
-                  </div>
-                  {raceScore.justification ? (
-                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, margin:'0 0 12px', lineHeight:1.65 }}>{raceScore.justification}</p>
-                  ) : (
-                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.textMuted, margin:'0 0 12px', lineHeight:1.65, fontStyle:'italic' }}>Grade calculated from your performance data.</p>
-                  )}
-                  {raceScore.is_partial && (
-                    <div style={{ background:t.isDark?'rgba(27,42,74,0.5)':'rgba(27,42,74,0.06)', border:`1px solid ${t.isDark?'rgba(255,255,255,0.1)':'rgba(27,42,74,0.12)'}`, borderRadius:'10px', padding:'10px 14px' }}>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, color:t.isDark?'rgba(255,255,255,0.6)':'#1B2A4A', marginBottom:'4px', letterSpacing:'0.5px' }}>
-                        ⚡ This is your initial grade
-                      </div>
-                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.6 }}>
-                        Based on performance data only. For a complete grade, connect your Strava activity and submit your training block below — training counts for 60% of your full score.
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* PACER REPORT CARD */}
         <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.22s both', transition:'background 0.25s' }}>
