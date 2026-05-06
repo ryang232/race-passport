@@ -62,26 +62,6 @@ export default function BuildPassport() {
 
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-      // ── Returning user check ──────────────────────────────────────────────
-      // If profile already has full_name, this is an existing user — skip onboarding
-      if (data?.full_name) {
-        navigate('/home', { replace: true })
-        return
-      }
-
-      // ── Google OAuth new user — save name from auth metadata ──────────────
-      // Google passes full_name through user_metadata, save it to profile now
-      const meta = user.user_metadata || {}
-      const googleName = meta.full_name || meta.name || ''
-      if (googleName && !data?.full_name) {
-        await supabase.from('profiles').update({
-          full_name:  googleName,
-          first_name: meta.given_name  || googleName.split(' ')[0] || '',
-          last_name:  meta.family_name || googleName.split(' ').slice(1).join(' ') || '',
-        }).eq('id', user.id)
-      }
-      // ─────────────────────────────────────────────────────────────────────
-
       // Pre-fill any existing profile fields
       if (data) {
         setPhone(data.phone || '')
