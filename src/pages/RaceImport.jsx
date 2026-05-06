@@ -801,7 +801,47 @@ export default function RaceImport() {
           location:r.location, city:r.city, state:r.state,
           distance:r.distance, time:r.time, source:r.source, confidence:r.confidence,
         }))
-        await supabase.from('passport_races').upsert(toInsert, { onConflict:'user_id,name,date', ignoreDuplicates:true })
+        const { data: inserted } = await supabase
+          .from('passport_races')
+          .upsert(toInsert, { onConflict:'user_id,name,date', ignoreDuplicates:true })
+          .select()
+
+        // ── Fire partial race scores in background (non-blocking) ────────────
+        if (inserted && inserted.length > 0) {
+          const allRaces = inserted  // use what we just saved
+          const scoreInBackground = async () => {
+            for (const race of inserted) {
+              if (!race.time) continue  // can't score without a finish time
+              try {
+                const resp = await fetch('/api/pacer', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'race_score',
+                    is_partial: true,
+                    race: {
+                      id: race.id,
+                      name: race.name,
+                      distance: race.distance,
+                      time: race.time,
+                      is_pr: race.is_pr || false,
+                    },
+                    all_races: allRaces,
+                  }),
+                })
+                const data = await resp.json()
+                if (data.score) {
+                  await supabase.from('passport_races').update({
+                    pacer_score: data.score,
+                    pacer_grade: data.grade,
+                    pacer_score_partial: true,
+                  }).eq('id', race.id)
+                }
+              } catch(e) { /* non-blocking — silently ignore */ }
+            }
+          }
+          scoreInBackground()  // fire and forget
+        }
       }
     } catch(e) { console.error('Save error:', e) }
     setSaving(false)
