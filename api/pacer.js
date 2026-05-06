@@ -490,8 +490,7 @@ Each section: 5-10 specific actionable items. Respond ONLY with valid JSON, no m
       const prompt = `You are Pacer, a running coach AI. A user wants to run a ${distance} in ${month ? month + ' ' : ''}${year || '2026'}${location ? ' near ' + location : ''}.
 
 Here are up to 15 races that match:
-${raceList.map((r, i) => `${i+1}. ID: ${r.id} | ${r.name} | ${r.date} | ${r.city}, ${r.state}`).join('
-')}
+${raceList.map((r, i) => (i+1) + '. ID: ' + r.id + ' | ' + r.name + ' | ' + r.date + ' | ' + r.city + ', ' + r.state).join('\n')}
 
 Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness, location quality, date timing. Return ONLY valid JSON with this exact shape — no markdown, no explanation:
 {"top_race_ids": ["id1", "id2", "id3"], "reason": "one sentence explaining your picks"}`
