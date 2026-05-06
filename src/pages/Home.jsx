@@ -279,8 +279,8 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    if (!races?.length) return
-    const cacheKey = `pacer_dashboard_v1_${profile?.full_name||'user'}`
+    // Fire even with 0 races for new users — show a generic welcome insight
+    const cacheKey = `pacer_dashboard_v2_${profile?.full_name||'user'}_${races?.length||0}`
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) { try { setPacerData(JSON.parse(cached)); return } catch(e) {} }
     setLoading(true)
@@ -359,7 +359,7 @@ function RaceTimeline({ races, t, isMobile }) {
   return (
     <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:isMobile?'16px':'20px 24px', marginBottom:'16px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>Race Timeline</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>Race Timeline</span>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
           {sorted[0]?.year || sorted[0]?.date?.split(' ')[1] || ''} → {sorted[sorted.length-1]?.year || sorted[sorted.length-1]?.date?.split(' ')[1] || ''}
         </span>
@@ -452,7 +452,7 @@ function WorldMajors({ races, t }) {
   return (
     <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>World Majors</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>World Majors</span>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>{earned.size} of 6 completed</span>
       </div>
       <div style={{ display:'flex', justifyContent:'space-between', gap:'8px' }}>
@@ -460,7 +460,7 @@ function WorldMajors({ races, t }) {
           const done = earned.has(m.key)
           return (
             <div key={m.key} onClick={()=>navigate('/discover')} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'6px', cursor:'pointer', flex:1 }}>
-              <div style={{ width:54, height:54, borderRadius:'50%', border:`2.5px solid ${done?'#C9A84C':t.border}`, background:done?'rgba(201,168,76,0.08)':t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.03)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s', filter:done?'none':'grayscale(1) opacity(0.4)' }}
+              <div style={{ width:72, height:72, borderRadius:'50%', border:`2.5px solid ${done?'#C9A84C':t.border}`, background:done?'rgba(201,168,76,0.08)':t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.03)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s', filter:done?'none':'grayscale(1) opacity(0.4)' }}
                 onMouseEnter={e=>e.currentTarget.style.transform='scale(1.08)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
                 <div style={{ position:'absolute', inset:4, borderRadius:'50%', border:`1px dashed ${done?'rgba(201,168,76,0.4)':t.border}` }} />
                 <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'10px', color:done?'#C9A84C':t.textMuted, position:'relative', zIndex:1, textAlign:'center', lineHeight:1.2, padding:'0 4px' }}>26.2</span>
@@ -498,7 +498,7 @@ function GoalCard({ profile, t, navigate }) {
   return (
     <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>Your Goal</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>Your Goal</span>
         <button onClick={()=>navigate('/goal-races')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>Change →</button>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px', background:`${c.stampBorder}08`, border:`1px solid ${c.stampBorder}25`, borderRadius:'10px' }}>
@@ -544,7 +544,7 @@ function MyLists({ userId, t, navigate }) {
   return (
     <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
         <button onClick={()=>setCreating(p=>!p)} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>
           + New List
         </button>
@@ -615,46 +615,112 @@ function LocationPrompt({ t, onAllow }) {
   )
 }
 
+// ── Logo race card for discover ────────────────────────────────────────────────
+function LogoRaceCard({ race, t }) {
+  const [hov, setHov] = useState(false)
+  const navigate = useNavigate()
+  const c = getDistanceColor(race.distance||'26.2')
+  return (
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+      onClick={()=>navigate(`/race-detail/${race.id}`)}
+      style={{ flexShrink:0, width:'clamp(220px,20vw,280px)', borderRadius:'16px', overflow:'hidden', background:t.surface, border:`1.5px solid ${hov?c.stampBorder:t.border}`, cursor:'pointer', transition:'all 0.2s', transform:hov?'translateY(-4px)':'none' }}>
+      <div style={{ height:160, background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', position:'relative' }}>
+        {race.logo_url ? (
+          <img src={race.logo_url} alt={race.name} style={{ maxWidth:'78%', maxHeight:'78%', objectFit:'contain', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }} />
+        ) : (
+          <div style={{ opacity:0.3 }}><CardStamp distance={race.distance||'26.2'} size={64} /></div>
+        )}
+        <div style={{ position:'absolute', bottom:8, left:8 }}><CardStamp distance={race.distance||'26.2'} size={34} /></div>
+      </div>
+      <div style={{ padding:'12px 14px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:t.text, letterSpacing:'0.5px', marginBottom:'3px', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{[race.city,race.state].filter(Boolean).join(', ')}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:t.text, flexShrink:0, marginLeft:'6px' }}>{race.date}</div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Discover card (no upcoming race state) ────────────────────────────────────
 function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, navigate }) {
+  const [topRaces, setTopRaces]           = useState([])
+  const [topLoading, setTopLoading]       = useState(true)
   const [locationAllowed, setLocationAllowed] = useState(!!profile?.state)
 
+  useEffect(() => {
+    const loadTop = async () => {
+      try {
+        const params = new URLSearchParams({ results_per_page:20, sort:'date ASC', start_date:'2026-01-01', end_date:'2027-12-31' })
+        const resp = await fetch(`/api/runsignup?${params}`)
+        const data = await resp.json()
+        const races = (data.races||[]).slice(0,15).map(r => {
+          const race = r.race||r
+          const ev = (race.events&&race.events[0]) || {}
+          return {
+            id:       String(race.race_id||race.id||Math.random()),
+            name:     race.name,
+            date:     race.next_date_utc ? new Date(race.next_date_utc).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : (ev.start_time ? new Date(ev.start_time).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''),
+            city:     race.address?.city||'',
+            state:    race.address?.state||'',
+            distance: ev.distance||'26.2',
+            logo_url: race.logo_url||race.event_logo_url||null,
+          }
+        }).filter(r => r.name)
+        setTopRaces(races)
+      } catch(e) {}
+      setTopLoading(false)
+    }
+    loadTop()
+  }, [])
+
   const handleAllow = () => {
-    navigator.geolocation?.getCurrentPosition(
-      pos => { setLocationAllowed(true) },
-      () => setLocationAllowed(false)
-    )
+    navigator.geolocation?.getCurrentPosition(()=>setLocationAllowed(true), ()=>setLocationAllowed(false))
   }
 
+  const SectionLabel = ({ label }) => (
+    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'14px' }}>{label}</div>
+  )
+
+  const LoadingRow = () => (
+    <div style={{ display:'flex', gap:'14px', overflow:'hidden' }}>
+      {[1,2,3,4].map(i=><div key={i} style={{ flexShrink:0, width:'clamp(220px,20vw,280px)', height:206, borderRadius:'16px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }}/>)}
+    </div>
+  )
+
+  const MoreBtn = () => (
+    <div onClick={()=>navigate('/discover')} style={{ flexShrink:0, width:70, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', textTransform:'uppercase', letterSpacing:'1px', writingMode:'vertical-lr' }}>More →</span>
+    </div>
+  )
+
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px' }}>Find Your Next Race</span>
-        <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>See All →</button>
+    <div style={{ borderRadius:'20px', background:t.surface, border:`1px solid ${t.border}`, padding:'24px 28px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px' }}>Find Your Next Race</span>
+        <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>See All →</button>
       </div>
 
-      {/* Races Near You */}
-      <div style={{ marginBottom:'16px' }}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>
-          Races Near You{profile?.state ? ` in ${profile.state}` : ''}
-        </div>
-        {!locationAllowed && !profile?.state ? (
-          <LocationPrompt t={t} onAllow={handleAllow} />
-        ) : nearbyLoading ? (
-          <div style={{ display:'flex', gap:'12px', overflow:'hidden' }}>
-            {[1,2,3].map(i => <div key={i} style={{ flexShrink:0, width:'clamp(200px,30vw,260px)', height:160, borderRadius:'12px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }} />)}
-          </div>
-        ) : nearbyRaces.length > 0 ? (
-          <ScrollRow gap={12}>
-            {nearbyRaces.slice(0,10).map(race => <RaceCard key={race.id} race={race} t={t} compact={isMobile} />)}
-            <div onClick={()=>navigate('/discover')} style={{ flexShrink:0, width:100, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', textTransform:'uppercase', letterSpacing:'1px', writingMode:'vertical-lr', textOrientation:'mixed' }}>More on Discover →</span>
-            </div>
+      <div style={{ marginBottom:'28px' }}>
+        <SectionLabel label={`Races Near You${profile?.state ? ' in ' + profile.state : ''}`} />
+        {!locationAllowed && !profile?.state ? <LocationPrompt t={t} onAllow={handleAllow} />
+         : nearbyLoading ? <LoadingRow />
+         : nearbyRaces.length > 0 ? (
+          <ScrollRow gap={14}>
+            {nearbyRaces.slice(0,10).map(race=><LogoRaceCard key={race.id} race={race} t={t}/>)}
+            <MoreBtn />
           </ScrollRow>
-        ) : (
-          <div style={{ padding:'16px', textAlign:'center', border:`1.5px dashed ${t.border}`, borderRadius:'10px' }}>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted }}>No races found near you.</div>
-          </div>
+        ) : <LocationPrompt t={t} onAllow={handleAllow} />}
+      </div>
+
+      <div>
+        <SectionLabel label="Top Races" />
+        {topLoading ? <LoadingRow /> : (
+          <ScrollRow gap={14}>
+            {topRaces.map(race=><LogoRaceCard key={race.id} race={race} t={t}/>)}
+            <MoreBtn />
+          </ScrollRow>
         )}
       </div>
     </div>
@@ -935,86 +1001,78 @@ export default function Home() {
       </div>
 
       {/* Dashboard content */}
-      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'20px 16px 80px':'28px 40px 80px' }}>
-        <div style={{ maxWidth:'900px', margin:'0 auto' }}>
+      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'20px 16px 80px':'32px 48px 80px' }}>
+        <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
 
-          {/* Next Race Hero OR Discover Section */}
-          {upcomingRace
-            ? <NextRaceHero race={upcomingRace} t={t} isMobile={isMobile} />
-            : <DiscoverSection nearbyRaces={nearbyRaces} nearbyLoading={nearbyLoading} profile={profile} t={t} isMobile={isMobile} navigate={navigate} />
-          }
+          {/* ROW 1: Hero (full width) */}
+          <div style={{ marginBottom:'24px' }}>
+            {upcomingRace
+              ? <NextRaceHero race={upcomingRace} t={t} isMobile={isMobile} />
+              : <DiscoverSection nearbyRaces={nearbyRaces} nearbyLoading={nearbyLoading} profile={profile} t={t} isMobile={isMobile} navigate={navigate} />
+            }
+          </div>
 
-          {/* Two-col grid: Pacer insight + Career Score */}
-          <PacerDashboard races={passportRaces} profile={profile} t={t} isMobile={isMobile} />
+          {/* ROW 2: Pacer insight (full width, prominent) */}
+          <div style={{ marginBottom:'24px' }}>
+            <PacerDashboard races={passportRaces} profile={profile} t={t} isMobile={isMobile} />
+          </div>
 
-          {/* Race Timeline */}
-          <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
+          {/* ROW 3: Timeline (full width) */}
+          <div style={{ marginBottom:'24px' }}>
+            <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
+          </div>
 
-          {/* Milestones */}
-          <Milestones races={passportRaces} t={t} />
+          {/* ROW 4: 3-column grid — Milestones | World Majors | Goal */}
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:'20px', marginBottom:'24px', alignItems:'start' }}>
+            <Milestones races={passportRaces} t={t} />
+            <WorldMajors races={passportRaces} t={t} />
+            <GoalCard profile={profile} t={t} navigate={navigate} />
+          </div>
 
-          {/* World Majors */}
-          <WorldMajors races={passportRaces} t={t} />
-
-          {/* Goal */}
-          <GoalCard profile={profile} t={t} navigate={navigate} />
-
-          {/* My Lists */}
-          {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
-
-          {/* Your Stamps */}
-          <div style={{ marginBottom:'28px' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
-              <button onClick={()=>navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
+          {/* ROW 5: Stamps (full width) */}
+          <div style={{ marginBottom:'24px' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
+              <button onClick={()=>navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
             </div>
             {stamps.length === 0 ? (
-              <div style={{ padding:'28px', textAlign:'center', background:t.surface, borderRadius:'16px', border:`1.5px dashed ${t.border}` }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'12px' }}>Add your first race to start building your Passport.</div>
-                <button onClick={()=>navigate('/race-import')} style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+              <div style={{ padding:'40px', textAlign:'center', background:t.surface, borderRadius:'20px', border:`1.5px dashed ${t.border}` }}>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', color:t.textMuted, marginBottom:'16px' }}>Add your first race to start building your Passport.</div>
+                <button onClick={()=>navigate('/race-import')} style={{ padding:'12px 28px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
                   onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>Add Races →</button>
               </div>
             ) : (
               <ScrollRow>
                 {stamps.map(s=>(
-                  <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={130} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
+                  <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={150} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
                 ))}
                 <div onClick={()=>navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
-                  <div style={{ width:130, height:130, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', background:t.isDark?'rgba(201,168,76,0.05)':'rgba(255,255,255,0.8)', transition:'border-color 0.15s,transform 0.15s' }}
+                  <div style={{ width:150, height:150, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', background:t.isDark?'rgba(201,168,76,0.05)':'rgba(255,255,255,0.8)', transition:'border-color 0.15s,transform 0.15s' }}
                     onMouseEnter={e=>{e.currentTarget.style.borderColor='#C9A84C';e.currentTarget.style.transform='scale(1.05)'}}
                     onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform='scale(1)'}}>
-                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                    <svg width="40" height="40" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
                   </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textAlign:'center' }}>Get More Stamps</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textAlign:'center' }}>Get More Stamps</div>
                 </div>
               </ScrollRow>
             )}
           </div>
 
-          {/* Races Near You — only shown when user HAS an upcoming race */}
-          {upcomingRace && (
-            <div style={{ marginBottom:'28px' }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px' }}>Races Near You{profile?.state?` in ${profile.state}`:''}</span>
-                <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
-              </div>
-              {nearbyLoading ? (
-                <div style={{ display:'flex', gap:'12px', overflow:'hidden' }}>
-                  {[1,2,3].map(i=><div key={i} style={{ flexShrink:0, width:isMobile?'clamp(200px,60vw,260px)':'clamp(220px,22vw,300px)', height:isMobile?'170px':'240px', borderRadius:'14px', background:t.surface, animation:'pulse 1.5s ease infinite' }}/>)}
+          {/* ROW 6: 2-column — My Lists | Races Near You */}
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:'20px', marginBottom:'24px', alignItems:'start' }}>
+            {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
+            {upcomingRace && nearbyRaces.length > 0 && (
+              <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'20px 22px' }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Races Near You{profile?.state?` in ${profile.state}`:''}</span>
+                  <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
                 </div>
-              ) : nearbyRaces.length > 0 ? (
-                <ScrollRow>
-                  {nearbyRaces.slice(0,10).map(race=><RaceCard key={race.id} race={race} t={t} compact={isMobile}/>)}
+                <ScrollRow gap={12}>
+                  {nearbyRaces.slice(0,8).map(race=><RaceCard key={race.id} race={race} t={t} compact />)}
                 </ScrollRow>
-              ) : (
-                <div style={{ padding:'24px', textAlign:'center', background:t.surface, borderRadius:'14px', border:`1.5px dashed ${t.border}` }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'12px' }}>Add your location in Profile to see races near you.</div>
-                  <button onClick={()=>navigate('/profile')} style={{ padding:'7px 18px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
-                    onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>Update Location →</button>
-                </div>
-              )}
-            </div>
-          )}
+              </div>
+            )}
+          </div>
 
         </div>
       </div>
