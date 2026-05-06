@@ -505,5 +505,109 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
     }
   }
 
+  // ── race_score: individual race grade ───────────────────────────────────────
+  if (action === 'race_score') {
+    const { race, all_races, report_card_grades, strava_data, is_partial } = req.body
+    if (!race) return res.status(400).json({ error: 'race required' })
+
+    const safeRaces = Array.isArray(all_races) ? all_races : []
+
+    // ── Performance metrics (40% of full score, 100% of partial) ─────────────
+    const toSecs = t => {
+      if (!t) return null
+      const p = t.split(':').map(Number)
+      return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + (p[1]||0)
+    }
+
+    const raceSecs = toSecs(race.time)
+    const sameDist = safeRaces.filter(r => r.distance === race.distance && r.time && r.id !== race.id)
+
+    // Time percentile vs same distance
+    let timePercentile = 50
+    if (raceSecs && sameDist.length > 0) {
+      const sameDistSecs = sameDist.map(r => toSecs(r.time)).filter(Boolean)
+      const fasterCount  = sameDistSecs.filter(s => s > raceSecs).length
+      timePercentile     = Math.round((fasterCount / sameDistSecs.length) * 100)
+    }
+
+    // Pace vs personal average across all distances (normalized to per-mile)
+    const DIST_MILES = { '5K':3.10559,'10K':6.21371,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31.07,'70.3':null,'140.6':null,'Ultra':50 }
+    const raceMiles = DIST_MILES[race.distance]
+    let paceScore = 70 // neutral default
+    if (raceSecs && raceMiles) {
+      const racePacePerMile = raceSecs / raceMiles
+      const allPaces = safeRaces.map(r => {
+        const m = DIST_MILES[r.distance], s = toSecs(r.time)
+        return m && s ? s / m : null
+      }).filter(Boolean)
+      if (allPaces.length > 0) {
+        const avgPace = allPaces.reduce((a,b) => a+b, 0) / allPaces.length
+        // Faster pace than average = higher score
+        const paceRatio = avgPace / racePacePerMile  // >1 means faster than avg
+        paceScore = Math.min(100, Math.max(40, Math.round(50 + (paceRatio - 1) * 200)))
+      }
+    }
+
+    const isPR      = race.is_pr || false
+    const prBonus   = isPR ? 8 : 0
+    const perfScore = Math.min(100, Math.max(40, Math.round((timePercentile * 0.5 + paceScore * 0.5) + prBonus)))
+
+    // ── Full score: 60% report card + 40% performance ────────────────────────
+    let finalScore = perfScore
+    if (!is_partial && report_card_grades && report_card_grades.length > 0) {
+      const gradeToNum = { 'A+':98,'A':95,'A-':92,'B+':88,'B':85,'B-':82,'C+':78,'C':75,'C-':72,'D+':68,'D':65,'D-':62,'F':50 }
+      const rcNums  = report_card_grades.map(g => gradeToNum[g] || 75).filter(Boolean)
+      const rcScore = rcNums.reduce((a,b) => a+b, 0) / rcNums.length
+      finalScore    = Math.min(100, Math.round(rcScore * 0.6 + perfScore * 0.4))
+    }
+
+    const gradeFromScore = s => {
+      if (s >= 97) return 'A+'; if (s >= 93) return 'A'; if (s >= 90) return 'A-'
+      if (s >= 87) return 'B+'; if (s >= 83) return 'B'; if (s >= 80) return 'B-'
+      if (s >= 77) return 'C+'; if (s >= 73) return 'C'; if (s >= 70) return 'C-'
+      if (s >= 67) return 'D+'; if (s >= 63) return 'D'; if (s >= 60) return 'D-'
+      return 'F'
+    }
+
+    const grade = gradeFromScore(finalScore)
+
+    // ── Ask Pacer for a one-sentence justification ───────────────────────────
+    try {
+      const distSummary = sameDist.length > 0
+        ? `Runner has completed ${sameDist.length} other ${race.distance} race(s). This finish time ranked them in the ${timePercentile}th percentile of their own ${race.distance} history.`
+        : `This is the runner's first recorded ${race.distance}.`
+
+      const prompt = `You are Pacer, a warm and encouraging AI running coach.
+${POSITIVITY_RULES}
+
+RACE: ${race.name} (${race.distance})
+FINISH TIME: ${race.time || 'not recorded'}
+PERSONAL RECORD: ${isPR ? 'YES' : 'No'}
+PERFORMANCE SCORE: ${finalScore}/100 (Grade: ${grade})
+${distSummary}
+${!is_partial && report_card_grades ? `TRAINING GRADE (60% of score): Based on ${report_card_grades.length} training metrics` : 'NOTE: This is a partial grade based on performance data only — training not yet assessed'}
+
+Write ONE sentence (max 20 words) celebrating this performance and explaining the grade. Be warm and specific. No markdown.
+${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
+
+      const text = await callClaude(prompt, 80)
+      return res.status(200).json({
+        score: finalScore,
+        grade,
+        justification: text.trim().replace(/^"|"$/g, ''),
+        is_partial: !!is_partial,
+      })
+    } catch(e) {
+      return res.status(200).json({
+        score: finalScore,
+        grade,
+        justification: isPR
+          ? `New personal record — this race shows real growth in your ${race.distance} journey!`
+          : `Solid ${race.distance} performance that adds to your racing legacy.`,
+        is_partial: !!is_partial,
+      })
+    }
+  }
+
   return res.status(400).json({ error: `Unknown action: ${action}` })
 }
