@@ -402,16 +402,16 @@ function PacerDashboard({ races, profile, t, isMobile }) {
                     <div key={rc.id}
                       onClick={() => navigate('/race/' + rc.id)}
                       title={partial ? 'Partial grade - add training for full score' : ('Full grade: ' + rc.pacer_grade)}
-                      style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:partial ? (t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)') : 'rgba(201,168,76,0.08)', border:'1px solid ' + borderVal, borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = borderVal }}>
-                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                        {(rc.name||'').split(' ').slice(0,2).join(' ')}
-                      </span>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:gColor, letterSpacing:'0.5px' }}>
+                      style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:'3px', padding:'10px 16px', background:partial ? (t.isDark?'rgba(255,255,255,0.05)':'rgba(27,42,74,0.05)') : 'rgba(201,168,76,0.1)', border:'1.5px solid ' + borderVal, borderRadius:'14px', cursor:'pointer', transition:'all 0.2s', minWidth:'72px' }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.transform = 'translateY(-2px)' }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = borderVal; e.currentTarget.style.transform = 'translateY(0)' }}>
+                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:gColor, letterSpacing:'1px', lineHeight:1 }}>
                         {partial ? '~' : ''}{rc.pacer_grade}
                       </span>
-                      {partial && <span style={{ fontSize:'8px', color:t.textMuted }}>*</span>}
+                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center', letterSpacing:'0.3px' }}>
+                        {(rc.name||'').split(' ').slice(0,2).join(' ')}
+                      </span>
+                      {partial && <span style={{ fontSize:'8px', color:t.textMuted, letterSpacing:'0.5px' }}>partial</span>}
                     </div>
                   )
                 })}
