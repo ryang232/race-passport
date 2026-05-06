@@ -354,48 +354,85 @@ function PacerDashboard({ races, profile, t, isMobile }) {
 // ── Race Timeline ─────────────────────────────────────────────────────────────
 function RaceTimeline({ races, t, isMobile }) {
   const navigate = useNavigate()
+  const scrollRef = useRef(null)
   if (!races?.length) return null
   const sorted = [...races].sort((a,b) => (a.date_sort||a.date||'').localeCompare(b.date_sort||b.date||''))
+  const DOT_SPACING = 220
+  const totalW = Math.max(sorted.length * DOT_SPACING + 200, 600)
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:isMobile?'16px':'20px 24px', marginBottom:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>Race Timeline</span>
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>
-          {sorted[0]?.year || sorted[0]?.date?.split(' ')[1] || ''} → {sorted[sorted.length-1]?.year || sorted[sorted.length-1]?.date?.split(' ')[1] || ''}
-        </span>
-      </div>
-      <div style={{ overflowX:'auto', paddingBottom:'8px' }}>
-        <div style={{ position:'relative', minWidth: Math.max(sorted.length * 100, 400), padding:'50px 16px 20px' }}>
-          <div style={{ position:'absolute', bottom:28, left:16, right:16, height:'1.5px', background:t.border }} />
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between', position:'relative' }}>
-            {sorted.map((race, i) => {
-              const c = getDistanceColor(race.distance)
-              const label = (race.date||'').split(' ').slice(0,2).join(' ') || race.month+' '+race.year || ''
-              const hasPhoto = race.photos?.length > 0
-              return (
-                <div key={race.id||i} onClick={()=>navigate(`/race/${race.id}`)}
-                  style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:0, cursor:'pointer', flex:'1', position:'relative' }}>
-                  <div style={{ position:'absolute', bottom:20, background:t.surface, border:`1px solid ${t.border}`, borderRadius:'6px', padding:'3px 6px', whiteSpace:'nowrap', transform:'translateX(-50%)', left:'50%', marginBottom:'8px', zIndex:2 }}>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, color:t.text, whiteSpace:'nowrap' }}>{race.name?.split(' ').slice(0,3).join(' ')}</div>
-                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', color:t.textMuted }}>{label}</div>
-                  </div>
-                  <div style={{ position:'absolute', bottom:8, left:'50%', transform:'translateX(-50%)', width: hasPhoto?18:14, height: hasPhoto?18:14, borderRadius:'50%', background:c.stampBorder, border:`2px solid ${t.surface}`, boxShadow:`0 0 0 1.5px ${c.stampBorder}`, zIndex:3, overflow:'hidden' }}>
-                    {hasPhoto && <img src={race.photos[0]} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />}
-                  </div>
-                  <div style={{ height:8 }} />
-                </div>
-              )
-            })}
-          </div>
-          <div style={{ display:'flex', justifyContent:'center', gap:'12px', marginTop:'12px' }}>
-            {[['#1E5FA8','Running'],['#C9A84C','Marathon'],['#B83232','Triathlon']].map(([color,label]) => (
-              <div key={label} style={{ display:'flex', alignItems:'center', gap:'4px' }}>
-                <div style={{ width:8, height:8, borderRadius:'50%', background:color }} />
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:t.textMuted }}>{label}</span>
-              </div>
-            ))}
-          </div>
+    <div style={{ borderRadius:'20px', background:'#1B2A4A', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
+      {/* Ghost text */}
+      <div style={{ position:'absolute', top:'50%', right:-20, transform:'translateY(-50%)', fontFamily:"'Bebas Neue',sans-serif", fontSize:'120px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>TIMELINE</div>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', position:'relative', zIndex:1 }}>
+        <div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Your Journey</div>
+          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>Race Timeline</span>
         </div>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>
+            {sorted[0]?.month||sorted[0]?.date?.split(' ')[0]||''} {sorted[0]?.year||sorted[0]?.date?.split(' ')[1]||''} → {sorted[sorted.length-1]?.month||sorted[sorted.length-1]?.date?.split(' ')[0]||''} {sorted[sorted.length-1]?.year||sorted[sorted.length-1]?.date?.split(' ')[1]||''}
+          </div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px' }}>{sorted.length} {sorted.length===1?'Race':'Races'}</div>
+        </div>
+      </div>
+      {/* Scrollable timeline */}
+      <div ref={scrollRef} style={{ overflowX:'auto', paddingBottom:'4px', cursor:'grab', position:'relative', zIndex:1 }}
+        onMouseDown={e=>{const el=scrollRef.current;if(!el)return;let x=e.clientX,sl=el.scrollLeft;const move=ev=>{el.scrollLeft=sl-(ev.clientX-x)};const up=()=>{document.removeEventListener('mousemove',move);document.removeEventListener('mouseup',up)};document.addEventListener('mousemove',move);document.addEventListener('mouseup',up)}}>
+        <div style={{ position:'relative', width:totalW, height:180, minWidth:'100%' }}>
+          {/* Month markers */}
+          {sorted.map((race,i) => {
+            const x = 100 + i * DOT_SPACING
+            const label = race.date ? race.date.split(' ').slice(0,2).join(' ') : `${race.month||''} ${race.year||''}`
+            return (
+              <div key={`month-${i}`} style={{ position:'absolute', bottom:8, left:x, transform:'translateX(-50%)', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.35)', whiteSpace:'nowrap', letterSpacing:'0.5px' }}>
+                {label}
+              </div>
+            )
+          })}
+          {/* Timeline line */}
+          <div style={{ position:'absolute', top:'50%', left:0, right:0, height:6, background:'rgba(201,168,76,0.15)', borderRadius:'3px', transform:'translateY(-50%)' }}>
+            <div style={{ height:'100%', background:'linear-gradient(to right,rgba(201,168,76,0.4),#C9A84C)', borderRadius:'3px', width: sorted.length > 1 ? `${((sorted.length-1)*DOT_SPACING+100)/totalW*100}%` : '30%', marginLeft:'100px' }} />
+          </div>
+          {/* Race dots */}
+          {sorted.map((race,i) => {
+            const c = getDistanceColor(race.distance)
+            const x = 100 + i * DOT_SPACING
+            const hasPhoto = race.photos?.length > 0
+            const label = race.name || ''
+            return (
+              <div key={race.id||i} style={{ position:'absolute', top:'50%', left:x, transform:'translate(-50%,-50%)', zIndex:3 }}>
+                {/* Label above */}
+                <div style={{ position:'absolute', bottom:'calc(100% + 16px)', left:'50%', transform:'translateX(-50%)', background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'8px', padding:'6px 12px', whiteSpace:'nowrap', backdropFilter:'blur(4px)' }}>
+                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:'#fff', letterSpacing:'0.5px', lineHeight:1.1, marginBottom:'2px' }}>{label.length > 20 ? label.slice(0,20)+'…' : label}</div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(201,168,76,0.7)', fontWeight:600 }}>{c.stampBorder === '#C9A84C' ? 'Marathon' : c.stampBorder === '#B83232' ? 'Triathlon' : 'Running'} · {race.time||''}</div>
+                </div>
+                {/* Connector line from label to dot */}
+                <div style={{ position:'absolute', bottom:'calc(100% + 4px)', left:'50%', transform:'translateX(-50%)', width:2, height:12, background:'rgba(201,168,76,0.3)' }} />
+                {/* The dot */}
+                <div onClick={()=>navigate(`/race/${race.id}`)}
+                  style={{ width:hasPhoto?48:36, height:hasPhoto?48:36, borderRadius:'50%', background:c.stampBorder, border:`4px solid rgba(27,42,74,0.8)`, boxShadow:`0 0 0 2px ${c.stampBorder}, 0 0 20px ${c.stampBorder}60`, cursor:'pointer', overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center', transition:'transform 0.2s, box-shadow 0.2s' }}
+                  onMouseEnter={e=>{e.currentTarget.style.transform='scale(1.3)';e.currentTarget.style.boxShadow=`0 0 0 3px ${c.stampBorder}, 0 0 30px ${c.stampBorder}80`}}
+                  onMouseLeave={e=>{e.currentTarget.style.transform='scale(1)';e.currentTarget.style.boxShadow=`0 0 0 2px ${c.stampBorder}, 0 0 20px ${c.stampBorder}60`}}>
+                  {hasPhoto
+                    ? <img src={race.photos[0]} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                    : <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:8, color:'#fff', textAlign:'center', lineHeight:1 }}>{(race.distance||'').replace(' mi','').slice(0,4)}</span>
+                  }
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+      {/* Legend */}
+      <div style={{ display:'flex', gap:'16px', marginTop:'16px', position:'relative', zIndex:1 }}>
+        {[['#1E5FA8','Running'],['#C9A84C','Marathon / Ultra'],['#B83232','Triathlon']].map(([color,label]) => (
+          <div key={label} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
+            <div style={{ width:10, height:10, borderRadius:'50%', background:color }} />
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>{label}</span>
+          </div>
+        ))}
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.25)', marginLeft:'auto' }}>← drag to scroll →</span>
       </div>
     </div>
   )
@@ -419,15 +456,16 @@ function Milestones({ races, t }) {
 
   if (!milestones.length) return null
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', marginBottom:'12px' }}>Milestones</div>
-      <div style={{ position:'relative', minHeight:130 }}>
+    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(201,168,76,0.08)':'#FFF8E7', border:`1.5px solid ${t.isDark?'rgba(201,168,76,0.2)':'rgba(201,168,76,0.3)'}`, padding:'24px 24px' }}>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'4px' }}>Your Journey</div>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.isDark?'#fff':t.text, letterSpacing:'1px', marginBottom:'16px' }}>Milestones</div>
+      <div style={{ position:'relative', minHeight:160 }}>
         {milestones.slice(0,3).map((m,i) => (
-          <div key={i} style={{ background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.03)', border:`0.5px solid ${t.border}`, borderRadius:'10px', padding:'10px 12px', display:'flex', alignItems:'center', gap:'10px', position:'absolute', top: i*8, left: i*4, right: i*4, zIndex:3-i, opacity:1-(i*0.25), transform:`scale(${1-i*0.03})`, transformOrigin:'top center' }}>
-            <div style={{ width:32, height:32, borderRadius:'8px', background:`${m.color}18`, border:`1px solid ${m.color}40`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'14px' }}>{m.icon}</div>
+          <div key={i} style={{ background:t.isDark?'rgba(27,42,74,0.6)':'rgba(255,255,255,0.9)', border:`1px solid ${t.isDark?'rgba(255,255,255,0.08)':'rgba(27,42,74,0.1)'}`, borderRadius:'12px', padding:'14px 16px', display:'flex', alignItems:'center', gap:'12px', position:'absolute', top: i*10, left: i*5, right: i*5, zIndex:3-i, opacity:1-(i*0.28), transform:`scale(${1-i*0.03})`, transformOrigin:'top center' }}>
+            <div style={{ width:40, height:40, borderRadius:'10px', background:`${m.color}20`, border:`1.5px solid ${m.color}50`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'20px' }}>{m.icon}</div>
             <div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:t.text }}>{m.title}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{m.sub}</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:t.isDark?'#fff':t.text, letterSpacing:'0.5px', lineHeight:1.1 }}>{m.title}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.isDark?'rgba(255,255,255,0.5)':t.textMuted, marginTop:'2px' }}>{m.sub}</div>
             </div>
           </div>
         ))}
@@ -442,6 +480,15 @@ function Milestones({ races, t }) {
 }
 
 // ── World Majors ──────────────────────────────────────────────────────────────
+const MAJOR_LOGOS = {
+  tokyo:   'https://upload.wikimedia.org/wikipedia/en/thumb/2/27/Tokyo_Marathon_logo.svg/200px-Tokyo_Marathon_logo.svg.png',
+  boston:  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Boston_Marathon_logo.svg/200px-Boston_Marathon_logo.svg.png',
+  london:  'https://upload.wikimedia.org/wikipedia/en/thumb/4/44/London_Marathon_logo.svg/200px-London_Marathon_logo.svg.png',
+  berlin:  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Berlin_Marathon_logo.svg/200px-Berlin_Marathon_logo.svg.png',
+  chicago: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Chicago_Marathon_logo.svg/200px-Chicago_Marathon_logo.svg.png',
+  nyc:     'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/New_York_City_Marathon_logo.svg/200px-New_York_City_Marathon_logo.svg.png',
+}
+
 function WorldMajors({ races, t }) {
   const navigate = useNavigate()
   const earned = new Set()
@@ -449,34 +496,62 @@ function WorldMajors({ races, t }) {
     const name = (r.name||'').toLowerCase()
     WORLD_MAJORS.forEach(m => { if (m.keywords.some(k => name.includes(k))) earned.add(m.key) })
   })
+  const completedCount = earned.size
+
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'14px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>World Majors</span>
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted }}>{earned.size} of 6 completed</span>
+    <div style={{ borderRadius:'20px', background:'#1B2A4A', padding:'28px 32px', position:'relative', overflow:'hidden' }}>
+      {/* Ghost text */}
+      <div style={{ position:'absolute', bottom:-20, right:-10, fontFamily:"'Bebas Neue',sans-serif", fontSize:'100px', color:'rgba(201,168,76,0.05)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'24px' }}>
+        <div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Abbott World Majors</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>World Majors</div>
+        </div>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'52px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>{completedCount}<span style={{ fontSize:'28px', color:'rgba(255,255,255,0.3)' }}>/6</span></div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', letterSpacing:'1px' }}>COMPLETED</div>
+        </div>
       </div>
-      <div style={{ display:'flex', justifyContent:'space-between', gap:'8px' }}>
+      {/* Majors grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'12px' }}>
         {WORLD_MAJORS.map(m => {
           const done = earned.has(m.key)
+          const logo = MAJOR_LOGOS[m.key]
           return (
-            <div key={m.key} onClick={()=>navigate('/discover')} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:'6px', cursor:'pointer', flex:1 }}>
-              <div style={{ width:72, height:72, borderRadius:'50%', border:`2.5px solid ${done?'#C9A84C':t.border}`, background:done?'rgba(201,168,76,0.08)':t.isDark?'rgba(255,255,255,0.03)':'rgba(27,42,74,0.03)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', position:'relative', transition:'transform 0.15s', filter:done?'none':'grayscale(1) opacity(0.4)' }}
-                onMouseEnter={e=>e.currentTarget.style.transform='scale(1.08)'} onMouseLeave={e=>e.currentTarget.style.transform='scale(1)'}>
-                <div style={{ position:'absolute', inset:4, borderRadius:'50%', border:`1px dashed ${done?'rgba(201,168,76,0.4)':t.border}` }} />
-                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'10px', color:done?'#C9A84C':t.textMuted, position:'relative', zIndex:1, textAlign:'center', lineHeight:1.2, padding:'0 4px' }}>26.2</span>
-                {done && (
-                  <div style={{ position:'absolute', top:-3, right:-3, width:16, height:16, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:4 }}>
-                    <svg width="8" height="8" viewBox="0 0 8 8" fill="none"><path d="M1 4l2 2 4-4" stroke="#fff" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                  </div>
-                )}
+            <div key={m.key} onClick={()=>navigate('/discover')}
+              style={{ borderRadius:'14px', background:done?'rgba(201,168,76,0.1)':'rgba(255,255,255,0.04)', border:`1.5px solid ${done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}`, padding:'16px 12px', cursor:'pointer', transition:'all 0.2s', position:'relative', overflow:'hidden', filter:done?'none':'grayscale(0.7) opacity(0.5)' }}
+              onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.borderColor=done?'#C9A84C':'rgba(255,255,255,0.2)'}}
+              onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.borderColor=done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}}>
+              {done && (
+                <div style={{ position:'absolute', top:8, right:8, width:20, height:20, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </div>
+              )}
+              <div style={{ height:52, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'10px' }}>
+                <img src={logo} alt={m.name} style={{ maxHeight:48, maxWidth:'90%', objectFit:'contain', opacity:done?1:0.6 }}
+                  onError={e=>{e.target.style.display='none';e.target.nextSibling.style.display='flex'}} />
+                <div style={{ display:'none', fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:done?'#C9A84C':'rgba(255,255,255,0.4)', textAlign:'center', lineHeight:1.2 }}>26.2</div>
               </div>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:done?'#C9A84C':t.textMuted, fontWeight:done?600:400, textAlign:'center', lineHeight:1.2 }}>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:done?'#C9A84C':'rgba(255,255,255,0.4)', textAlign:'center', letterSpacing:'0.5px', lineHeight:1.3 }}>
                 {m.name.replace(' Marathon','').replace('New York City','NYC')}
-              </span>
+              </div>
+              {!done && (
+                <div style={{ textAlign:'center', marginTop:'4px' }}>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.2)', letterSpacing:'1px', textTransform:'uppercase' }}>Locked</span>
+                </div>
+              )}
             </div>
           )
         })}
       </div>
+      {completedCount === 0 && (
+        <div style={{ marginTop:'16px', padding:'12px 16px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:'10px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.5)', lineHeight:1.5 }}>
+            Run any of the 6 Abbott World Marathon Majors and unlock them here. Add your races to track your progress.
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -484,8 +559,8 @@ function WorldMajors({ races, t }) {
 // ── Goal card ─────────────────────────────────────────────────────────────────
 function GoalCard({ profile, t, navigate }) {
   if (!profile?.goal_distance) return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1.5px dashed ${t.border}`, padding:'20px', marginBottom:'16px', textAlign:'center' }}>
-      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>No Goal Set</div>
+    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1.5px dashed ${t.border}`, padding:'32px', textAlign:'center' }}>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>No Goal Set</div>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'12px' }}>Set a goal race or distance and Pacer will find races to match.</div>
       <button onClick={()=>navigate('/goal-races')} style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
         onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
@@ -496,9 +571,9 @@ function GoalCard({ profile, t, navigate }) {
   const c = getDistanceColor(profile.goal_distance)
   const label = profile.goal_distance
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>Your Goal</span>
+    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1px solid ${t.border}`, padding:'24px 24px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px' }}>Your Goal</span>
         <button onClick={()=>navigate('/goal-races')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>Change →</button>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px', background:`${c.stampBorder}08`, border:`1px solid ${c.stampBorder}25`, borderRadius:'10px' }}>
@@ -542,9 +617,9 @@ function MyLists({ userId, t, navigate }) {
   }
 
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'16px 20px', marginBottom:'16px' }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
+    <div style={{ borderRadius:'20px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', border:`1px solid ${t.border}`, padding:'24px 24px' }}>
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
         <button onClick={()=>setCreating(p=>!p)} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>
           + New List
         </button>
@@ -698,7 +773,7 @@ function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, nav
   return (
     <div style={{ borderRadius:'20px', background:t.surface, border:`1px solid ${t.border}`, padding:'24px 28px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px' }}>
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px' }}>Find Your Next Race</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'44px', color:t.text, letterSpacing:'1px' }}>Find Your Next Race</span>
         <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>See All →</button>
       </div>
 
@@ -1001,7 +1076,7 @@ export default function Home() {
       </div>
 
       {/* Dashboard content */}
-      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'20px 16px 80px':'32px 48px 80px' }}>
+      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'20px 16px 80px':'32px 56px 80px' }}>
         <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
 
           {/* ROW 1: Hero (full width) */}
@@ -1023,7 +1098,7 @@ export default function Home() {
           </div>
 
           {/* ROW 4: 3-column grid — Milestones | World Majors | Goal */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:'20px', marginBottom:'24px', alignItems:'start' }}>
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:'24px', marginBottom:'24px', alignItems:'start' }}>
             <Milestones races={passportRaces} t={t} />
             <WorldMajors races={passportRaces} t={t} />
             <GoalCard profile={profile} t={t} navigate={navigate} />
