@@ -778,24 +778,42 @@ function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, nav
   useEffect(() => {
     const loadTop = async () => {
       try {
-        const params = new URLSearchParams({ results_per_page:20, sort:'date ASC', start_date:'2026-01-01', end_date:'2027-12-31' })
+        // No start_date needed — runsignup.js defaults to today server-side
+        const params = new URLSearchParams({ results_per_page:25, sort:'date ASC' })
         const resp = await fetch(`/api/runsignup?${params}`)
         const data = await resp.json()
-        const races = (data.races||[]).slice(0,15).map(r => {
-          const race = r.race||r
-          const ev = (race.events&&race.events[0]) || {}
+
+        const parseRunSignupRace = (r) => {
+          // RunSignup wraps each result in a { race: {...} } object
+          const race = r.race || r
+          // Events array holds the actual race instances with dates/distances
+          const events = race.next_date ? [] : (race.events || [])
+          const ev = events[0] || {}
+          // Prefer next_date_utc (their canonical upcoming date field)
+          const rawDate = race.next_date_utc || ev.start_time || race.next_date || ''
+          const dateStr = rawDate
+            ? new Date(rawDate).toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' })
+            : ''
+          // Skip any race that resolves to a past date
+          if (rawDate && new Date(rawDate) < new Date()) return null
           return {
-            id:       String(race.race_id||race.id||Math.random()),
-            name:     race.name,
-            date:     race.next_date_utc ? new Date(race.next_date_utc).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : (ev.start_time ? new Date(ev.start_time).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''),
-            city:     race.address?.city||'',
-            state:    race.address?.state||'',
-            distance: ev.distance||'26.2',
-            logo_url: race.logo_url||race.event_logo_url||null,
+            id:       String(race.race_id || race.id || Math.random()),
+            name:     race.name || '',
+            date:     dateStr,
+            city:     race.address?.city || '',
+            state:    race.address?.state || '',
+            distance: ev.distance || race.distance || '26.2',
+            logo_url: race.logo_url || race.event_logo_url || ev.logo_url || null,
           }
-        }).filter(r => r.name)
+        }
+
+        const races = (data.races||[])
+          .map(parseRunSignupRace)
+          .filter(r => r && r.name)
+          .slice(0, 15)
+
         setTopRaces(races)
-      } catch(e) {}
+      } catch(e) { console.error('[Discover] RunSignup fetch failed:', e) }
       setTopLoading(false)
     }
     loadTop()
@@ -885,10 +903,32 @@ export default function Home() {
       const bad = (n) => { const l=(n||'').toLowerCase(); return /\bexpo\b/.test(l)||/\bvolunteer\b/.test(l)||/\btot trot\b/.test(l) }
       try {
         if (userState) {
-          const { data } = await supabase.from('races').select('id,name,location,city,state,distance,date,date_sort,logo_url').eq('state', userState.toUpperCase()).eq('is_past', false).order('date_sort',{ascending:true}).limit(30)
-          if (data) setNearbyRaces(data.filter(r=>!bad(r.name)))
+          // Use RunSignup API for live upcoming races — runsignup.js defaults start_date to today
+          const params = new URLSearchParams({ state: userState.toUpperCase(), results_per_page: 25, sort: 'date ASC' })
+          const resp = await fetch(`/api/runsignup?${params}`)
+          const data = await resp.json()
+          const today = new Date()
+          const races = (data.races||[]).map(r => {
+            const race = r.race || r
+            const ev = (race.events||[])[0] || {}
+            const rawDate = race.next_date_utc || ev.start_time || race.next_date || ''
+            if (rawDate && new Date(rawDate) < today) return null
+            return {
+              id:       String(race.race_id || race.id),
+              name:     race.name || '',
+              date:     rawDate ? new Date(rawDate).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '',
+              city:     race.address?.city || '',
+              state:    race.address?.state || userState,
+              location: race.address ? `${race.address.city||''}, ${race.address.state||userState}` : '',
+              distance: ev.distance || '26.2',
+              logo_url: race.logo_url || race.event_logo_url || null,
+            }
+          }).filter(r => r && r.name && !bad(r.name)).slice(0, 20)
+          setNearbyRaces(races)
         }
-      } catch(e) {}
+      } catch(e) {
+        console.error('[Nearby] RunSignup fetch failed:', e)
+      }
       setNearbyLoading(false)
     }
 
