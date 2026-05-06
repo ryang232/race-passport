@@ -169,7 +169,7 @@ function ParallaxBackground({ t }) {
   return (
     <div style={{ position:'fixed', top:0, left:0, right:0, bottom:0, pointerEvents:'none', zIndex:0, overflow:'hidden' }}>
       <div style={{ position:'absolute', top:'50%', transform:`translateY(-50%) translateX(-${ox%600}px)`, whiteSpace:'nowrap', willChange:'transform' }}>
-        {[...TICKER_ITEMS,...TICKER_ITEMS,...TICKER_ITEMS].map((d,i)=><span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:`1px ${t.isDark?'rgba(201,168,76,0.04)':'rgba(27,42,74,0.04)'}`, lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>)}
+        {[...TICKER_ITEMS,...TICKER_ITEMS,...TICKER_ITEMS].map((d,i)=><span key={i} style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(180px,22vw,320px)', color:'transparent', WebkitTextStroke:'1px ' + (t.isDark?'rgba(201,168,76,0.04)':'rgba(27,42,74,0.04)'), lineHeight:1, padding:'0 40px', userSelect:'none', display:'inline-block' }}>{d}</span>)}
       </div>
     </div>
   )
@@ -401,7 +401,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
           </div>
           {/* Individual race grade pills */}
           {safeRaces2.filter(r => r.pacer_grade).length > 0 && (
-            <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:`1px solid ${t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)'}` }}>
+            <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:'1px solid ' + (t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)') }}>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Individual Race Grades</div>
               <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
                 {safeRaces2.filter(r => r.pacer_grade).slice(0,6).map(r => {
@@ -410,7 +410,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
                   return (
                     <div key={r.id}
                       onClick={()=>navigate(`/race/${r.id}`)}
-                      title={isPartial ? 'Partial grade — add training for full score' : `Full grade: ${r.pacer_grade}`}
+                      title={isPartial ? 'Partial grade - add training for full score' : ('Full grade: ' + r.pacer_grade)}
                       style={{ display:'inline-flex', alignItems:'center', gap:'5px', padding:'4px 10px', background:isPartial?t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)':'rgba(201,168,76,0.08)', border:'1px solid ' + (isPartial?t.border:'rgba(201,168,76,0.25)'), borderRadius:'12px', cursor:'pointer', transition:'all 0.15s' }}
                       onMouseEnter={e=>e.currentTarget.style.borderColor='#C9A84C'}
                       onMouseLeave={e=>{e.currentTarget.style.borderColor=isPartial?t.border:'rgba(201,168,76,0.25)'}}>
