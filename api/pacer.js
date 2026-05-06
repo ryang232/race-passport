@@ -482,5 +482,28 @@ Each section: 5-10 specific actionable items. Respond ONLY with valid JSON, no m
     }
   }
 
+  // ── Goal race suggestions ─────────────────────────────────────────────────
+  if (action === 'goal_race_suggestions') {
+    const { distance, month, year, location, races: raceList } = req.body
+    if (!raceList?.length) return res.status(400).json({ error: 'races required' })
+    try {
+      const prompt = `You are Pacer, a running coach AI. A user wants to run a ${distance} in ${month ? month + ' ' : ''}${year || '2026'}${location ? ' near ' + location : ''}.
+
+Here are up to 15 races that match:
+${raceList.map((r, i) => `${i+1}. ID: ${r.id} | ${r.name} | ${r.date} | ${r.city}, ${r.state}`).join('
+')}
+
+Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness, location quality, date timing. Return ONLY valid JSON with this exact shape — no markdown, no explanation:
+{"top_race_ids": ["id1", "id2", "id3"], "reason": "one sentence explaining your picks"}`
+
+      const result = await callClaude(prompt, 200)
+      const clean = result.replace(/\`\`\`json|\`\`\`/g, '').trim()
+      const parsed = JSON.parse(clean)
+      return res.status(200).json(parsed)
+    } catch(e) {
+      return res.status(200).json({ top_race_ids: raceList.slice(0,3).map(r => r.id) })
+    }
+  }
+
   return res.status(400).json({ error: `Unknown action: ${action}` })
 }
