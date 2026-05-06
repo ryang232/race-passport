@@ -1422,11 +1422,8 @@ export default function Home() {
             {/* 3. Timeline */}
             <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
 
-            {/* 4. World Majors + Partners side by side */}
-            <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'minmax(0,1.6fr) minmax(0,0.8fr)', gap:'16px', alignItems:'stretch' }}>
-              <WorldMajors races={passportRaces} t={t} />
-              <PartnersCard t={t} />
-            </div>
+            {/* 4. World Majors — full width */}
+            <WorldMajors races={passportRaces} t={t} />
 
           </div>
 
@@ -1474,6 +1471,9 @@ export default function Home() {
 
             {/* My Lists */}
             {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
+
+            {/* Partners */}
+            <PartnersCard t={t} />
 
           </div>
 
