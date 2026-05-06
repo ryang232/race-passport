@@ -626,7 +626,6 @@ function GoalCard({ profile, t, navigate }) {
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>Your Goal</div>
         </div>
         <button onClick={()=>navigate('/goal-races')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>Change →</button>
-        </div>
       </div>
       <div style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px', background:`${c.stampBorder}08`, border:`1px solid ${c.stampBorder}25`, borderRadius:'10px' }}>
         <div style={{ width:48, height:48, borderRadius:'50%', border:`2px solid ${c.stampBorder}`, background:`${c.stampBorder}12`, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, position:'relative' }}>
