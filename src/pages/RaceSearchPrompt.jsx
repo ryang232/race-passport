@@ -84,7 +84,7 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Build Your Race Passport</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Search any race by name, year, and distance — Pacer looks it up and fills in location and date. You verify, then it's stamped to your Passport.
+                Search any race by name and year — Pacer matches it to a real event and confirms the date, location, and distance. You verify, then it's stamped to your Passport.
               </div>
             </div>
           </div>
@@ -110,7 +110,7 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Connect Strava</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Link Strava on the next screen to add race maps, elevation, and pace data to your Passport automatically.
+                Sync Strava on the next screen — after you search for a race, Pacer will search your Strava for the matching activity and pull in your map, pace, and elevation automatically.
               </div>
             </div>
           </div>
