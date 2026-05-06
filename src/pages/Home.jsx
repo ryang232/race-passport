@@ -674,7 +674,9 @@ function MajorCard({ m, done, t }) {
   return (
     <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onClick={()=>window.open(m.url,'_blank')}
-      style={{ borderRadius:'14px', background:cardBg, border:`1.5px solid ${hov?(done?'#C9A84C':'rgba(255,255,255,0.2)'):accentColor}`, padding:'18px 16px', cursor:'pointer', transition:'all 0.2s', position:'relative', transform:hov?'translateY(-3px)':'none' }}>
+      style={{ borderRadius:'14px', background:cardBg, border:`1px solid ${hov?(done?'rgba(201,168,76,0.6)':'rgba(255,255,255,0.16)'):accentColor}`, padding:'18px 16px', cursor:'pointer', transition:'all 0.25s', position:'relative', transform:hov?'translateY(-4px)':'none', boxShadow:hov?`0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.06)`:'none', display:'flex', flexDirection:'column' }}>
+      {/* Top glow line on hover */}
+      <div style={{ position:'absolute', top:0, left:'20%', right:'20%', height:'1px', background:'linear-gradient(90deg,transparent,rgba(201,168,76,0.5),transparent)', opacity:hov?1:0, transition:'opacity 0.25s', borderRadius:'1px' }} />
 
       {/* Earned checkmark */}
       {done && (
@@ -783,27 +785,82 @@ function WorldMajors({ races, t }) {
   const completedCount = earned.size
 
   return (
-    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:'22px 24px', position:'relative', overflow:'hidden' }}>
+    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'26px 26px 22px', position:'relative', overflow:'hidden' }}>
+      {/* Ambient gradient top-left */}
+      <div style={{ position:'absolute', top:-60, left:-60, width:200, height:200, borderRadius:'50%', background:'rgba(201,168,76,0.04)', filter:'blur(40px)', pointerEvents:'none' }} />
       {/* Ghost text */}
-      <div style={{ position:'absolute', bottom:-10, right:-10, fontFamily:"'Bebas Neue',sans-serif", fontSize:'80px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
+      <div style={{ position:'absolute', bottom:-14, right:-8, fontFamily:"'Bebas Neue',sans-serif", fontSize:'90px', color:'rgba(201,168,76,0.03)', letterSpacing:'6px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>MAJORS</div>
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'18px', position:'relative', zIndex:1 }}>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'20px', position:'relative', zIndex:1 }}>
         <div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'3px' }}>Abbott World Majors</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Abbott World Majors</div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>World Majors</div>
         </div>
         <div style={{ textAlign:'right' }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'44px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>
-            {completedCount}<span style={{ fontSize:'24px', color:'rgba(255,255,255,0.25)' }}>/6</span>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'46px', color:'#C9A84C', letterSpacing:'1px', lineHeight:1 }}>
+            {completedCount}<span style={{ fontSize:'24px', color:'rgba(255,255,255,0.18)' }}>/6</span>
           </div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.3)', letterSpacing:'1.5px', textTransform:'uppercase' }}>Completed</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'2px', textTransform:'uppercase' }}>Completed</div>
         </div>
       </div>
-      {/* 3×2 grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', position:'relative', zIndex:1 }}>
+      {/* 3×2 equal-height grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:'10px', position:'relative', zIndex:1, gridAutoRows:'1fr' }}>
         {WORLD_MAJORS.map(m => (
           <MajorCard key={m.key} m={m} done={earned.has(m.key)} t={t} />
         ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Partners / Sponsors ─────────────────────────────────────────────────────
+const PARTNER_SLOTS = [
+  { id:1, label:'Gear Partner' },
+  { id:2, label:'Nutrition Partner' },
+  { id:3, label:'Training Partner' },
+  { id:4, label:'Recovery Partner' },
+]
+
+function PartnersCard({ t }) {
+  const navigate = useNavigate()
+  return (
+    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'24px 22px', position:'relative', overflow:'hidden', height:'100%', boxSizing:'border-box', display:'flex', flexDirection:'column' }}>
+      {/* Ambient glow */}
+      <div style={{ position:'absolute', bottom:-40, right:-40, width:160, height:160, borderRadius:'50%', background:'rgba(201,168,76,0.03)', filter:'blur(30px)', pointerEvents:'none' }} />
+      <div style={{ position:'absolute', top:-30, left:-30, width:120, height:120, borderRadius:'50%', background:'rgba(201,168,76,0.02)', filter:'blur(25px)', pointerEvents:'none' }} />
+
+      {/* Header */}
+      <div style={{ marginBottom:'18px', position:'relative', zIndex:1 }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.5)', textTransform:'uppercase', marginBottom:'4px' }}>Race Passport</div>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>Partners</div>
+      </div>
+
+      {/* Partner slots */}
+      <div style={{ display:'flex', flexDirection:'column', gap:'8px', flex:1, position:'relative', zIndex:1 }}>
+        {PARTNER_SLOTS.map(p => (
+          <div key={p.id}
+            style={{ flex:1, border:'1px dashed rgba(255,255,255,0.08)', borderRadius:'12px', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:'6px', padding:'14px', cursor:'pointer', transition:'all 0.2s', minHeight:'60px' }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor='rgba(201,168,76,0.3)'; e.currentTarget.style.background='rgba(201,168,76,0.04)' }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor='rgba(255,255,255,0.08)'; e.currentTarget.style.background='transparent' }}>
+            <div style={{ width:28, height:28, borderRadius:'8px', border:'1px solid rgba(255,255,255,0.1)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" strokeLinecap="round"/></svg>
+            </div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.2)', textTransform:'uppercase' }}>{p.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div style={{ marginTop:'16px', padding:'12px 14px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.15)', borderRadius:'10px', position:'relative', zIndex:1 }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'rgba(201,168,76,0.8)', marginBottom:'2px' }}>Interested in partnering?</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', marginBottom:'8px', lineHeight:1.5 }}>Reach 10,000+ endurance athletes directly through Race Passport.</div>
+        <button
+          onClick={()=>window.open('mailto:partners@racepassportapp.com','_blank')}
+          style={{ width:'100%', padding:'8px', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'7px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, letterSpacing:'1.5px', color:'#C9A84C', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
+          onMouseEnter={e=>{ e.currentTarget.style.background='rgba(201,168,76,0.12)'; e.currentTarget.style.borderColor='rgba(201,168,76,0.5)' }}
+          onMouseLeave={e=>{ e.currentTarget.style.background='transparent'; e.currentTarget.style.borderColor='rgba(201,168,76,0.3)' }}>
+          Become a Partner →
+        </button>
       </div>
     </div>
   )
@@ -1365,8 +1422,11 @@ export default function Home() {
             {/* 3. Timeline */}
             <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
 
-            {/* 4. World Majors */}
-            <WorldMajors races={passportRaces} t={t} />
+            {/* 4. World Majors + Partners side by side */}
+            <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'minmax(0,1.6fr) minmax(0,0.8fr)', gap:'16px', alignItems:'stretch' }}>
+              <WorldMajors races={passportRaces} t={t} />
+              <PartnersCard t={t} />
+            </div>
 
           </div>
 
