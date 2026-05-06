@@ -587,6 +587,9 @@ export default function RacePage() {
   const [pacerReflectionLoading, setPacerReflectionLoading] = useState(false)
   const [reportCard, setReportCard]     = useState(null)
   const [reportCardLoading, setReportCardLoading] = useState(false)
+  const [raceScore, setRaceScore]       = useState(null)   // { score, grade, justification, is_partial }
+  const [scoreLoading, setScoreLoading] = useState(false)
+  const [reportCardSubmitted, setReportCardSubmitted] = useState(false)
   const [showReportCard, setShowReportCard] = useState(false)
   const [checklistSections, setChecklistSections] = useState(null)
   const [checklistLoading, setChecklistLoading] = useState(false)
@@ -648,6 +651,19 @@ export default function RacePage() {
               weather:  null,
               place:    null,
               splits:   [],
+              pacer_score:         raceData.pacer_score || null,
+              pacer_grade:         raceData.pacer_grade || null,
+              pacer_score_partial: raceData.pacer_score_partial !== false,
+              strava_activity_id:  raceData.strava_activity_id || null,
+            }
+            // Pre-populate score state from Supabase if available
+            if (raceData.pacer_score) {
+              setRaceScore({
+                score:       raceData.pacer_score,
+                grade:       raceData.pacer_grade || '',
+                justification: '',
+                is_partial:  raceData.pacer_score_partial !== false,
+              })
             }
             setRace(mapped)
             setStory(mapped.story)
@@ -720,6 +736,44 @@ export default function RacePage() {
     .catch(() => {})
     .finally(() => setPacerReflectionLoading(false))
   }, [race?.id])
+
+  // ── Trigger FULL race score when both Strava + report card are available ──
+  useEffect(() => {
+    if (!race?.id || !reportCardSubmitted || !race.strava_activity_id) return
+    if (raceScore && !raceScore.is_partial) return  // already have full score
+    if (!reportCard?.grades?.length) return
+
+    const generateFullScore = async () => {
+      setScoreLoading(true)
+      try {
+        const gradeLetters = reportCard.grades.map(g => g.grade)
+        const resp = await fetch('/api/pacer', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'race_score',
+            is_partial: false,
+            race: { id:race.id, name:race.name, distance:race.distance, time:race.time, is_pr:race.pr },
+            all_races: allPassportRaces,
+            report_card_grades: gradeLetters,
+            strava_data: { linked: true },
+          }),
+        })
+        const data = await resp.json()
+        if (data.score) {
+          setRaceScore({ ...data, is_partial: false })
+          // Save to Supabase
+          await supabase.from('passport_races').update({
+            pacer_score: data.score,
+            pacer_grade: data.grade,
+            pacer_score_partial: false,
+          }).eq('id', race.id)
+        }
+      } catch(e) {}
+      setScoreLoading(false)
+    }
+    generateFullScore()
+  }, [reportCardSubmitted, race?.strava_activity_id, reportCard?.grades?.length])
 
   // ── Checklist loader ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -1072,6 +1126,68 @@ export default function RacePage() {
         {/* STRAVA ACTIVITY */}
         <StravaActivitySection race={race} t={t} />
 
+        {/* PACER RACE GRADE */}
+        {(raceScore || scoreLoading) && (
+          <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.06)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'20px 24px', marginBottom:'16px', animation:'fadeIn 0.4s ease both' }}>
+            {scoreLoading ? (
+              <div style={{ display:'flex', alignItems:'center', gap:'14px' }}>
+                <div style={{ width:80, height:80, borderRadius:'50%', background:t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)', animation:'pulse 1.5s ease infinite', flexShrink:0 }} />
+                <div style={{ flex:1 }}>
+                  <div style={{ height:12, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)', marginBottom:10, width:'40%', animation:'pulse 1.5s ease infinite' }} />
+                  <div style={{ height:11, borderRadius:6, background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.05)', width:'70%', animation:'pulse 1.5s ease infinite' }} />
+                </div>
+              </div>
+            ) : raceScore && (
+              <div style={{ display:'flex', alignItems:'center', gap:'20px', flexWrap:'wrap' }}>
+                {/* Score ring */}
+                <div style={{ flexShrink:0, textAlign:'center' }}>
+                  <div style={{ position:'relative', width:88, height:88 }}>
+                    <svg viewBox="0 0 88 88" width="88" height="88">
+                      <circle cx="44" cy="44" r="38" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="7"/>
+                      <circle cx="44" cy="44" r="38" fill="none"
+                        stroke={raceScore.is_partial?'rgba(154,165,180,0.7)':'#C9A84C'}
+                        strokeWidth="7"
+                        strokeDasharray={`${(raceScore.score/100)*238.76} 238.76`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 44 44)"/>
+                    </svg>
+                    <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:raceScore.is_partial?t.textMuted:t.text, lineHeight:1 }}>{raceScore.score}</div>
+                      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:raceScore.is_partial?'rgba(154,165,180,0.8)':'#C9A84C', lineHeight:1 }}>{raceScore.grade}</div>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'4px' }}>
+                    {raceScore.is_partial ? 'Partial Grade' : 'Race Grade'}
+                  </div>
+                </div>
+                {/* Text */}
+                <div style={{ flex:1, minWidth:200 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'8px' }}>
+                    <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
+                    <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Race Grade</span>
+                  </div>
+                  {raceScore.justification ? (
+                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, margin:'0 0 12px', lineHeight:1.65 }}>{raceScore.justification}</p>
+                  ) : (
+                    <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.textMuted, margin:'0 0 12px', lineHeight:1.65, fontStyle:'italic' }}>Grade calculated from your performance data.</p>
+                  )}
+                  {raceScore.is_partial && (
+                    <div style={{ background:t.isDark?'rgba(27,42,74,0.5)':'rgba(27,42,74,0.06)', border:`1px solid ${t.isDark?'rgba(255,255,255,0.1)':'rgba(27,42,74,0.12)'}`, borderRadius:'10px', padding:'10px 14px' }}>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, color:t.isDark?'rgba(255,255,255,0.6)':'#1B2A4A', marginBottom:'4px', letterSpacing:'0.5px' }}>
+                        ⚡ This is your initial grade
+                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.6 }}>
+                        Based on performance data only. For a complete grade, connect your Strava activity and submit your training block below — training counts for 60% of your full score.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* PACER REPORT CARD */}
         <div style={{ background:t.surface, borderRadius:'16px', padding: isMobile?'16px':'28px', marginBottom:'16px', border:`1px solid ${t.border}`, animation:'fadeIn 0.4s ease 0.22s both', transition:'background 0.25s' }}>
           <button onClick={() => {
@@ -1084,7 +1200,7 @@ export default function RacePage() {
                 body: JSON.stringify({ action:'report_card', race:{ name:race.name, distance:race.distance, time:race.time, splits:race.splits||[], strava_activities:[] }, races:allPassportRaces.slice(0,15) }),
               })
               .then(r => r.json())
-              .then(data => { if (data.grades) setReportCard(data) })
+              .then(data => { if (data.grades) { setReportCard(data); setReportCardSubmitted(true) } })
               .catch(() => {})
               .finally(() => setReportCardLoading(false))
             }
