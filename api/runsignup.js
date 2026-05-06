@@ -26,22 +26,26 @@ export default async function handler(req, res) {
       sort = 'date ASC',
     } = req.query
 
+    // Always default start_date to today — never return past races
+    const today = new Date().toISOString().split('T')[0]
+    const effectiveStart = start_date || today
+
     const params = new URLSearchParams({
-      api_key:         API_KEY,
-      api_secret:      API_SECRET,
-      format:          'json',
+      api_key:          API_KEY,
+      api_secret:       API_SECRET,
+      format:           'json',
       results_per_page: String(results_per_page),
-      page:            String(page),
+      page:             String(page),
       sort,
+      start_date:       effectiveStart,
     })
 
-    if (distance)      params.set('distance',      distance)
-    if (start_date)    params.set('start_date',    start_date)
-    if (end_date)      params.set('end_date',      end_date)
+    if (distance)      params.set('distance',     distance)
+    if (end_date)      params.set('end_date',     end_date)
     if (lat && lon)    { params.set('lat', lat); params.set('lon', lon) }
-    if (radius)        params.set('radius',        radius)
-    if (radius_units)  params.set('radius_units',  radius_units)
-    if (state && !lat) params.set('state',         state)
+    if (radius)        params.set('radius',       radius)
+    if (radius_units)  params.set('radius_units', radius_units)
+    if (state && !lat) params.set('state',        state)
 
     const url = `https://runsignup.com/Rest/races?${params}`
     const resp = await fetch(url)
