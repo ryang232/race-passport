@@ -1147,7 +1147,7 @@ export default function RacePage() {
                       <circle cx="44" cy="44" r="38" fill="none"
                         stroke={raceScore.is_partial?'rgba(154,165,180,0.7)':'#C9A84C'}
                         strokeWidth="7"
-                        strokeDasharray={`${(raceScore.score/100)*238.76} 238.76`}
+                        strokeDasharray={((raceScore.score/100)*238.76).toFixed(2) + ' 238.76'}
                         strokeLinecap="round"
                         transform="rotate(-90 44 44)"/>
                     </svg>
