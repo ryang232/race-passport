@@ -134,7 +134,7 @@ export default function BuildPassport() {
       }).eq('id', user?.id)
     } catch(e) {}
     setSaving(false)
-    navigate('/race-search-prompt', { state:{ firstName: firstName || user?.user_metadata?.given_name || '' } })
+    navigate('/home', { state:{ imported: importedCount } })
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
