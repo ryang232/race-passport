@@ -137,17 +137,15 @@ export default function GoalRaces() {
     const token = Symbol()
     fetchRef.current = token
 
-    const fetch = async () => {
+    const loadRaces = async () => {
       setLoadingRaces(true)
       setRacesError('')
       setSuggestedRaces([])
       setSelectedRace(null)
 
       try {
-        // Build RunSignup API params
+        // Build RunSignup API params — credentials injected server-side
         const params = new URLSearchParams({
-          format:          'json',
-          api_key:         'RUNSIGNUP_API_KEY', // server-side only — goes through our API
           distance:        DISTANCE_TO_RUNSIGNUP[selectedDistance] || selectedDistance,
           results_per_page: 20,
           page:            1,
@@ -239,7 +237,7 @@ export default function GoalRaces() {
       if (fetchRef.current === token) setLoadingRaces(false)
     }
 
-    fetch()
+    loadRaces()
   }, [selectedDistance, targetMonth, targetYear, userLat, userLng, userState])
 
   const handleSaveAndContinue = async () => {
@@ -295,7 +293,7 @@ export default function GoalRaces() {
           ANY GOAL RACES OR DISTANCES?
         </h1>
         <p style={{ fontFamily: "'Barlow',sans-serif", fontSize: '14px', color: '#6b7a8d', margin: '0 auto', fontWeight: 300, lineHeight: 1.7, maxWidth: '480px' }}>
-          {firstName ? `Tell us what you're chasing, ${firstName} —` : 'Tell us what you're chasing —'} Pacer will find races that fit.
+          {firstName ? `Tell us what you're chasing, ${firstName} —` : "Tell us what you're chasing —"} Pacer will find races that fit.
         </p>
       </div>
 
@@ -445,7 +443,7 @@ export default function GoalRaces() {
         </button>
 
         <p onClick={handleSkip} style={{ textAlign: 'center', fontFamily: "'Barlow Condensed',sans-serif", fontSize: '12px', color: '#9aa5b4', cursor: 'pointer', letterSpacing: '0.5px', margin: 0 }}>
-          Skip — I'll set goals later
+          Skip — I&#39;ll set goals later
         </p>
 
       </div>
