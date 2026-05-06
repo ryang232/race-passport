@@ -246,43 +246,83 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
     setStravaCandidates([])
     try {
       const token = stravaProfile.strava_access_token
-      // Parse date to timestamp window
+
+      // Parse race date — support "Oct 2023", "February 16, 2025", "2025-02-16"
       const raceDate = new Date(date)
       if (isNaN(raceDate)) { setStravaState('nomatch'); setStravaSearching(false); return }
-      const afterTs  = Math.floor(raceDate.getTime()/1000) - 14*86400
-      const beforeTs = Math.floor(raceDate.getTime()/1000) + 14*86400
 
-      const resp = await fetch(`/api/strava?action=activities&access_token=${token}&per_page=60&after=${afterTs}&before=${beforeTs}`)
+      // Search a wide +-60 day window to catch races where user entered approx date
+      const afterTs  = Math.floor(raceDate.getTime()/1000) - 60*86400
+      const beforeTs = Math.floor(raceDate.getTime()/1000) + 60*86400
+
+      const resp = await fetch(`/api/strava?action=activities&access_token=${token}&per_page=100&after=${afterTs}&before=${beforeTs}`)
       const acts = await resp.json()
-      if (!Array.isArray(acts)) { setStravaState('nomatch'); setStravaSearching(false); return }
+      if (!Array.isArray(acts) || acts.length === 0) {
+        setStravaState('nomatch')
+        setStravaSearching(false)
+        return
+      }
 
-      // Filter to running/walking activities
-      const DIST_MILES = {'5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31,'70.3':70.3,'140.6':140.6}
-      const targetMi = DIST_MILES[distance] || null
-      const runTypes = ['run','virtualrun','walk','ride','swim']
+      // Only consider relevant activity types
+      const runTypes = ['run','virtualrun','walk','ride','swim','elliptical']
       const pool = acts.filter(a => runTypes.includes((a.type||a.sport_type||'').toLowerCase()))
 
-      let match = null
-      if (targetMi) {
-        match = pool.find(a => {
-          const aMi = (a.distance||0)/1609.34
-          return Math.abs(aMi - targetMi)/targetMi <= 0.05
-        })
+      // Scoring: name match = 50pts, distance match = 30pts, same day = 20pts
+      const DIST_MILES = {
+        '5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,
+        '26.2':26.2,'50K':31,'70.3':70.3,'140.6':140.6
       }
-      if (!match) {
-        // Same day fallback
-        match = pool.find(a => new Date(a.start_date_local).toDateString() === raceDate.toDateString())
-      }
+      const targetMi = DIST_MILES[distance] || null
+      const normalize = (s) => (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim()
+      const raceName  = normalize(name)
+      const raceWords = raceName.split(' ').filter(w => w.length > 2)
 
-      if (match) {
-        // Fetch full activity for polyline
-        const detailResp = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${match.id}`)
+      const scored = pool.map(a => {
+        let score = 0
+        const actName = normalize(a.name)
+
+        // Name scoring
+        if (actName === raceName) {
+          score += 50
+        } else {
+          const matchedWords = raceWords.filter(w => actName.includes(w))
+          score += (matchedWords.length / Math.max(raceWords.length, 1)) * 40
+        }
+
+        // Distance scoring
+        if (targetMi && a.distance) {
+          const actMi = a.distance / 1609.34
+          const pctOff = Math.abs(actMi - targetMi) / targetMi
+          if (pctOff <= 0.05)      score += 30
+          else if (pctOff <= 0.10) score += 20
+          else if (pctOff <= 0.20) score += 10
+          else if (pctOff > 0.5)   score -= 30
+        }
+
+        // Date scoring
+        const actDate = new Date(a.start_date_local)
+        const daysDiff = Math.abs((actDate - raceDate) / 86400000)
+        if (daysDiff <= 1)       score += 20
+        else if (daysDiff <= 7)  score += 10
+        else if (daysDiff <= 14) score += 5
+
+        return { activity: a, score }
+      })
+
+      scored.sort((a, b) => b.score - a.score)
+
+      const best = scored[0]
+      const AUTO_MATCH_THRESHOLD = 25
+
+      if (best && best.score >= AUTO_MATCH_THRESHOLD) {
+        const detailResp = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${best.activity.id}`)
         const detail = await detailResp.json()
-        setStravaActivity(detail.id ? detail : match)
+        setStravaActivity(detail.id ? detail : best.activity)
         setStravaState('found')
       } else {
-        setStravaCandidates(pool.slice(0,10))
-        setStravaState(pool.length > 0 ? 'manual' : 'nomatch')
+        const candidates = scored.slice(0, 10).map(s => s.activity)
+        setStravaCandidates(candidates)
+        setStravaState(candidates.length > 0 ? 'manual' : 'nomatch')
       }
     } catch(e) {
       setStravaState('nomatch')
