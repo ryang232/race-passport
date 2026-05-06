@@ -29,12 +29,12 @@ const RACE_STAT_ITEMS = [
 ]
 
 const WORLD_MAJORS = [
-  { key:'tokyo',   name:'Tokyo Marathon',               keywords:['tokyo'] },
-  { key:'boston',  name:'Boston Marathon',              keywords:['boston'] },
-  { key:'london',  name:'London Marathon',              keywords:['london'] },
-  { key:'berlin',  name:'Berlin Marathon',              keywords:['berlin'] },
-  { key:'chicago', name:'Chicago Marathon',             keywords:['chicago'] },
-  { key:'nyc',     name:'New York City Marathon',       keywords:['new york','nyc','tcs new york'] },
+  { key:'tokyo',   name:'Tokyo Marathon',         keywords:['tokyo'],                       url:'https://www.marathon.tokyo/en/' },
+  { key:'boston',  name:'Boston Marathon',        keywords:['boston'],                      url:'https://www.baa.org/' },
+  { key:'london',  name:'London Marathon',        keywords:['london'],                      url:'https://www.londonmarathonevents.co.uk/london-marathon' },
+  { key:'berlin',  name:'Berlin Marathon',        keywords:['berlin'],                      url:'https://www.bmw-berlin-marathon.com/en/' },
+  { key:'chicago', name:'Chicago Marathon',       keywords:['chicago'],                     url:'https://www.chicagomarathon.com/' },
+  { key:'nyc',     name:'New York City Marathon', keywords:['new york','nyc','tcs new york'], url:'https://www.nyrr.org/tcsnycmarathon' },
 ]
 
 function gradeFromScore(s) {
@@ -279,19 +279,26 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
-    // Fire even with 0 races for new users — show a generic welcome insight
-    const cacheKey = `pacer_dashboard_v2_${profile?.full_name||'user'}_${races?.length||0}`
+    // Wait until we at least have profile data before firing
+    if (!profile) return
+    const safeRaces = Array.isArray(races) ? races : []
+    const firstName = (profile?.full_name||'').split(' ')[0]
+    const cacheKey = `pacer_insight_v3_${firstName||'user'}_${safeRaces.length}`
     const cached = sessionStorage.getItem(cacheKey)
     if (cached) { try { setPacerData(JSON.parse(cached)); return } catch(e) {} }
     setLoading(true)
     fetch('/api/pacer', {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ action:'insight', races:races.slice(0,15), profile:{ first_name:(profile?.full_name||'').split(' ')[0], state:profile?.state, favorite_distance:profile?.favorite_distance } })
+      body: JSON.stringify({
+        action:'insight',
+        races: safeRaces.slice(0,15),
+        profile: { first_name: firstName, state: profile?.state, favorite_distance: profile?.favorite_distance }
+      })
     }).then(r=>r.json()).then(d => {
       if (d.insight) { setPacerData(d); sessionStorage.setItem(cacheKey, JSON.stringify(d)) }
       setLoading(false)
     }).catch(()=>setLoading(false))
-  }, [races?.length])
+  }, [profile?.full_name, races?.length])
 
   // Career score from race scores
   const scoredRaces = races?.filter(r => r.pacer_score) || []
@@ -480,13 +487,16 @@ function Milestones({ races, t }) {
 }
 
 // ── World Majors ──────────────────────────────────────────────────────────────
+// Major logos — hosted in Supabase Storage > assets > majors/
+// Upload each PNG to that path to activate
+const SUPABASE_ASSETS = 'https://xwngrbzvqhioklfvaizm.supabase.co/storage/v1/object/public/assets/majors'
 const MAJOR_LOGOS = {
-  tokyo:   'https://upload.wikimedia.org/wikipedia/en/thumb/2/27/Tokyo_Marathon_logo.svg/200px-Tokyo_Marathon_logo.svg.png',
-  boston:  'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Boston_Marathon_logo.svg/200px-Boston_Marathon_logo.svg.png',
-  london:  'https://upload.wikimedia.org/wikipedia/en/thumb/4/44/London_Marathon_logo.svg/200px-London_Marathon_logo.svg.png',
-  berlin:  'https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Berlin_Marathon_logo.svg/200px-Berlin_Marathon_logo.svg.png',
-  chicago: 'https://upload.wikimedia.org/wikipedia/commons/thumb/7/72/Chicago_Marathon_logo.svg/200px-Chicago_Marathon_logo.svg.png',
-  nyc:     'https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/New_York_City_Marathon_logo.svg/200px-New_York_City_Marathon_logo.svg.png',
+  tokyo:   `${SUPABASE_ASSETS}/tokyo.png`,
+  boston:  `${SUPABASE_ASSETS}/boston.png`,
+  london:  `${SUPABASE_ASSETS}/london.png`,
+  berlin:  `${SUPABASE_ASSETS}/berlin.png`,
+  chicago: `${SUPABASE_ASSETS}/chicago.png`,
+  nyc:     `${SUPABASE_ASSETS}/nyc.png`,
 }
 
 function WorldMajors({ races, t }) {
@@ -519,7 +529,7 @@ function WorldMajors({ races, t }) {
           const done = earned.has(m.key)
           const logo = MAJOR_LOGOS[m.key]
           return (
-            <div key={m.key} onClick={()=>navigate('/discover')}
+            <div key={m.key} onClick={()=>window.open(m.url,'_blank')}
               style={{ borderRadius:'14px', background:done?'rgba(201,168,76,0.1)':'rgba(255,255,255,0.04)', border:`1.5px solid ${done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}`, padding:'16px 12px', cursor:'pointer', transition:'all 0.2s', position:'relative', overflow:'hidden', filter:done?'none':'grayscale(0.7) opacity(0.5)' }}
               onMouseEnter={e=>{e.currentTarget.style.transform='translateY(-3px)';e.currentTarget.style.borderColor=done?'#C9A84C':'rgba(255,255,255,0.2)'}}
               onMouseLeave={e=>{e.currentTarget.style.transform='translateY(0)';e.currentTarget.style.borderColor=done?'rgba(201,168,76,0.4)':'rgba(255,255,255,0.08)'}}>
@@ -1076,77 +1086,64 @@ export default function Home() {
       </div>
 
       {/* Dashboard content */}
-      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'20px 16px 80px':'32px 56px 80px' }}>
-        <div style={{ maxWidth:'1400px', margin:'0 auto' }}>
+      <div style={{ position:'relative', zIndex:10, width:'100%', padding:isMobile?'16px 12px 80px':'24px 24px 80px' }}>
+        <div style={{ width:'100%' }}>
 
-          {/* ROW 1: Hero (full width) */}
-          <div style={{ marginBottom:'24px' }}>
-            {upcomingRace
-              ? <NextRaceHero race={upcomingRace} t={t} isMobile={isMobile} />
-              : <DiscoverSection nearbyRaces={nearbyRaces} nearbyLoading={nearbyLoading} profile={profile} t={t} isMobile={isMobile} navigate={navigate} />
-            }
+          {/* ROW 1: Hero + Stamps side by side */}
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'2fr 1fr', gap:'16px', marginBottom:'16px', alignItems:'start' }}>
+            <div>
+              {upcomingRace
+                ? <NextRaceHero race={upcomingRace} t={t} isMobile={isMobile} />
+                : <DiscoverSection nearbyRaces={nearbyRaces} nearbyLoading={nearbyLoading} profile={profile} t={t} isMobile={isMobile} navigate={navigate} />
+              }
+            </div>
+            {/* Stamps compact box */}
+            <div style={{ borderRadius:'20px', background:t.surface, border:`1px solid ${t.border}`, padding:'20px' }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
+                <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
+                <button onClick={()=>navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View All →</button>
+              </div>
+              {stamps.length === 0 ? (
+                <div style={{ padding:'24px', textAlign:'center', border:`1.5px dashed ${t.border}`, borderRadius:'12px' }}>
+                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'12px' }}>Add your first race to start building your Passport.</div>
+                  <button onClick={()=>navigate('/race-import')} style={{ padding:'8px 18px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
+                    onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>Add Races →</button>
+                </div>
+              ) : (
+                <div style={{ overflowX:'auto', scrollbarWidth:'none' }}>
+                  <div style={{ display:'flex', gap:'16px', paddingBottom:'8px' }}>
+                    {stamps.slice(0,6).map(s=>(
+                      <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={90} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
+                    ))}
+                    <div onClick={()=>navigate('/passport')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'8px', cursor:'pointer' }}>
+                      <div style={{ width:90, height:90, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', transition:'border-color 0.15s' }}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.borderColor=t.border}>
+                        <svg width="24" height="24" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                      </div>
+                      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', textAlign:'center' }}>More</div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* ROW 2: Pacer insight (full width, prominent) */}
-          <div style={{ marginBottom:'24px' }}>
+          {/* ROW 2: Pacer full width */}
+          <div style={{ marginBottom:'16px' }}>
             <PacerDashboard races={passportRaces} profile={profile} t={t} isMobile={isMobile} />
           </div>
 
-          {/* ROW 3: Timeline (full width) */}
-          <div style={{ marginBottom:'24px' }}>
+          {/* ROW 3: Timeline full width */}
+          <div style={{ marginBottom:'16px' }}>
             <RaceTimeline races={stamps} t={t} isMobile={isMobile} />
           </div>
 
-          {/* ROW 4: 3-column grid — Milestones | World Majors | Goal */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr 1fr', gap:'24px', marginBottom:'24px', alignItems:'start' }}>
+          {/* ROW 4: 4-column — Milestones | World Majors | My Lists | Goal */}
+          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 2fr 1fr 1fr', gap:'16px', marginBottom:'16px', alignItems:'start' }}>
             <Milestones races={passportRaces} t={t} />
             <WorldMajors races={passportRaces} t={t} />
-            <GoalCard profile={profile} t={t} navigate={navigate} />
-          </div>
-
-          {/* ROW 5: Stamps (full width) */}
-          <div style={{ marginBottom:'24px' }}>
-            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
-              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'32px', color:t.text, letterSpacing:'1px' }}>Your Stamps</span>
-              <button onClick={()=>navigate('/passport')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>View Passport →</button>
-            </div>
-            {stamps.length === 0 ? (
-              <div style={{ padding:'40px', textAlign:'center', background:t.surface, borderRadius:'20px', border:`1.5px dashed ${t.border}` }}>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'16px', color:t.textMuted, marginBottom:'16px' }}>Add your first race to start building your Passport.</div>
-                <button onClick={()=>navigate('/race-import')} style={{ padding:'12px 28px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
-                  onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'} onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>Add Races →</button>
-              </div>
-            ) : (
-              <ScrollRow>
-                {stamps.map(s=>(
-                  <Stamp key={s.id} distance={s.distance} name={s.name} location={s.location} month={s.month} year={s.year} size={150} t={t} onClick={()=>navigate(`/race/${s.id}`)} />
-                ))}
-                <div onClick={()=>navigate('/discover')} style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'center', gap:'12px', cursor:'pointer', paddingBottom:'4px' }}>
-                  <div style={{ width:150, height:150, borderRadius:'50%', border:`2px dashed ${t.border}`, display:'flex', alignItems:'center', justifyContent:'center', background:t.isDark?'rgba(201,168,76,0.05)':'rgba(255,255,255,0.8)', transition:'border-color 0.15s,transform 0.15s' }}
-                    onMouseEnter={e=>{e.currentTarget.style.borderColor='#C9A84C';e.currentTarget.style.transform='scale(1.05)'}}
-                    onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform='scale(1)'}}>
-                    <svg width="40" height="40" viewBox="0 0 32 32" fill="none"><path d="M16 6v20M6 16h20" stroke="#C9A84C" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                  </div>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'14px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', textAlign:'center' }}>Get More Stamps</div>
-                </div>
-              </ScrollRow>
-            )}
-          </div>
-
-          {/* ROW 6: 2-column — My Lists | Races Near You */}
-          <div style={{ display:'grid', gridTemplateColumns:isMobile?'1fr':'1fr 1fr', gap:'20px', marginBottom:'24px', alignItems:'start' }}>
             {userId && <MyLists userId={userId} t={t} navigate={navigate} />}
-            {upcomingRace && nearbyRaces.length > 0 && (
-              <div style={{ borderRadius:'16px', background:t.surface, border:`1px solid ${t.border}`, padding:'20px 22px' }}>
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
-                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'1px' }}>Races Near You{profile?.state?` in ${profile.state}`:''}</span>
-                  <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', cursor:'pointer', border:'none', background:'none', padding:0 }}>Browse All →</button>
-                </div>
-                <ScrollRow gap={12}>
-                  {nearbyRaces.slice(0,8).map(race=><RaceCard key={race.id} race={race} t={t} compact />)}
-                </ScrollRow>
-              </div>
-            )}
+            <GoalCard profile={profile} t={t} navigate={navigate} />
           </div>
 
         </div>
