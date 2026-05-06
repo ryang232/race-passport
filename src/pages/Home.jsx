@@ -637,16 +637,29 @@ const WORLD_MAJORS = [
 ]
 
 function useMajorCountdown(targetDate) {
-  const [cd, setCd] = useState({ days:0, hours:0, mins:0, past:false })
+  const [cd, setCd] = useState({ days:0, hours:0, mins:0, secs:0, past:false })
   useEffect(() => {
     const calc = () => {
       const diff = targetDate - new Date()
-      if (diff <= 0) { setCd({ days:0, hours:0, mins:0, past:true }); return }
-      setCd({ days:Math.floor(diff/86400000), hours:Math.floor((diff%86400000)/3600000), mins:Math.floor((diff%3600000)/60000), past:false })
+      if (diff <= 0) { setCd({ days:0, hours:0, mins:0, secs:0, past:true }); return }
+      setCd({ days:Math.floor(diff/86400000), hours:Math.floor((diff%86400000)/3600000), mins:Math.floor((diff%3600000)/60000), secs:Math.floor((diff%60000)/1000), past:false })
     }
-    calc(); const ti = setInterval(calc, 60000); return () => clearInterval(ti)
+    calc(); const ti = setInterval(calc, 1000); return () => clearInterval(ti)
   }, [targetDate])
   return cd
+}
+
+function CountdownUnit({ value, label }) {
+  return (
+    <div style={{ flex:1, background:'rgba(255,255,255,0.06)', borderRadius:'8px', padding:'8px 4px', textAlign:'center', minWidth:0 }}>
+      <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', lineHeight:1, letterSpacing:'1px' }}>
+        {String(value).padStart(2,'0')}
+      </div>
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.35)', textTransform:'uppercase', marginTop:'2px' }}>
+        {label}
+      </div>
+    </div>
+  )
 }
 
 function MajorCard({ m, done, t }) {
@@ -655,95 +668,104 @@ function MajorCard({ m, done, t }) {
   const raceCountdown = useMajorCountdown(m.raceDate)
   const lotteryCountdown = m.entry.lotteryOpenDate ? useMajorCountdown(m.entry.lotteryOpenDate) : null
   const logo = MAJOR_LOGOS[m.key]
-  const daysToRace = raceCountdown.days
-  const past = raceCountdown.past
-
-  const accentColor = done ? '#C9A84C' : 'rgba(255,255,255,0.12)'
-  const cardBg = done ? 'rgba(201,168,76,0.08)' : 'rgba(255,255,255,0.03)'
+  const accentColor = done ? '#C9A84C' : 'rgba(255,255,255,0.1)'
+  const cardBg = done ? 'rgba(201,168,76,0.07)' : 'rgba(255,255,255,0.03)'
 
   return (
-    <div
-      onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+    <div onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
       onClick={()=>window.open(m.url,'_blank')}
-      style={{ borderRadius:'14px', background:cardBg, border:`1.5px solid ${hov?(done?'#C9A84C':'rgba(255,255,255,0.22)'):accentColor}`, padding:'16px 14px', cursor:'pointer', transition:'all 0.2s', position:'relative', transform:hov?'translateY(-2px)':'none' }}>
+      style={{ borderRadius:'14px', background:cardBg, border:`1.5px solid ${hov?(done?'#C9A84C':'rgba(255,255,255,0.2)'):accentColor}`, padding:'18px 16px', cursor:'pointer', transition:'all 0.2s', position:'relative', transform:hov?'translateY(-3px)':'none' }}>
+
       {/* Earned checkmark */}
       {done && (
-        <div style={{ position:'absolute', top:8, right:8, width:18, height:18, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
-          <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><path d="M1.5 4.5l2 2L7.5 2" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+        <div style={{ position:'absolute', top:10, right:10, width:20, height:20, borderRadius:'50%', background:'#C9A84C', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2.5 2.5L8 2.5" stroke="#1B2A4A" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
         </div>
       )}
 
       {/* Logo */}
-      <div style={{ height:56, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'10px' }}>
+      <div style={{ height:64, display:'flex', alignItems:'center', justifyContent:'center', marginBottom:'12px' }}>
         {!imgErr ? (
           <img src={logo} alt={m.name}
-            style={{ maxHeight:52, maxWidth:'88%', objectFit:'contain', opacity:done?1:0.55, filter:done?'none':'grayscale(0.4)' }}
+            style={{ maxHeight:60, maxWidth:'90%', objectFit:'contain', opacity:done?1:0.6, filter:done?'none':'grayscale(0.3)' }}
             onError={()=>setImgErr(true)} />
         ) : (
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:done?'#C9A84C':'rgba(255,255,255,0.35)', textAlign:'center', letterSpacing:'1px', lineHeight:1.2 }}>
-            {m.name.replace(' Marathon','').replace('New York City','NYC')}
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:done?'#C9A84C':'rgba(255,255,255,0.4)', textAlign:'center', letterSpacing:'1px' }}>
+            {m.name.replace('New York City','NYC')}
           </div>
         )}
       </div>
 
-      {/* Race name */}
-      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, color:done?'#C9A84C':'rgba(255,255,255,0.5)', textAlign:'center', letterSpacing:'0.5px', marginBottom:'10px', lineHeight:1.2 }}>
-        {m.name.replace('New York City','NYC')}
+      {/* Race name + date */}
+      <div style={{ textAlign:'center', marginBottom:'14px' }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:done?'#C9A84C':'rgba(255,255,255,0.7)', letterSpacing:'0.5px', lineHeight:1.1 }}>
+          {m.name.replace('New York City','NYC')}
+        </div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.3)', marginTop:'2px' }}>
+          {m.raceDate.toLocaleDateString('en-US',{month:'long',day:'numeric',year:'numeric'})}
+        </div>
       </div>
+
+      {/* Race countdown blocks */}
+      {!raceCountdown.past ? (
+        <div style={{ marginBottom:'12px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(255,255,255,0.25)', textTransform:'uppercase', textAlign:'center', marginBottom:'6px' }}>
+            Countdown to Race Day
+          </div>
+          <div style={{ display:'flex', gap:'4px' }}>
+            <CountdownUnit value={raceCountdown.days}  label="Days" />
+            <CountdownUnit value={raceCountdown.hours} label="Hrs" />
+            <CountdownUnit value={raceCountdown.mins}  label="Min" />
+            <CountdownUnit value={raceCountdown.secs}  label="Sec" />
+          </div>
+        </div>
+      ) : (
+        <div style={{ textAlign:'center', marginBottom:'12px', padding:'8px', background:'rgba(201,168,76,0.08)', borderRadius:'8px' }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#C9A84C', letterSpacing:'1px' }}>Race Complete 🏅</div>
+        </div>
+      )}
 
       {/* Divider */}
-      <div style={{ height:'1px', background:'rgba(255,255,255,0.07)', marginBottom:'10px' }} />
-
-      {/* Race countdown */}
-      <div style={{ marginBottom:'8px' }}>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.3)', textTransform:'uppercase', marginBottom:'3px' }}>
-          {past ? 'Race Complete' : 'Race Day'}
-        </div>
-        {past ? (
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>
-            {m.raceDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-          </div>
-        ) : (
-          <div style={{ display:'flex', alignItems:'baseline', gap:'4px' }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>{daysToRace}</span>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.45)', fontWeight:600 }}>days</span>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', marginLeft:'2px' }}>
-              · {m.raceDate.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}
-            </span>
-          </div>
-        )}
-      </div>
+      <div style={{ height:'1px', background:'rgba(255,255,255,0.06)', marginBottom:'10px' }} />
 
       {/* Lottery / Entry status */}
-      <div style={{ background:'rgba(0,0,0,0.2)', borderRadius:'8px', padding:'7px 9px' }}>
-        <div style={{ display:'flex', alignItems:'center', gap:'5px', marginBottom:'3px' }}>
-          <div style={{ width:6, height:6, borderRadius:'50%', background:m.entry.statusColor, flexShrink:0 }} />
-          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, color:m.entry.statusColor, letterSpacing:'0.5px' }}>
+      <div>
+        <div style={{ display:'flex', alignItems:'center', gap:'5px', marginBottom:'4px' }}>
+          <div style={{ width:7, height:7, borderRadius:'50%', background:m.entry.statusColor, flexShrink:0 }} />
+          <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:700, color:m.entry.statusColor, letterSpacing:'0.5px' }}>
             {m.entry.statusLabel}
           </span>
         </div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.35)', lineHeight:1.4 }}>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', lineHeight:1.5 }}>
           {m.entry.detail}
         </div>
-        {/* Lottery countdown if opening soon */}
+
+        {/* Tokyo lottery countdown */}
         {lotteryCountdown && !lotteryCountdown.past && (
-          <div style={{ marginTop:'5px', display:'flex', alignItems:'center', gap:'4px' }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:'#f59e0b', letterSpacing:'0.5px' }}>{lotteryCountdown.days}d {lotteryCountdown.hours}h</span>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.3)' }}>until expected open</span>
+          <div style={{ marginTop:'8px', background:'rgba(245,158,11,0.08)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:'7px', padding:'6px 8px' }}>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(245,158,11,0.7)', textTransform:'uppercase', marginBottom:'4px' }}>Expected Lottery Opens In</div>
+            <div style={{ display:'flex', gap:'6px', alignItems:'baseline' }}>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#f59e0b', letterSpacing:'1px' }}>{lotteryCountdown.days}</span>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(245,158,11,0.6)' }}>days</span>
+              <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:'#f59e0b', letterSpacing:'1px' }}>{lotteryCountdown.hours}</span>
+              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(245,158,11,0.6)' }}>hrs</span>
+            </div>
           </div>
         )}
+
         {/* Boston qualifying link */}
         {m.entry.qualifyUrl && (
-          <div style={{ marginTop:'5px' }}>
+          <div style={{ marginTop:'8px' }}>
             <span onClick={e=>{e.stopPropagation();window.open(m.entry.qualifyUrl,'_blank')}}
-              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'#C9A84C', cursor:'pointer', textDecoration:'underline', letterSpacing:'0.3px' }}>
+              style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#C9A84C', cursor:'pointer', textDecoration:'underline' }}>
               View Qualifying Standards →
             </span>
           </div>
         )}
+
         {/* Tokyo disclaimer */}
         {m.entry.disclaimer && (
-          <div style={{ marginTop:'3px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.2)', lineHeight:1.4, fontStyle:'italic' }}>
+          <div style={{ marginTop:'4px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', color:'rgba(255,255,255,0.2)', lineHeight:1.4, fontStyle:'italic' }}>
             {m.entry.disclaimer}
           </div>
         )}
