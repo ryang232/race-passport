@@ -30,7 +30,7 @@ export default function AuthCallback() {
       const isNewUser = diffSecs < 60
 
       if (isNewUser) {
-        navigate('/build-passport', { replace: true })
+        navigate('/race-search-prompt', { replace: true })
       } else {
         navigate('/home', { replace: true })
       }
