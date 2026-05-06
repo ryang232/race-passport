@@ -1207,10 +1207,61 @@ export default function Home() {
       const { data: praces } = await supabase.from('passport_races').select('*').eq('user_id', user.id).order('date_sort',{ascending:false})
       if (praces) {
         setPassportRaces(praces)
-        // Find upcoming race (future date_sort)
         const today = new Date().toISOString().split('T')[0]
-        const next = praces.find(r => r.date_sort && r.date_sort >= today)
+        const next = praces.find(rc => rc.date_sort && rc.date_sort >= today)
         setUpcomingRace(next || null)
+
+        // Silent background auto-scoring — covers existing races, new imports,
+        // and any race that somehow missed scoring. Fires whenever Home loads.
+        const unscored = praces.filter(rc => rc.time && !rc.pacer_score)
+        if (unscored.length > 0) {
+          const autoScore = async () => {
+            const updated = []
+            for (const rc of unscored) {
+              try {
+                // Use Strava data if linked (better pace + elevation accuracy)
+                let stravaCtx = null
+                if (rc.strava_activity_data) {
+                  const sd = typeof rc.strava_activity_data === 'string'
+                    ? JSON.parse(rc.strava_activity_data)
+                    : rc.strava_activity_data
+                  const seg = sd && sd.segments
+                    ? sd.segments.find(s => ['run','virtualrun'].includes((s.type||'').toLowerCase()))
+                    : sd
+                  if (seg) stravaCtx = { moving_time: seg.moving_time, distance_m: seg.distance, elevation_gain: seg.total_elevation_gain }
+                }
+                const resp = await fetch('/api/pacer', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'race_score',
+                    is_partial: !rc.strava_activity_id,
+                    race: { id: rc.id, name: rc.name, distance: rc.distance, time: rc.time, is_pr: rc.is_pr || false },
+                    all_races: praces,
+                    strava_data: stravaCtx,
+                  }),
+                })
+                const scoreData = await resp.json()
+                if (scoreData.score) {
+                  await supabase.from('passport_races').update({
+                    pacer_score: scoreData.score,
+                    pacer_grade: scoreData.grade,
+                    pacer_score_partial: !rc.strava_activity_id,
+                  }).eq('id', rc.id)
+                  updated.push({ id: rc.id, pacer_score: scoreData.score, pacer_grade: scoreData.grade, pacer_score_partial: !rc.strava_activity_id })
+                }
+              } catch(e) { /* silent — never interrupt the UI */ }
+            }
+            // Merge scores back into state so grade pills appear without reload
+            if (updated.length > 0) {
+              setPassportRaces(prev => prev.map(rc => {
+                const u = updated.find(x => x.id === rc.id)
+                return u ? { ...rc, pacer_score: u.pacer_score, pacer_grade: u.pacer_grade, pacer_score_partial: u.pacer_score_partial } : rc
+              }))
+            }
+          }
+          autoScore()  // fire and forget — non-blocking
+        }
       }
     }
     loadProfile()
