@@ -507,7 +507,6 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
 
   // ── race_score: individual race grade ───────────────────────────────────────
   if (action === 'race_score') {
-    try {
     const { race, all_races, report_card_grades, strava_data, is_partial } = req.body
     if (!race) return res.status(400).json({ error: 'race required' })
 
@@ -598,26 +597,14 @@ ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
         justification: text.trim().replace(/^"|"$/g, ''),
         is_partial: !!is_partial,
       })
-    } catch(innerErr) {
+    } catch(e) {
       return res.status(200).json({
         score: finalScore,
         grade,
         justification: isPR
-          ? 'New personal record — this race shows real growth in your journey!'
+          ? 'New personal record — this shows real growth in your racing journey!'
           : 'Solid performance that adds to your racing legacy.',
         is_partial: !!is_partial,
-      })
-    }
-    } catch(outerErr) {
-      // Safety net — always return a valid score, never 500
-      const fallbackScore = 75
-      const fallbackGrade = 'C+'
-      return res.status(200).json({
-        score: fallbackScore,
-        grade: fallbackGrade,
-        justification: 'Great effort on this race — every finish line crossed is a victory!',
-        is_partial: true,
-        error_recovered: outerErr.message,
       })
     }
   }
