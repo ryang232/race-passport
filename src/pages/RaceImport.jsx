@@ -84,12 +84,20 @@ function PacerThinking({ label='Pacer is looking this up...' }) {
 }
 
 // ── Strava mini map ───────────────────────────────────────────────────────────
+const SEG_COLORS = { swim:'#0EA5E9', ride:'#F97316', virtualride:'#F97316', mountainbikeride:'#F97316', run:'#FC4C02', virtualrun:'#FC4C02' }
+const SEG_LABELS = { swim:'Swim 🏊', ride:'Bike 🚴', virtualride:'Bike 🚴', mountainbikeride:'Bike 🚴', run:'Run 🏃', virtualrun:'Run 🏃' }
+
 function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
   const mapRef = useRef(null)
   const rendered = useRef(false)
+  const isTri = activity?.isTriathlon && activity?.segments?.length > 0
 
   useEffect(() => {
-    if (!activity?.map?.summary_polyline || !mapRef.current || rendered.current) return
+    if (!mapRef.current || rendered.current) return
+    const hasData = isTri
+      ? activity.segments.some(s => s.map?.summary_polyline)
+      : activity?.map?.summary_polyline
+    if (!hasData) return
     rendered.current = true
     const draw = async () => {
       try {
@@ -102,43 +110,80 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
         }
         const L = window.L, poly = window.polyline
         if (!poly || !L || !mapRef.current) return
-        const latlngs = poly.decode(activity.map.summary_polyline)
-        if (!latlngs.length) return
         const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
         L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
-        const line = L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
-        map.fitBounds(line.getBounds(), { padding:[16,16] })
+        const allBounds = []
+        if (isTri) {
+          activity.segments.forEach(seg => {
+            if (!seg?.map?.summary_polyline) return
+            const type = (seg.type||seg.sport_type||'').toLowerCase()
+            const color = SEG_COLORS[type] || '#FC4C02'
+            const latlngs = poly.decode(seg.map.summary_polyline)
+            if (!latlngs.length) return
+            L.polyline(latlngs, { color, weight:3, opacity:0.9 }).addTo(map)
+            allBounds.push(...latlngs)
+          })
+        } else {
+          const latlngs = poly.decode(activity.map.summary_polyline)
+          if (latlngs.length) {
+            L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
+            allBounds.push(...latlngs)
+          }
+        }
+        if (allBounds.length) map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16] })
       } catch(e) {}
     }
     draw()
   }, [activity])
 
-  const elev = activity.total_elevation_gain ? `${Math.round(activity.total_elevation_gain * 3.281)}ft` : '—'
-  const date = activity.start_date_local ? new Date(activity.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''
+  // For triathlon, compute totals across segments
+  const triTotals = isTri ? {
+    distance: activity.segments.reduce((s,a) => s + (a.distance||0), 0),
+    moving_time: activity.segments.reduce((s,a) => s + (a.moving_time||0), 0),
+    total_elevation_gain: activity.segments.reduce((s,a) => s + (a.total_elevation_gain||0), 0),
+  } : null
+
+  const displayActivity = isTri ? { ...triTotals, name: `${activity.segments.length} segments` } : activity
+  const elev = displayActivity.total_elevation_gain ? `${Math.round(displayActivity.total_elevation_gain * 3.281)}ft` : '—'
+  const date = isTri
+    ? (activity.segments[0]?.start_date_local ? new Date(activity.segments[0].start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '')
+    : (activity.start_date_local ? new Date(activity.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : '')
 
   return (
     <div style={{marginTop:'16px',borderRadius:'12px',overflow:'hidden',border:'1.5px solid rgba(252,76,2,0.25)',animation:'slideDown 0.3s ease both'}}>
       {/* Header */}
       <div style={{background:'rgba(252,76,2,0.06)',padding:'10px 14px',display:'flex',alignItems:'center',gap:'8px',borderBottom:'1px solid rgba(252,76,2,0.15)'}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#FC4C02',textTransform:'uppercase'}}>Strava Activity Found</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#FC4C02',textTransform:'uppercase'}}>
+          {isTri ? `${activity.segments.length} Strava Segments Found` : 'Strava Activity Found'}
+        </span>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)',marginLeft:'auto'}}>{date}</span>
       </div>
       {/* Map */}
-      {activity.map?.summary_polyline ? (
-        <div ref={mapRef} style={{height:'160px',background:'#f8f9fb'}}/>
-      ) : (
-        <div style={{height:'80px',background:'#f8f9fb',display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4'}}>No route data available</span>
+      <div ref={mapRef} style={{height:'160px',background:'#f8f9fb'}}/>
+      {/* Tri segment legend */}
+      {isTri && (
+        <div style={{display:'flex',gap:'0',borderTop:'1px solid rgba(252,76,2,0.1)'}}>
+          {activity.segments.map((seg,i) => {
+            const type = (seg.type||seg.sport_type||'').toLowerCase()
+            const color = SEG_COLORS[type] || '#FC4C02'
+            const label = SEG_LABELS[type] || type
+            return (
+              <div key={seg.id||i} style={{flex:1,padding:'8px 0',textAlign:'center',borderRight:i<activity.segments.length-1?'1px solid rgba(252,76,2,0.1)':'none',background:`${color}08`}}>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,color,letterSpacing:'0.5px'}}>{label}</div>
+                <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',color:'#9aa5b4',marginTop:'1px'}}>{fmtDist(seg.distance)}</div>
+              </div>
+            )
+          })}
         </div>
       )}
       {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,borderTop:'1px solid rgba(252,76,2,0.1)'}}>
         {[
-          { label:'Distance', value: fmtDist(activity.distance) },
-          { label:'Time',     value: fmtTime(activity.moving_time) },
-          { label:'Pace',     value: fmtPace(activity.moving_time, activity.distance) },
-          { label:'Elevation',value: elev },
+          { label:'Distance', value: fmtDist(displayActivity.distance) },
+          { label:'Total Time', value: fmtTime(displayActivity.moving_time) },
+          { label:'Pace', value: isTri ? '—' : fmtPace(displayActivity.moving_time, displayActivity.distance) },
+          { label:'Elevation', value: elev },
         ].map((s,i) => (
           <div key={s.label} style={{padding:'10px 0',textAlign:'center',borderRight:i<3?'1px solid rgba(252,76,2,0.1)':'none'}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'16px',color:'#1B2A4A',letterSpacing:'0.5px',lineHeight:1}}>{s.value}</div>
@@ -148,7 +193,9 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
       </div>
       {/* Activity name */}
       <div style={{padding:'8px 14px',borderTop:'1px solid rgba(252,76,2,0.1)',background:'rgba(252,76,2,0.02)'}}>
-        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d'}}>"{activity.name}"</span>
+        <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d'}}>
+          {isTri ? `Swim · Bike · Run — ${date}` : `"${activity.name}"`}
+        </span>
       </div>
       {/* Confirm/reject */}
       {t === 'confirm' && (
@@ -309,6 +356,59 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
         return { activity: a, score }
       })
 
+      // ── Triathlon: find swim + bike + run on the same day ─────────────────
+      // Covers all tri distances: Sprint, Olympic, 70.3, 140.6
+      const TRI_DISTANCES = ['70.3','140.6','tri','triathlon','olympic','sprint']
+      const isTri = TRI_DISTANCES.some(d => distance.toLowerCase().includes(d))
+        || (distance === 'Other' && name.toLowerCase().includes('tri'))
+      if (isTri) {
+        // Minimum distances by format — generous lower bounds to catch all formats
+        // Sprint: 0.5mi swim, 10mi bike, 2mi run
+        // Olympic: 0.9mi swim, 20mi bike, 4mi run
+        // 70.3:   1mi swim,   40mi bike, 8mi run
+        // 140.6:  2mi swim,   80mi bike, 20mi run
+        const is140  = distance === '140.6'
+        const is70   = distance === '70.3'
+        const minSwimM  = is140 ? 3000  : is70 ? 1500  : 400    // meters
+        const minBikeMi = is140 ? 80    : is70 ? 40    : 8      // miles
+        const minRunMi  = is140 ? 20    : is70 ? 8     : 1.5    // miles
+
+        const SWIM = ['swim']
+        const BIKE = ['ride','virtualride','ebikeride','mountainbikeride']
+        const RUN  = ['run','virtualrun']
+
+        const sameDay = pool.filter(a => {
+          const actDate = new Date(a.start_date_local)
+          return Math.abs((actDate - raceDate) / 86400000) <= 1
+        })
+        const swimPool = sameDay.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
+          .filter(a => (a.distance||0) > minSwimM).sort((a,b) => b.distance - a.distance)
+        const bikePool = sameDay.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
+          .filter(a => (a.distance||0)/1609.34 > minBikeMi).sort((a,b) => b.distance - a.distance)
+        const runPool  = sameDay.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
+          .filter(a => (a.distance||0)/1609.34 > minRunMi).sort((a,b) => b.distance - a.distance)
+        const segs = [swimPool[0], bikePool[0], runPool[0]].filter(Boolean)
+        if (segs.length >= 2) {
+          // Fetch full details for all segments (for polylines)
+          const detailed = await Promise.all(segs.map(async seg => {
+            try {
+              const r = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${seg.id}`)
+              const d = await r.json()
+              return d.id ? d : seg
+            } catch(e) { return seg }
+          }))
+          setStravaActivity({ isTriathlon: true, segments: detailed })
+          setStravaState('found')
+        } else {
+          // Fallback — show all same-day activities for manual pick
+          setStravaCandidates(sameDay.slice(0, 10))
+          setStravaState(sameDay.length > 0 ? 'manual' : 'nomatch')
+        }
+        setStravaSearching(false)
+        return
+      }
+      // ── Standard single activity ─────────────────────────────────────────
+
       scored.sort((a, b) => b.score - a.score)
 
       const best = scored[0]
@@ -333,9 +433,10 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
   const confirmActivity = (act) => {
     setStravaActivity(act)
     setStravaState('confirmed')
-    // Pre-fill finish time from Strava
-    if (act.moving_time && !time) {
-      setTime(fmtTime(act.moving_time))
+    // Pre-fill finish time — for tri, sum all segment times
+    if (act.isTriathlon && act.segments) {
+      const totalSecs = act.segments.reduce((s, a) => s + (a.moving_time||0), 0)
+      if (totalSecs) setTime(fmtTime(totalSecs))
     } else if (act.moving_time) {
       setTime(fmtTime(act.moving_time))
     }
