@@ -347,7 +347,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const dash = careerScore ? (careerScore / 100) * circ : 0
 
   if (!pacerData && (loading || !profile)) return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid rgba(201,168,76,0.4)', padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
+    <div className={'rp-section-card rp-section-gold-tint'} style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid rgba(201,168,76,0.4)', padding:'24px 28px', display:'flex', alignItems:'center', gap:'20px' }}>
       <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
       <div style={{ flex:1 }}>
         <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3px', color:'#C9A84C', marginBottom:'10px' }}>PACER · YOUR AI RACE INTELLIGENCE</div>
@@ -377,7 +377,7 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const displayDash = displayScore ? (displayScore / 100) * circ : 0
 
   return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
+    <div className={'rp-section-card rp-section-gold-tint'} style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
       <div style={{ display:'flex', alignItems:'flex-start', gap:'16px', flexWrap:isMobile?'wrap':'nowrap' }}>
         <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
         <div style={{ flex:1, minWidth:0 }}>
@@ -432,7 +432,7 @@ function RaceTimeline({ races, t, isMobile }) {
   const DOT_SPACING = 220
   const totalW = Math.max(sorted.length * DOT_SPACING + 200, 600)
   return (
-    <div style={{ borderRadius:'16px', background:'#1B2A4A', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
+    <div className='rp-section-card rp-section-navy' style={{ borderRadius:'16px', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
       {/* Ghost text */}
       <div style={{ position:'absolute', top:'50%', right:-20, transform:'translateY(-50%)', fontFamily:"'Bebas Neue',sans-serif", fontSize:'120px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>TIMELINE</div>
       {/* Header */}
@@ -528,7 +528,7 @@ function Milestones({ races, t }) {
 
   if (!milestones.length) return null
   return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.08)':'#FFF8E7', padding:'20px' }}>
+    <div className={`rp-section-card rp-section-gold-tint`} style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.08)':'#FFF8E7', padding:'20px' }}>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'3px' }}>Your Journey</div>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.isDark?'#fff':t.text, letterSpacing:'1px', marginBottom:'12px' }}>Milestones</div>
       <div style={{ display:'flex', flexDirection:'column', gap:'8px', maxHeight:'280px', overflowY:'auto', scrollbarWidth:'none' }}>
@@ -785,7 +785,7 @@ function WorldMajors({ races, t }) {
   const completedCount = earned.size
 
   return (
-    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'clamp(16px,3vw,26px) clamp(14px,3vw,26px) 22px', position:'relative', overflow:'hidden' }}>
+    <div className='rp-section-card rp-section-dark-deep' style={{ borderRadius:'20px', padding:'clamp(16px,3vw,26px) clamp(14px,3vw,26px) 22px', position:'relative', overflow:'hidden' }}>
       {/* Ambient gradient top-left */}
       <div style={{ position:'absolute', top:-60, left:-60, width:200, height:200, borderRadius:'50%', background:'rgba(201,168,76,0.04)', filter:'blur(40px)', pointerEvents:'none' }} />
       {/* Ghost text */}
@@ -824,7 +824,7 @@ const PARTNER_SLOTS = [
 function PartnersCard({ t, isMobile }) {
   const navigate = useNavigate()
   return (
-    <div style={{ borderRadius:'20px', background:'#0f1623', padding:'20px', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column' }}>
+    <div className='rp-section-card rp-section-dark-deep' style={{ borderRadius:'20px', padding:'20px', position:'relative', overflow:'hidden', display:'flex', flexDirection:'column' }}>
       {/* Ambient glow */}
       <div style={{ position:'absolute', bottom:-40, right:-40, width:160, height:160, borderRadius:'50%', background:'rgba(201,168,76,0.03)', filter:'blur(30px)', pointerEvents:'none' }} />
       <div style={{ position:'absolute', top:-30, left:-30, width:120, height:120, borderRadius:'50%', background:'rgba(201,168,76,0.02)', filter:'blur(25px)', pointerEvents:'none' }} />
@@ -869,7 +869,7 @@ function PartnersCard({ t, isMobile }) {
 // ── Goal card ─────────────────────────────────────────────────────────────────
 function GoalCard({ profile, t, navigate }) {
   if (!profile?.goal_distance) return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px', textAlign:'center' }}>
+    <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-grey'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px', textAlign:'center' }}>
       <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px', marginBottom:'6px' }}>No Goal Set</div>
       <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginBottom:'12px' }}>Set a goal race or distance and Pacer will find races to match.</div>
       <button onClick={()=>navigate('/goal-races')} style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}
@@ -881,7 +881,7 @@ function GoalCard({ profile, t, navigate }) {
   const c = getDistanceColor(profile.goal_distance)
   const label = profile.goal_distance
   return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
+    <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-grey'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'12px' }}>
         <div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>Training</div>
@@ -930,7 +930,7 @@ function MyLists({ userId, t, navigate }) {
   }
 
   return (
-    <div style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
+    <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-grey'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#F4F5F8', padding:'20px' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'16px' }}>
         <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'24px', color:t.text, letterSpacing:'1px' }}>My Lists</span>
         <button onClick={()=>setCreating(p=>!p)} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px' }}>
@@ -1056,7 +1056,7 @@ function isQualityRace(race) {
 
 function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, navigate }) {
   return (
-    <div style={{ borderRadius:'16px', background:t.surface, padding:'24px', overflow:'hidden', width:'100%', minWidth:0 }}>
+    <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-light'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#ffffff', padding:'24px', overflow:'hidden', width:'100%', minWidth:0 }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
         <div>
           <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'3px' }}>Race Discovery</div>
@@ -1203,6 +1203,21 @@ export default function Home() {
       .rp-nav-tab{display:flex;flex-direction:column;align-items:center;gap:4px;padding:0 24px;height:64px;justify-content:center;cursor:pointer;border:none;background:none;transition:color 0.15s;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid transparent;white-space:nowrap;}
       .rp-dropdown-item{display:block;width:100%;padding:10px 18px;background:none;border:none;text-align:left;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:1px;cursor:pointer;transition:background 0.1s;}
       div::-webkit-scrollbar{display:none;}
+      .rp-section-card{transition:box-shadow 0.22s ease,background 0.22s ease,border-color 0.22s ease;position:relative;}
+      .rp-section-card::after{content:'';position:absolute;top:0;left:15%;right:15%;height:1px;border-radius:1px;background:linear-gradient(90deg,transparent,rgba(201,168,76,0.55),transparent);opacity:0;transition:opacity 0.22s ease;pointer-events:none;}
+      .rp-section-card:hover::after{opacity:1;}
+      .rp-section-light{background:#ffffff;border:1px solid rgba(27,42,74,0.09);box-shadow:0 2px 12px rgba(27,42,74,0.07);}
+      .rp-section-light:hover{background:#fdfeff;border-color:rgba(27,42,74,0.13);box-shadow:0 6px 28px rgba(27,42,74,0.12);}
+      .rp-section-dark-surface{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);box-shadow:0 2px 12px rgba(0,0,0,0.25);}
+      .rp-section-dark-surface:hover{background:rgba(255,255,255,0.07);border-color:rgba(255,255,255,0.14);box-shadow:0 8px 32px rgba(0,0,0,0.4);}
+      .rp-section-navy{background:#1B2A4A;border:1px solid rgba(255,255,255,0.06);box-shadow:0 2px 12px rgba(0,0,0,0.3);}
+      .rp-section-navy:hover{background:#1e3054;border-color:rgba(255,255,255,0.1);box-shadow:0 8px 32px rgba(0,0,0,0.45);}
+      .rp-section-dark-deep{background:#0f1623;border:1px solid rgba(255,255,255,0.06);box-shadow:0 2px 16px rgba(0,0,0,0.4);}
+      .rp-section-dark-deep:hover{background:#111926;border-color:rgba(255,255,255,0.1);box-shadow:0 10px 40px rgba(0,0,0,0.55);}
+      .rp-section-gold-tint{border:1.5px solid rgba(201,168,76,0.22);box-shadow:0 2px 12px rgba(201,168,76,0.05);}
+      .rp-section-gold-tint:hover{border-color:rgba(201,168,76,0.38);box-shadow:0 6px 28px rgba(201,168,76,0.1);}
+      .rp-section-grey{background:#F4F5F8;border:1px solid rgba(27,42,74,0.07);box-shadow:0 2px 10px rgba(27,42,74,0.05);}
+      .rp-section-grey:hover{background:#f6f7fa;border-color:rgba(27,42,74,0.12);box-shadow:0 6px 24px rgba(27,42,74,0.09);}
     `
     if (!document.getElementById('rp-home-styles')) document.head.appendChild(style)
     const handleClick = e => { if (dropdownRef.current&&!dropdownRef.current.contains(e.target)) setShowDropdown(false) }
@@ -1261,7 +1276,7 @@ export default function Home() {
   ]
 
   return (
-    <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s', overflowX:'hidden', maxWidth:'100vw', boxSizing:'border-box' }}>
+    <div style={{ minHeight:'100vh', background:t.isDark?t.bg:'#eef0f5', fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s', overflowX:'hidden', maxWidth:'100vw', boxSizing:'border-box' }}>
       <ParallaxBackground t={t} />
 
       {/* MOBILE NAV */}
@@ -1431,7 +1446,7 @@ export default function Home() {
           <div style={{ display:'flex', flexDirection:'column', gap:'16px', minWidth:0 }}>
 
             {/* Stamps */}
-            <div style={{ borderRadius:'16px', background:t.surface, padding:'20px' }}>
+            <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-light'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#ffffff', padding:'20px' }}>
               <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'18px' }}>
                 <div>
                   <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>Passport</div>
