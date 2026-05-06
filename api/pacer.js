@@ -507,6 +507,7 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
 
   // ── race_score: individual race grade ───────────────────────────────────────
   if (action === 'race_score') {
+    try {
     const { race, all_races, report_card_grades, strava_data, is_partial } = req.body
     if (!race) return res.status(400).json({ error: 'race required' })
 
@@ -585,7 +586,7 @@ FINISH TIME: ${race.time || 'not recorded'}
 PERSONAL RECORD: ${isPR ? 'YES' : 'No'}
 PERFORMANCE SCORE: ${finalScore}/100 (Grade: ${grade})
 ${distSummary}
-${!is_partial && report_card_grades ? `TRAINING GRADE (60% of score): Based on ${report_card_grades.length} training metrics` : 'NOTE: This is a partial grade based on performance data only — training not yet assessed'}
+${is_partial ? 'NOTE: Partial grade — training not yet assessed.' : 'TRAINING GRADE (60% of score): Included in calculation.'}
 
 Write ONE sentence (max 20 words) celebrating this performance and explaining the grade. Be warm and specific. No markdown.
 ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
@@ -597,17 +598,29 @@ ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
         justification: text.trim().replace(/^"|"$/g, ''),
         is_partial: !!is_partial,
       })
-    } catch(e) {
+    } catch(innerErr) {
       return res.status(200).json({
         score: finalScore,
         grade,
         justification: isPR
-          ? `New personal record — this race shows real growth in your ${race.distance} journey!`
-          : `Solid ${race.distance} performance that adds to your racing legacy.`,
+          ? 'New personal record — this race shows real growth in your journey!'
+          : 'Solid performance that adds to your racing legacy.',
         is_partial: !!is_partial,
+      })
+    }
+    } catch(outerErr) {
+      // Safety net — always return a valid score, never 500
+      const fallbackScore = 75
+      const fallbackGrade = 'C+'
+      return res.status(200).json({
+        score: fallbackScore,
+        grade: fallbackGrade,
+        justification: 'Great effort on this race — every finish line crossed is a victory!',
+        is_partial: true,
+        error_recovered: outerErr.message,
       })
     }
   }
 
-  return res.status(400).json({ error: `Unknown action: ${action}` })
+  return res.status(400).json({ error: 'Unknown action: ' + action })
 }
