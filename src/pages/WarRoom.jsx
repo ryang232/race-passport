@@ -448,22 +448,22 @@ function BusinessPlanPanel() {
   const sections = [
     {
       num: '1', title: 'Executive Summary',
-      content: 'Race Passport is a mobile-first race identity platform — the permanent home for an endurance athlete's racing life. Every race, every finish line, every personal record. One place. Forever.',
-      highlight: 'Strava owns the journey. Runna owns the coaching. Race Passport owns the destination.'
+      content: "Race Passport is a mobile-first race identity platform — the permanent home for an endurance athlete's racing life. Every race, every finish line, every personal record. One place. Forever.",
+      highlight: "Strava owns the journey. Runna owns the coaching. Race Passport owns the destination."
     },
     {
       num: '2', title: 'The Problem',
       items: [
-        'Race accomplishments have no permanent home — timing websites delete results, finish photos scatter across apps never reopened',
-        'PRs are buried in Strava activity feeds, impossible to surface or share meaningfully',
-        'No single place to view a runner's complete racing identity across all distances and years',
-        'The race is the most meaningful moment in an athlete's journey — and it disappears almost immediately',
-        'No AI-powered race performance analysis exists for everyday endurance athletes',
+        "Race accomplishments have no permanent home — timing websites delete results, finish photos scatter across apps never reopened",
+        "PRs are buried in Strava activity feeds, impossible to surface or share meaningfully",
+        "No single place to view a runner's complete racing identity across all distances and years",
+        "The race is the most meaningful moment in an athlete's journey — and it disappears almost immediately",
+        "No AI-powered race performance analysis exists for everyday endurance athletes",
       ]
     },
     {
       num: '3', title: 'The Solution',
-      content: 'Race Passport is the shrine of the destination. Not a training app, not a registration platform — the place athletes go to feel proud of where they've been and inspired by how far they can go.',
+      content: "Race Passport is the shrine of the destination. Not a training app, not a registration platform — the place athletes go to feel proud of where they've been and inspired by how far they can go.",
       items: [
         'Personal race pages — photos, story, gear, Strava activity map, splits, all preserved forever',
         'Race stamps — collectible visual record of every finish line, displayed in a passport grid',
@@ -496,16 +496,16 @@ function BusinessPlanPanel() {
     },
     {
       num: '6', title: 'Business Model',
-      content: 'Year 1 is entirely focused on user growth. Revenue begins in Year 2 once there is a meaningful audience to bring to brand partners.',
+      content: "Year 1 is entirely focused on user growth. Revenue begins in Year 2 once there is a meaningful audience to bring to brand partners.",
       table: {
         headers: ['Stream', 'Description', 'Starts'],
         rows: [
           ['RunSignup Affiliate', 'Referral fee when users register via Race Passport link', 'Year 2'],
           ['Gear Affiliate Links', 'Commission on race-specific gear recommendations', 'Year 2'],
           ['Brand Partnerships', 'Sponsored content and challenges (HOKA, Garmin, GU, Tracksmith)', 'Year 2'],
-          ['Co-branded Stamps', 'Brands attach their name to a stamp category — permanent in every passport', 'Year 3'],
-          ['Sponsored Race Cards', 'Race sponsors pay for branded placement on high-intent discovery pages', 'Year 3'],
-          ['Race Director Portal', 'QR bib pickup, in-app registration — only viable at 500K+ users', 'V2/V3'],
+          ['Co-branded Stamps', "Brands attach their name to a stamp category — permanent in every passport", 'Year 3'],
+          ['Sponsored Race Cards', "Race sponsors pay for branded placement on high-intent discovery pages", 'Year 3'],
+          ['Race Director Portal', "QR bib pickup, in-app registration — only viable at 500K+ users", 'V2/V3'],
         ]
       }
     },
@@ -525,17 +525,17 @@ function BusinessPlanPanel() {
           ['Net', '-$3,500', '~$4,500', '~$70,000'],
         ]
       },
-      note: 'Year 2 brand partnership revenue assumes 3 deals at ~$3,000–$4,000 each. This requires active outreach — it will not come inbound at 5,000 users.'
+      note: "Year 2 brand partnership revenue assumes 3 deals at ~$3,000–$4,000 each. This requires active outreach — it will not come inbound at 5,000 users."
     },
     {
       num: '8', title: 'Go-to-Market',
       items: [
-        'Phase 1 (Now–Q1 2027): Complete MVP, seed with personal network and MD/DC/VA running community',
-        'Phase 2 (Q1 2027): Soft launch to waitlist — 30 days to build, import, and give feedback',
-        'Phase 3 (April 22, 2027): Public launch — social, press, running clubs, running publications',
-        'Growth engine 1: Public passport URL lives in every user's Instagram bio — every click is organic acquisition',
-        'Growth engine 2: Strava integration posts stamp earned to feed, reaching entire runner network',
-        'Growth engine 3: The Wall — shareable stories drive emotional connection and discovery',
+        "Phase 1 (Now–Q1 2027): Complete MVP, seed with personal network and MD/DC/VA running community",
+        "Phase 2 (Q1 2027): Soft launch to waitlist — 30 days to build, import, and give feedback",
+        "Phase 3 (April 22, 2027): Public launch — social, press, running clubs, running publications",
+        "Growth engine 1: Public passport URL lives in every user's Instagram bio — every click is organic acquisition",
+        "Growth engine 2: Strava integration posts stamp earned to feed, reaching entire runner network",
+        "Growth engine 3: The Wall — shareable stories drive emotional connection and discovery",
       ]
     },
     {
@@ -557,11 +557,11 @@ function BusinessPlanPanel() {
     {
       num: '10', title: 'Key Risks',
       items: [
-        'Users don't engage after signup — Mitigation: Pacer AI creates immediate value on first race import',
-        'Brand partnerships don't materialize at 5K users — Mitigation: affiliate revenue requires no sales, covers baseline',
-        'Strava builds a race identity layer — Mitigation: Race Passport can move faster as a focused product',
-        'Solo founder bandwidth — Mitigation: strict MVP scope, AI-accelerated development, app is already built',
-        'Low organic growth — Mitigation: public passport URL is a constant engine, Strava integration amplifies every import',
+        "Users don't engage after signup — Mitigation: Pacer AI creates immediate value on first race import",
+        "Brand partnerships don't materialize at 5K users — Mitigation: affiliate revenue requires no sales, covers baseline",
+        "Strava builds a race identity layer — Mitigation: Race Passport can move faster as a focused product",
+        "Solo founder bandwidth — Mitigation: strict MVP scope, AI-accelerated development, app is already built",
+        "Low organic growth — Mitigation: public passport URL is a constant engine, Strava integration amplifies every import",
       ]
     },
   ]
