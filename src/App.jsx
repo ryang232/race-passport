@@ -27,6 +27,7 @@ import Terms from './pages/Terms'
 import Privacy from './pages/Privacy'
 import TrainingBlock from './pages/TrainingBlock'
 import AuthCallback from './pages/AuthCallback'
+import WarRoom from './pages/WarRoom'
 
 // ── RunSignup OAuth callback handler ─────────────────────────────────────────
 function RunSignupCallback() {
@@ -101,6 +102,7 @@ export default function App() {
             <Route path="/race-detail/:id"         element={<RaceDetail />} />
             <Route path="/passport"                element={<Passport />} />
             <Route path="/profile"                 element={<Profile />} />
+            <Route path="/warroom"                 element={<WarRoom />} />
             <Route path="/:username"               element={<PublicProfile />} />
           </Routes>
         </BrowserRouter>
