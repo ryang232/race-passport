@@ -7,6 +7,7 @@ export default function SignUp() {
   const [email, setEmail]             = useState('')
   const [error, setError]             = useState(null)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [appleLoading, setAppleLoading]   = useState(false)
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -47,15 +48,19 @@ export default function SignUp() {
     setGoogleLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: {
-        redirectTo: `https://www.racepassportapp.com/auth/callback`,
-      },
+      options: { redirectTo: 'https://www.racepassportapp.com/auth/callback' },
     })
-    if (error) {
-      setError(error.message)
-      setGoogleLoading(false)
-    }
-    // On success the browser redirects to Google — no further action needed here
+    if (error) { setError(error.message); setGoogleLoading(false) }
+  }
+
+  const handleAppleSignUp = async () => {
+    setError(null)
+    setAppleLoading(true)
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: 'https://www.racepassportapp.com/auth/callback' },
+    })
+    if (error) { setError(error.message); setAppleLoading(false) }
   }
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -97,7 +102,7 @@ export default function SignUp() {
         <div className="rp-divider"><span>OR</span></div>
 
         {/* Google — fully wired */}
-        <button className="rp-social" onClick={handleGoogleSignUp} disabled={googleLoading} style={{ marginBottom:'8px' }}>
+        <button className="rp-social" onClick={handleGoogleSignUp} disabled={googleLoading || appleLoading} style={{ marginBottom:'8px' }}>
           {googleLoading ? (
             <div style={{ width:14, height:14, border:'2px solid #e2e6ed', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
           ) : (
@@ -111,11 +116,17 @@ export default function SignUp() {
           {googleLoading ? 'Redirecting...' : 'Sign Up with Google'}
         </button>
 
-        {/* Apple — coming soon */}
-        <div className="rp-social" style={{ marginBottom:'20px', opacity:0.4, cursor:'not-allowed' }}>
-          <svg width="14" height="16" viewBox="0 0 18 18" fill="#1B2A4A"><path d="M12.525 0c.068.93-.27 1.858-.787 2.54-.52.69-1.37 1.22-2.21 1.16-.09-.88.32-1.8.79-2.44C10.84.58 11.74.07 12.525 0zM15.7 12.05c-.42.93-.62 1.35-1.16 2.17-.75 1.14-1.81 2.56-3.12 2.57-1.17.01-1.47-.74-3.06-.73-1.59.01-1.92.75-3.09.74-1.31-.01-2.31-1.29-3.06-2.43C.57 11.72.04 8.94.95 7.21c.64-1.2 1.79-1.9 3.02-1.9 1.12 0 1.83.73 2.76.73.9 0 1.45-.73 2.75-.73 1.1 0 2.13.58 2.77 1.58-2.44 1.33-2.04 4.8.45 5.16z"/></svg>
-          Sign Up with Apple
-        </div>
+        {/* Apple */}
+        <button className="rp-social" onClick={handleAppleSignUp} disabled={appleLoading || googleLoading} style={{ marginBottom:'20px', background: appleLoading ? '#f8f9fb' : '#fff' }}>
+          {appleLoading ? (
+            <div style={{ width:14, height:14, border:'2px solid #e2e6ed', borderTopColor:'#1B2A4A', borderRadius:'50%', animation:'spin 0.7s linear infinite' }} />
+          ) : (
+            <svg width="14" height="16" viewBox="0 0 18 18" fill="#1B2A4A">
+              <path d="M12.525 0c.068.93-.27 1.858-.787 2.54-.52.69-1.37 1.22-2.21 1.16-.09-.88.32-1.8.79-2.44C10.84.58 11.74.07 12.525 0zM15.7 12.05c-.42.93-.62 1.35-1.16 2.17-.75 1.14-1.81 2.56-3.12 2.57-1.17.01-1.47-.74-3.06-.73-1.59.01-1.92.75-3.09.74-1.31-.01-2.31-1.29-3.06-2.43C.57 11.72.04 8.94.95 7.21c.64-1.2 1.79-1.9 3.02-1.9 1.12 0 1.83.73 2.76.73.9 0 1.45-.73 2.75-.73 1.1 0 2.13.58 2.77 1.58-2.44 1.33-2.04 4.8.45 5.16z"/>
+            </svg>
+          )}
+          {appleLoading ? 'Redirecting...' : 'Sign Up with Apple'}
+        </button>
 
         <p style={{ textAlign:'center', fontSize:'11px', color:'#b0b8c4', margin:'0 0 16px', lineHeight:1.6, fontWeight:300 }}>
           By continuing, you agree to our{' '}
