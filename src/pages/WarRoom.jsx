@@ -448,85 +448,94 @@ function BusinessPlanPanel() {
   const sections = [
     {
       num: '1', title: 'Executive Summary',
-      content: 'Race Passport is a mobile-first platform serving as the universal registration, identity, and discovery layer for the endurance sports world. One account that gets you into every race, everywhere, while building a living record of your racing life.',
-      highlight: 'One Passport. Every Race. Everywhere. The world is your course.'
+      content: 'Race Passport is a mobile-first race identity platform — the permanent home for an endurance athlete's racing life. Every race, every finish line, every personal record. One place. Forever.',
+      highlight: 'Strava owns the journey. Runna owns the coaching. Race Passport owns the destination.'
     },
     {
       num: '2', title: 'The Problem',
       items: [
-        'Every race uses a different registration platform — RunSignUp, Active.com, RaceRoster, and dozens more',
-        'Runners re-enter the same information for every single race',
-        'No single place to view a complete race history, times, and personal records',
-        'Race discovery is completely fragmented',
-        'No AI-powered coaching exists for everyday endurance athletes',
+        'Race accomplishments have no permanent home — timing websites delete results, finish photos scatter across apps never reopened',
+        'PRs are buried in Strava activity feeds, impossible to surface or share meaningfully',
+        'No single place to view a runner's complete racing identity across all distances and years',
+        'The race is the most meaningful moment in an athlete's journey — and it disappears almost immediately',
+        'No AI-powered race performance analysis exists for everyday endurance athletes',
       ]
     },
     {
       num: '3', title: 'The Solution',
+      content: 'Race Passport is the shrine of the destination. Not a training app, not a registration platform — the place athletes go to feel proud of where they've been and inspired by how far they can go.',
       items: [
-        'One profile created once — saves to every race forever',
-        'Race Discovery powered by RunSignUp API with quality filtering and Leaflet map',
-        'Personal Race Passport pages — photos, story, gear, Strava linking, splits',
+        'Personal race pages — photos, story, gear, Strava activity map, splits, all preserved forever',
+        'Race stamps — collectible visual record of every finish line, displayed in a passport grid',
         'Pacer AI — personalized insights, report cards, race grades, career score (powered by Claude)',
-        'The Wall — community story feed for athlete moments',
-        'World Majors tracker with live countdowns to all 6 Abbott World Marathon Majors',
-        'Public passport profile — shareable URL as running identity',
+        'The Wall — community story feed for athlete moments and racing stories',
+        'World Majors tracker — live countdowns to all 6 Abbott World Marathon Majors',
+        'Public passport profile — shareable URL as permanent running identity',
+        'Race discovery — Leaflet map powered by RunSignUp API, top of the funnel into the identity platform',
       ]
     },
     {
-      num: '4', title: 'Market Opportunity',
+      num: '4', title: 'The Ecosystem Fit',
       table: {
-        headers: ['Segment', 'Description', 'Size'],
+        headers: ['Platform', 'What It Owns', 'Gap'],
         rows: [
-          ['Primary', 'Active racers in the US, 2+ races/year', '~10M runners'],
-          ['Secondary', 'Race directors & event companies', '~30,000 events/year'],
-          ['Tertiary', 'Running-adjacent brands', 'Multi-billion dollar market'],
+          ['Strava', 'The journey — every training run, every daily mile', 'The race destination, the finish line, the permanent record'],
+          ['Runna', 'The coaching — structured plans to reach the start line', 'The race result, the identity, the celebration'],
+          ['Race Passport', 'The destination — the race, the finish line, the accomplishment', 'This is the gap. Nobody else has built this.'],
         ]
       }
     },
     {
       num: '5', title: 'Product Roadmap',
       items: [
-        'MVP (April 2027) — Core passport, discovery, import, Pacer AI, The Wall, World Majors ← IN PROGRESS',
-        'V2 (Q3 2027) — Race director portal, custom stamps, live tracking, push notifications, Runna integration',
-        'V3 (2028) — Brand sponsorship platform, premium tier, international expansion, timing integration',
+        'MVP (April 2027) — Race identity, import, Pacer AI, The Wall, World Majors, Discovery ← IN PROGRESS',
+        'V2 (Q3-Q4 2027, 5K-10K users) — Native mobile app, Runna integration, push notifications, enhanced Pacer',
+        'V3 (2028, 50K+ users) — Brand sponsorship platform, premium tier, international expansion',
+        'OpenTable Moment (500K-1M users) — Race director portal, QR bib pickup, in-app registration, auto-import from chip timing',
       ]
     },
     {
       num: '6', title: 'Business Model',
+      content: 'Year 1 is entirely focused on user growth. Revenue begins in Year 2 once there is a meaningful audience to bring to brand partners.',
       table: {
-        headers: ['Stream', 'Price', 'Available'],
+        headers: ['Stream', 'Description', 'Starts'],
         rows: [
-          ['Race Director Listing Fee', '$299/race/year', 'From launch'],
-          ['Featured Race Placement', '$99–499/placement', 'Year 2'],
-          ['Sponsored Stamps & Challenges', '$5K–50K/campaign', 'Year 2–3'],
-          ['Premium Racer Passport', '$4.99–9.99/month', 'Year 2'],
+          ['RunSignup Affiliate', 'Referral fee when users register via Race Passport link', 'Year 2'],
+          ['Gear Affiliate Links', 'Commission on race-specific gear recommendations', 'Year 2'],
+          ['Brand Partnerships', 'Sponsored content and challenges (HOKA, Garmin, GU, Tracksmith)', 'Year 2'],
+          ['Co-branded Stamps', 'Brands attach their name to a stamp category — permanent in every passport', 'Year 3'],
+          ['Sponsored Race Cards', 'Race sponsors pay for branded placement on high-intent discovery pages', 'Year 3'],
+          ['Race Director Portal', 'QR bib pickup, in-app registration — only viable at 500K+ users', 'V2/V3'],
         ]
       }
     },
     {
       num: '7', title: 'Financial Projections',
       table: {
-        headers: ['Metric', 'Year 1 (2027)', 'Year 2 (2028)', 'Year 3 (2029)'],
+        headers: ['Stream', 'Year 1 (2027)', 'Year 2 (2028)', 'Year 3 (2029)'],
         rows: [
-          ['Race Director Listings', '25 races', '100 races', '500 races'],
-          ['Total Revenue', '$7,475', '$64,900', '$374,500'],
-          ['Active Racer Accounts', '1,000', '10,000', '50,000'],
-          ['Operating Costs', '$5,000', '$20,000', '$80,000'],
-          ['Net', '$2,475', '$44,900', '$294,500'],
+          ['Active Users', '100–500', '5,000–10,000', '50,000+'],
+          ['RunSignup Affiliate', '—', '~$1,000', '~$8,000'],
+          ['Gear Affiliate', '—', '~$1,500', '~$12,000'],
+          ['Brand Partnerships', '—', '~$10,000', '~$50,000'],
+          ['Co-branded Stamps', '—', '—', '~$15,000'],
+          ['Sponsored Race Cards', '—', '—', '~$10,000'],
+          ['Total Revenue', '$0', '~$12,500', '~$95,000'],
+          ['Operating Costs', '~$3,500', '~$8,000', '~$25,000'],
+          ['Net', '-$3,500', '~$4,500', '~$70,000'],
         ]
       },
-      note: 'Break-even: 17 race listings. Corrigan Sports alone (9 races) gets Race Passport more than halfway there.'
+      note: 'Year 2 brand partnership revenue assumes 3 deals at ~$3,000–$4,000 each. This requires active outreach — it will not come inbound at 5,000 users.'
     },
     {
       num: '8', title: 'Go-to-Market',
       items: [
-        'Phase 1 (Now–Q4 2026): Build MVP, begin race director outreach in MD/DC/VA',
-        'Phase 2 (Q1 2027): Soft launch to waitlist — 30 days before public',
-        'Phase 3 (April 22, 2027): Public launch — social, press, running clubs',
-        'Growth engine: Strava integration posts to runners\'s feeds on every race registration and stamp',
-        'Virality loop: Public passport profile URL in every user\'s Instagram bio',
-        'Beachhead: Corrigan Sports (9 races, 13,000+ participants at Baltimore Running Festival)',
+        'Phase 1 (Now–Q1 2027): Complete MVP, seed with personal network and MD/DC/VA running community',
+        'Phase 2 (Q1 2027): Soft launch to waitlist — 30 days to build, import, and give feedback',
+        'Phase 3 (April 22, 2027): Public launch — social, press, running clubs, running publications',
+        'Growth engine 1: Public passport URL lives in every user's Instagram bio — every click is organic acquisition',
+        'Growth engine 2: Strava integration posts stamp earned to feed, reaching entire runner network',
+        'Growth engine 3: The Wall — shareable stories drive emotional connection and discovery',
       ]
     },
     {
@@ -536,23 +545,23 @@ function BusinessPlanPanel() {
         rows: [
           ['Frontend', 'React + Vite + Tailwind CSS', 'Live'],
           ['Hosting', 'Vercel (auto-deploy from GitHub)', 'Live'],
-          ['Database & Auth', 'Supabase (PostgreSQL + Auth)', 'Live'],
+          ['Database & Auth', 'Supabase (PostgreSQL + RLS)', 'Live'],
           ['AI Coaching', 'Anthropic Claude (Pacer AI)', 'Live'],
-          ['Race Data', 'RunSignUp API', 'Live'],
+          ['Race Data', 'RunSignUp API (free, Apache license)', 'Live'],
           ['Activity Tracking', 'Strava OAuth + Activities API', 'Live'],
           ['Maps', 'Leaflet CDN', 'Live'],
-          ['Social Login', 'Google OAuth + Apple OAuth', 'Partial'],
+          ['Social Login', 'Google OAuth (live) + Apple OAuth (pending)', 'Partial'],
         ]
       }
     },
     {
       num: '10', title: 'Key Risks',
       items: [
-        'Chicken & egg — Mitigation: launch racer-first, deliver value before race directors join',
-        'Race directors unwilling to pay — Mitigation: free pilot year for first 10',
-        'Solo founder bandwidth — Mitigation: strict MVP scope, AI-accelerated development',
-        'RunSignUp competes — Mitigation: Race Passport is complementary, not a threat',
-        'Low waitlist growth — Mitigation: personal network, local running clubs, Strava virality',
+        'Users don't engage after signup — Mitigation: Pacer AI creates immediate value on first race import',
+        'Brand partnerships don't materialize at 5K users — Mitigation: affiliate revenue requires no sales, covers baseline',
+        'Strava builds a race identity layer — Mitigation: Race Passport can move faster as a focused product',
+        'Solo founder bandwidth — Mitigation: strict MVP scope, AI-accelerated development, app is already built',
+        'Low organic growth — Mitigation: public passport URL is a constant engine, Strava integration amplifies every import',
       ]
     },
   ]
