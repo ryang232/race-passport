@@ -124,14 +124,14 @@ function StatsTicker({ t, items }) {
         </div>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:'rgba(255,255,255,0.25)', letterSpacing:'1px' }}>Synced via Strava</span>
       </div>
-      <div style={{ display:'flex', alignItems:'center', padding:'20px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
+      <div style={{ display:'flex', alignItems:'center', padding:'14px 0', animation:'statsTicker 50s linear infinite', width:'max-content' }}>
         {all.map((item,i) => (
           <div key={i} style={{ display:'flex', alignItems:'center', flexShrink:0 }}>
-            <div style={{ textAlign:'center', padding:'0 28px' }}>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(32px,5vw,72px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', marginTop:'4px', whiteSpace:'nowrap' }}>{item.label}</div>
+            <div style={{ textAlign:'center', padding:'0 22px' }}>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(22px,3.5vw,48px)', color:'#fff', lineHeight:1, letterSpacing:'2px', whiteSpace:'nowrap' }}>{item.value}</div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', marginTop:'3px', whiteSpace:'nowrap' }}>{item.label}</div>
             </div>
-            <div style={{ width:4, height:4, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
+            <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.25)', flexShrink:0 }} />
           </div>
         ))}
       </div>
@@ -358,6 +358,39 @@ function PacerDashboard({ races, profile, t, isMobile }) {
   const hasUltra   = allRaces.some(rc => rc.distance?.includes('50') || rc.distance?.includes('100') || (rc.distance||'').toLowerCase().includes('ultra'))
   const runnerType = hasTri ? 'Triathlete' : hasUltra ? 'Ultra Runner' : hasMarathon ? 'Marathoner' : topDist?.includes('13') ? 'Half Marathoner' : topDist ? 'Road Runner' : null
 
+  // Archetype engine — reads HOW you race, not just what distance
+  const parseTimeToSec = (t) => { if(!t) return null; const p=t.split(':').map(Number); if(p.length===3) return p[0]*3600+p[1]*60+p[2]; if(p.length===2) return p[0]*60+p[1]; return null }
+  const racedRaces2 = allRaces.filter(r=>r.time&&r.distance)
+  const byDist2 = {}
+  racedRaces2.forEach(r=>{ if(!byDist2[r.distance]) byDist2[r.distance]=[]; const t2=parseTimeToSec(r.time); if(t2) byDist2[r.distance].push({ time:t2, sort:r.date_sort||r.date||'' }) })
+  let prProgression2 = 0
+  Object.values(byDist2).forEach(arr=>{ if(arr.length<2) return; const s=[...arr].sort((a,b)=>a.sort.localeCompare(b.sort)); if(s[s.length-1].time < s[0].time) prProgression2++ })
+  const paceVars = []
+  Object.values(byDist2).forEach(arr=>{ if(arr.length<3) return; const times=arr.map(r=>r.time); const avg=times.reduce((s,t2)=>s+t2,0)/times.length; const variance=times.reduce((s,t2)=>s+Math.pow(t2-avg,2),0)/times.length; paceVars.push(Math.sqrt(variance)/avg) })
+  const avgVar = paceVars.length ? paceVars.reduce((s,v)=>s+v,0)/paceVars.length : null
+  const distMilesMap = {'5K':3.1,'5k':3.1,'10K':6.2,'10k':6.2,'13.1':13.1,'26.2':26.2,'70.3':70.3,'140.6':140.6,'50K':31,'100M':100}
+  const dOverTime = racedRaces2.map(r=>({ m:distMilesMap[r.distance]||null, s:r.date_sort||'' })).filter(r=>r.m).sort((a,b)=>a.s.localeCompare(b.s))
+  let distGrowth2 = false
+  if (dOverTime.length>=3) { const h=Math.floor(dOverTime.length/2); const a1=dOverTime.slice(0,h).reduce((s,r)=>s+r.m,0)/h; const a2=dOverTime.slice(h).reduce((s,r)=>s+r.m,0)/(dOverTime.length-h); distGrowth2=a2>a1*1.2 }
+  const hasPRs2 = allRaces.some(r=>r.is_pr)
+  const sortedByDate2 = [...allRaces].sort((a,b)=>(a.date_sort||'').localeCompare(b.date_sort||''))
+  let comeback2 = false
+  for (let i=1;i<sortedByDate2.length&&!comeback2;i++) { const prev=sortedByDate2[i-1].date_sort||'', curr=sortedByDate2[i].date_sort||''; if(prev&&curr){ const months=(new Date(curr)-new Date(prev))/(1000*60*60*24*30); if(months>18&&hasPRs2) comeback2=true } }
+  const runnerArchetype = (() => {
+    if (!racedRaces2.length) return null
+    if (hasTri||hasUltra) return { title:'The Iron Soul', desc:'Iron-distance or ultra history. You race where others spectate.', color:'#B83232' }
+    if (distGrowth2&&hasMarathon) return { title:'The Distance Hunter', desc:'Always chasing the next longer challenge.', color:'#1E5FA8' }
+    if (avgVar!==null&&avgVar<0.04&&racedRaces2.length>=3) return { title:'The Pacer', desc:'Metronomic consistency. You race with surgical precision.', color:'#C9A84C' }
+    if (prProgression2>=2&&hasPRs2) return { title:'The Strong Finisher', desc:'Your times keep dropping. Each race builds on the last.', color:'#4ade80' }
+    if (comeback2) return { title:'The Comeback Kid', desc:'You stepped away and came back stronger. That takes character.', color:'#C9A84C' }
+    if (allRaces.length>=10) return { title:'The Grinder', desc:'High volume, relentless. You show up to every start line.', color:'#9aa5b4' }
+    const shorts=racedRaces2.filter(r=>['5K','5k','10K','10k'].some(d=>(r.distance||'').includes(d)))
+    if (shorts.length>=2&&prProgression2>=1) return { title:'The Speedster', desc:'Built for pace. You thrive at the sharp end of the field.', color:'#1E5FA8' }
+    if (allRaces.length<=3) return { title:'The Contender', desc:'Your passport is just getting started. The best is ahead.', color:'#C9A84C' }
+    if (hasMarathon) return { title:'The Marathoner', desc:'The classic distance, run seriously.', color:'#C9A84C' }
+    return { title:'The Road Runner', desc:'Consistent, committed, always moving forward.', color:'#9aa5b4' }
+  })()
+
   // Display score — use stored career score or derive from race history
   const derivedScore = allRaces.length > 0 && !careerScore
     ? Math.min(99, 60 + Math.min(20, allRaces.length * 4) + Math.min(10, Object.keys(distMap).length * 2) + (hasTri ? 6 : 0) + (hasMarathon ? 3 : 0))
@@ -369,79 +402,69 @@ function PacerDashboard({ races, profile, t, isMobile }) {
 
   return (
     <div className="rp-section-card rp-section-gold-tint" style={{ borderRadius:'16px', background:t.isDark?'rgba(201,168,76,0.07)':'#FFFDF5', borderLeft:'3px solid #C9A84C', padding:isMobile?'16px':'24px 28px' }}>
-      <div style={{ display:'flex', alignItems:'flex-start', gap:'16px', flexWrap:isMobile?'wrap':'nowrap' }}>
-        <div style={{ width:44, height:44, borderRadius:'10px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'22px' }}>⚡</div>
-        <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'10px' }}>
-            <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', letterSpacing:'3px', color:'#C9A84C' }}>PACER</span>
-            <div style={{ width:4, height:4, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Race Intelligence</span>
-          </div>
-          <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.text, margin:'0 0 14px', lineHeight:1.7, fontWeight:400 }}>{pacerData.insight}</p>
-          <div style={{ display:'flex', alignItems:'center', gap:'10px', flexWrap:'wrap' }}>
-            <div style={{ display:'inline-flex', alignItems:'center', gap:'8px', background:t.isDark?'rgba(201,168,76,0.12)':'rgba(201,168,76,0.14)', borderRadius:'20px', padding:'6px 14px' }}>
-              <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M5 1l1.5 3H10L7.5 6l1 3L5 7.5 1.5 9l1-3L0 4h3.5z" fill="#C9A84C"/></svg>
-              <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C' }}>{pacerData.next_step}</span>
-            </div>
-            {runnerType && (
-              <div style={{ display:'inline-flex', alignItems:'center', gap:'6px', background:t.isDark?'rgba(255,255,255,0.05)':'rgba(27,42,74,0.06)', borderRadius:'20px', padding:'6px 14px' }}>
-                <span style={{ fontSize:'12px' }}>🏃</span>
-                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:t.text }}>{runnerType}</span>
-              </div>
-            )}
-          </div>
-          {gradedRaces.length > 0 && (
-            <div style={{ marginTop:'14px', paddingTop:'14px', borderTop:'1px solid ' + (t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.07)') }}>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Individual Race Grades</div>
-              <div style={{ display:'flex', flexWrap:'wrap', gap:'6px' }}>
-                {gradedRaces.slice(0,6).map(rc => {
-                  const partial = rc.pacer_score_partial !== false
-                  const gColor = partial ? t.textMuted : (rc.pacer_grade?.startsWith('A') ? '#16a34a' : rc.pacer_grade?.startsWith('B') ? '#C9A84C' : '#9aa5b4')
-                  const borderVal = partial ? t.border : 'rgba(201,168,76,0.25)'
-                  return (
-                    <div key={rc.id}
-                      onClick={() => navigate('/race/' + rc.id)}
-                      title={partial ? 'Partial grade - add training for full score' : ('Full grade: ' + rc.pacer_grade)}
-                      style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:'3px', padding:'10px 16px', background:partial ? (t.isDark?'rgba(255,255,255,0.05)':'rgba(27,42,74,0.05)') : 'rgba(201,168,76,0.1)', border:'1.5px solid ' + borderVal, borderRadius:'14px', cursor:'pointer', transition:'all 0.2s', minWidth:'72px' }}
-                      onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.transform = 'translateY(-2px)' }}
-                      onMouseLeave={e => { e.currentTarget.style.borderColor = borderVal; e.currentTarget.style.transform = 'translateY(0)' }}>
-                      <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:gColor, letterSpacing:'1px', lineHeight:1 }}>
-                        {partial ? '~' : ''}{rc.pacer_grade}
-                      </span>
-                      <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center', letterSpacing:'0.3px' }}>
-                        {(rc.name||'').split(' ').slice(0,2).join(' ')}
-                      </span>
-                      {partial && <span style={{ fontSize:'8px', color:t.textMuted, letterSpacing:'0.5px' }}>partial</span>}
-                    </div>
-                  )
-                })}
-              </div>
-              {allRaces.some(rc => rc.pacer_score_partial !== false) && (
-                <div style={{ marginTop:'6px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>
-                  * Partial grade — add Strava + training on your race page for a full score
+
+      {/* Header */}
+      <div style={{ display:'flex', alignItems:'center', gap:'8px', marginBottom:'14px' }}>
+        <div style={{ width:36, height:36, borderRadius:'9px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>⚡</div>
+        <div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'13px', letterSpacing:'3px', color:'#C9A84C', lineHeight:1 }}>PACER</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Race Intelligence</div>
+        </div>
+      </div>
+
+      {/* Zone A — Insight, full width, prominent */}
+      <p style={{ fontFamily:"'Barlow',sans-serif", fontSize:'15px', color:t.text, margin:'0 0 16px', lineHeight:1.75, fontWeight:400 }}>{pacerData.insight}</p>
+
+      {/* Zone B — Race grades directly below, no divider */}
+      {gradedRaces.length > 0 && (
+        <div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'10px' }}>Your Race Grades</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:'8px' }}>
+            {gradedRaces.slice(0,6).map(rc => {
+              const partial = rc.pacer_score_partial !== false
+              const gColor = partial ? t.textMuted : (rc.pacer_grade?.startsWith('A') ? '#16a34a' : rc.pacer_grade?.startsWith('B') ? '#C9A84C' : '#9aa5b4')
+              const borderVal = partial ? t.border : 'rgba(201,168,76,0.25)'
+              return (
+                <div key={rc.id}
+                  onClick={() => navigate('/race/' + rc.id)}
+                  style={{ display:'inline-flex', flexDirection:'column', alignItems:'center', gap:'3px', padding:'10px 16px', background:partial?(t.isDark?'rgba(255,255,255,0.05)':'rgba(27,42,74,0.05)'):'rgba(201,168,76,0.1)', border:'1.5px solid ' + borderVal, borderRadius:'14px', cursor:'pointer', transition:'all 0.2s', minWidth:'72px' }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.transform='translateY(-2px)' }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor=borderVal; e.currentTarget.style.transform='translateY(0)' }}>
+                  <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'30px', color:gColor, letterSpacing:'1px', lineHeight:1 }}>{partial?'~':''}{rc.pacer_grade}</span>
+                  <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:t.textMuted, maxWidth:'80px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center', letterSpacing:'0.3px' }}>
+                    {(rc.name||'').split(' ').slice(0,2).join(' ')}
+                  </span>
+                  {partial && <span style={{ fontSize:'8px', color:t.textMuted, letterSpacing:'0.5px' }}>partial</span>}
                 </div>
-              )}
+              )
+            })}
+          </div>
+          {gradedRaces.some(rc => rc.pacer_score_partial !== false) && (
+            <div style={{ marginTop:'12px', padding:'10px 14px', background:t.isDark?'rgba(27,42,74,0.5)':'rgba(27,42,74,0.05)', borderRadius:'8px' }}>
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'5px' }}>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:t.textMuted }}>Grade completeness</span>
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#C9A84C', fontWeight:600 }}>40%</span>
+              </div>
+              <div style={{ height:'4px', background:t.isDark?'rgba(255,255,255,0.08)':'rgba(27,42,74,0.1)', borderRadius:'99px', overflow:'hidden' }}>
+                <div style={{ height:'100%', width:'40%', background:'#C9A84C', borderRadius:'99px' }} />
+              </div>
+              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, marginTop:'6px', lineHeight:1.5 }}>
+                Link Strava and add training on your race page to unlock your full grade — training counts for 60% of your score.
+              </div>
             </div>
           )}
         </div>
-        {allRaces.length > 0 && displayScore && !isMobile && (
-          <div style={{ flexShrink:0, textAlign:'center' }}>
-            <div style={{ position:'relative', width:96, height:96 }}>
-              <svg viewBox="0 0 96 96" width="96" height="96">
-                <circle cx="48" cy="48" r="40" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="8"/>
-                <circle cx="48" cy="48" r="40" fill="none" stroke="#C9A84C" strokeWidth="8"
-                  strokeDasharray={dashLen + ' 251.3'}
-                  strokeLinecap="round" transform="rotate(-90 48 48)"/>
-              </svg>
-              <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, lineHeight:1 }}>{displayScore}</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#C9A84C', lineHeight:1 }}>{displayGrade}</div>
-              </div>
-            </div>
-            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'6px' }}>Career Score</div>
+      )}
+
+      {allRaces.length === 0 && (
+        <div style={{ display:'flex', alignItems:'center', gap:'12px', padding:'14px', background:t.isDark?'rgba(201,168,76,0.06)':'rgba(201,168,76,0.08)', borderRadius:'10px', border:'1px solid rgba(201,168,76,0.2)' }}>
+          <span style={{ fontSize:'20px' }}>🏁</span>
+          <div>
+            <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, color:t.text, marginBottom:'2px' }}>Import your first race to unlock your Pacer grade and career score.</div>
+            <button onClick={() => navigate('/race-import')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', background:'none', border:'none', cursor:'pointer', padding:0, textTransform:'uppercase' }}>Import races →</button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -459,14 +482,24 @@ function RaceTimeline({ races, t, isMobile }) {
     <div className='rp-section-card rp-section-navy' style={{ borderRadius:'16px', padding:isMobile?'20px 16px':'28px 32px', position:'relative', overflow:'hidden' }}>
       {/* Ghost text */}
       <div style={{ position:'absolute', top:'50%', right:-20, transform:'translateY(-50%)', fontFamily:"'Bebas Neue',sans-serif", fontSize:'120px', color:'rgba(201,168,76,0.04)', letterSpacing:'4px', userSelect:'none', lineHeight:1, pointerEvents:'none' }}>TIMELINE</div>
-      {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'24px', position:'relative', zIndex:1 }}>
+      {/* Header — amplified emotional copy */}
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:'24px', position:'relative', zIndex:1 }}>
         <div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Your Journey</div>
-          <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'40px', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>Race Timeline</span>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'3px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Race Timeline</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(24px,3.5vw,38px)', color:'#fff', letterSpacing:'1px', lineHeight:1 }}>
+            {(() => {
+              const firstYear = sorted[0]?.date_sort?.split('-')[0] || sorted[0]?.year || ''
+              const lastYear = sorted[sorted.length-1]?.date_sort?.split('-')[0] || sorted[sorted.length-1]?.year || ''
+              const span = firstYear && lastYear && firstYear !== lastYear ? (parseInt(lastYear)-parseInt(firstYear)) + ' years' : ''
+              const distMap2 = {'5K':3.1,'5k':3.1,'10K':6.2,'10k':6.2,'13.1':13.1,'26.2':26.2,'70.3':70.3,'140.6':140.6,'50K':31,'100M':100}
+              const miles = Math.round(sorted.reduce((s,r)=>s+(distMap2[r.distance]||0),0))
+              if (span && miles > 0) return span + '. ' + miles + ' miles.'
+              return sorted.length + ' ' + (sorted.length===1?'race':'races') + '. All right here.'
+            })()}
+          </div>
         </div>
-        <div style={{ textAlign:'right' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'rgba(255,255,255,0.4)' }}>
+        <div style={{ textAlign:'right', flexShrink:0 }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)' }}>
             {sorted[0]?.month||sorted[0]?.date?.split(' ')[0]||''} {sorted[0]?.year||sorted[0]?.date?.split(' ')[1]||''} → {sorted[sorted.length-1]?.month||sorted[sorted.length-1]?.date?.split(' ')[0]||''} {sorted[sorted.length-1]?.year||sorted[sorted.length-1]?.date?.split(' ')[1]||''}
           </div>
           <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:'#C9A84C', letterSpacing:'1px' }}>{sorted.length} {sorted.length===1?'Race':'Races'}</div>
@@ -520,15 +553,19 @@ function RaceTimeline({ races, t, isMobile }) {
           })}
         </div>
       </div>
-      {/* Legend */}
-      <div style={{ display:'flex', gap:'16px', marginTop:'16px', position:'relative', zIndex:1 }}>
+      {/* Legend + micro-CTA */}
+      <div style={{ display:'flex', alignItems:'center', gap:'16px', marginTop:'16px', position:'relative', zIndex:1, flexWrap:'wrap' }}>
         {[['#1E5FA8','Running'],['#C9A84C','Marathon / Ultra'],['#B83232','Triathlon']].map(([color,label]) => (
           <div key={label} style={{ display:'flex', alignItems:'center', gap:'6px' }}>
-            <div style={{ width:10, height:10, borderRadius:'50%', background:color }} />
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.4)', letterSpacing:'0.5px' }}>{label}</span>
+            <div style={{ width:8, height:8, borderRadius:'50%', background:color }} />
+            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.35)', letterSpacing:'0.5px' }}>{label}</span>
           </div>
         ))}
-        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.25)', marginLeft:'auto' }}>← drag to scroll →</span>
+        <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'rgba(255,255,255,0.2)', marginLeft:'auto' }}>← drag to scroll →</span>
+        <button onClick={()=>navigate('/race-import')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', background:'none', border:'none', cursor:'pointer', padding:0, flexShrink:0 }}
+          onMouseEnter={e=>e.currentTarget.style.opacity='0.7'} onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+          + Add Another Race →
+        </button>
       </div>
     </div>
   )
@@ -1080,35 +1117,44 @@ function isQualityRace(race) {
 
 function DiscoverSection({ nearbyRaces, nearbyLoading, profile, t, isMobile, navigate }) {
   return (
-    <div className={`rp-section-card ${t.isDark?'rp-section-dark-surface':'rp-section-light'}`} style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#ffffff', padding:'24px', overflow:'hidden', width:'100%', minWidth:0 }}>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:'20px' }}>
+    <div className="rp-section-card rp-section-light" style={{ borderRadius:'16px', background:t.isDark?'rgba(255,255,255,0.04)':'#ffffff', padding:isMobile?'20px':'24px 28px', border:`1px solid ${t.border}` }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', marginBottom:'16px' }}>
+        <div style={{ width:36, height:36, borderRadius:'9px', background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:'18px' }}>🗺️</div>
         <div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'3px' }}>Race Discovery</div>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'36px', color:t.text, letterSpacing:'1px', lineHeight:1 }}>
-            Upcoming Races{profile?.state ? ` Near You in ${profile.state}` : ' Near You'}
-          </div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'2.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'2px' }}>What's Next</div>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'26px', color:t.text, letterSpacing:'0.5px', lineHeight:1 }}>Ready for Your Next Race?</div>
         </div>
-        <button onClick={()=>navigate('/discover')} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', letterSpacing:'1px', flexShrink:0 }}>See All →</button>
       </div>
-
-      {nearbyLoading ? (
-        <div style={{ display:'flex', gap:'14px', overflow:'hidden' }}>
-          {[1,2,3].map(i=><div key={i} style={{ flexShrink:0, width:240, height:200, borderRadius:'14px', background:t.surfaceAlt, animation:'pulse 1.5s ease infinite' }}/>)}
+      <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'20px', lineHeight:1.65 }}>
+        Pacer thinks you're ready for your next challenge. Browse thousands of upcoming races on the discover map.
+      </div>
+      {nearbyRaces && nearbyRaces.length > 0 ? (
+        <div style={{ marginBottom:'20px' }}>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'10px' }}>Races Near You</div>
+          <ScrollRow gap="12px">
+            {nearbyRaces.slice(0,4).map(race => (
+              <div key={race.id} onClick={() => navigate('/race-detail/' + race.id)}
+                style={{ flexShrink:0, width:'clamp(150px,38vw,220px)', borderRadius:'10px', background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.03)', border:`1px solid ${t.border}`, padding:'12px', cursor:'pointer', transition:'all 0.15s' }}
+                onMouseEnter={e=>{e.currentTarget.style.borderColor='#C9A84C';e.currentTarget.style.transform='translateY(-2px)'}}
+                onMouseLeave={e=>{e.currentTarget.style.borderColor=t.border;e.currentTarget.style.transform='translateY(0)'}}>
+                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:t.text, letterSpacing:'0.5px', lineHeight:1.2, marginBottom:'4px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{race.name}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{race.city||race.location} · {race.date}</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, color:'#C9A84C', marginTop:'4px' }}>{race.distance}</div>
+              </div>
+            ))}
+          </ScrollRow>
         </div>
-      ) : nearbyRaces.length === 0 ? (
-        <div style={{ padding:'32px', textAlign:'center', border:`1.5px dashed ${t.border}`, borderRadius:'12px' }}>
-          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:t.textMuted, letterSpacing:'1px', marginBottom:'8px' }}>No Races Found</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'16px' }}>Add your state in Profile to see races near you.</div>
-          <button onClick={()=>navigate('/discover')} style={{ padding:'8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:700, letterSpacing:'1px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>Browse Discover →</button>
+      ) : nearbyLoading ? (
+        <div style={{ display:'flex', gap:'10px', marginBottom:'20px' }}>
+          {[1,2,3].map(i => <div key={i} style={{ flexShrink:0, width:180, height:70, borderRadius:'10px', background:t.isDark?'rgba(255,255,255,0.04)':'rgba(27,42,74,0.04)', animation:'pulse 1.5s ease infinite' }} />)}
         </div>
-      ) : (
-        <ScrollRow gap={14}>
-          {nearbyRaces.slice(0,10).map(race => <LogoRaceCard key={race.id} race={race} t={t} />)}
-          <div onClick={()=>navigate('/discover')} style={{ flexShrink:0, width:60, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
-            <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, color:'#C9A84C', textTransform:'uppercase', letterSpacing:'1px', writingMode:'vertical-lr' }}>More →</span>
-          </div>
-        </ScrollRow>
-      )}
+      ) : null}
+      <button onClick={() => navigate('/discover')}
+        style={{ width:'100%', padding:'12px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1.5px', textTransform:'uppercase', background:'#1B2A4A', color:'#fff', border:'none', borderRadius:'8px', cursor:'pointer', transition:'background 0.2s' }}
+        onMouseEnter={e=>e.currentTarget.style.background='#C9A84C'}
+        onMouseLeave={e=>e.currentTarget.style.background='#1B2A4A'}>
+        Open Discover Map →
+      </button>
     </div>
   )
 }
@@ -1342,6 +1388,49 @@ export default function Home() {
     { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
 
+  // ── Career score for greeting ─────────────────────────────────────────────
+  const _scoredForGreeting = passportRaces.filter(r => r.pacer_score)
+  const careerScoreForGreeting = _scoredForGreeting.length
+    ? Math.round(_scoredForGreeting.reduce((s,r) => s+r.pacer_score,0) / _scoredForGreeting.length)
+    : passportRaces.length > 0
+      ? (() => { const dm={}; passportRaces.forEach(r=>{dm[r.distance]=(dm[r.distance]||0)+1}); const ht=passportRaces.some(r=>(r.distance||'').includes('70.3')||(r.distance||'').includes('140')); const hm=passportRaces.some(r=>(r.distance||'').includes('26.2')); return Math.min(98,60+Math.min(20,passportRaces.length*3)+Math.min(10,Object.keys(dm).length*2)+(ht?6:0)+(hm?3:0)) })()
+      : null
+  const careerGradeForGreeting = careerScoreForGreeting ? gradeFromScore(careerScoreForGreeting) : null
+
+  // ── Greeting identity values — computed from passportRaces ─────────────────
+  const gradedRaces = passportRaces.filter(r => r.pacer_grade)
+  const greetingLine2 = (() => {
+    if (upcomingRace) return 'YOUR NEXT RACE IS WAITING.'
+    if (gradedRaces.length > 0) return 'YOUR GRADES ARE IN.'
+    return 'THE START LINE IS CALLING.'
+  })()
+  const runnerArchetype = (() => {
+    const r = passportRaces
+    if (!r.length) return null
+    const hasTri2 = r.some(rc=>(rc.distance||'').includes('70.3')||(rc.distance||'').includes('140.6'))
+    const hasUltra2 = r.some(rc=>['50K','50k','100M'].some(d=>(rc.distance||'').includes(d)))
+    const hasMarathon2 = r.some(rc=>(rc.distance||'').includes('26.2'))
+    const racedR = r.filter(rc=>rc.time&&rc.distance)
+    if (!racedR.length) return { title:'The Contender', desc:'Your passport is just getting started.', color:'#C9A84C' }
+    const byD = {}; racedR.forEach(rc=>{ if(!byD[rc.distance]) byD[rc.distance]=[]; const p=rc.time.split(':').map(Number); const s=p.length===3?p[0]*3600+p[1]*60+p[2]:p[0]*60+(p[1]||0); byD[rc.distance].push({time:s,sort:rc.date_sort||''}) })
+    let prProg=0; Object.values(byD).forEach(arr=>{ if(arr.length<2) return; const s=[...arr].sort((a,b)=>a.sort.localeCompare(b.sort)); if(s[s.length-1].time<s[0].time) prProg++ })
+    const pv=[]; Object.values(byD).forEach(arr=>{ if(arr.length<3) return; const times=arr.map(rc=>rc.time); const avg=times.reduce((s,t)=>s+t,0)/times.length; pv.push(Math.sqrt(times.reduce((s,t)=>s+Math.pow(t-avg,2),0)/times.length)/avg) })
+    const avgV=pv.length?pv.reduce((s,v)=>s+v,0)/pv.length:null
+    const hasPRs2=r.some(rc=>rc.is_pr)
+    const sortD=[...r].sort((a,b)=>(a.date_sort||'').localeCompare(b.date_sort||''))
+    let comeback2=false; for(let i=1;i<sortD.length&&!comeback2;i++){const prev=sortD[i-1].date_sort||'',curr=sortD[i].date_sort||'';if(prev&&curr&&(new Date(curr)-new Date(prev))/(1000*60*60*24*30)>18&&hasPRs2) comeback2=true}
+    if (hasTri2||hasUltra2) return { title:'The Iron Soul', desc:'Iron-distance or ultra. You race where others spectate.', color:'#B83232' }
+    if (avgV!==null&&avgV<0.04&&racedR.length>=3) return { title:'The Pacer', desc:'Metronomic consistency. You race with surgical precision.', color:'#C9A84C' }
+    if (prProg>=2&&hasPRs2) return { title:'The Strong Finisher', desc:'Your times keep dropping. Each race builds on the last.', color:'#4ade80' }
+    if (comeback2) return { title:'The Comeback Kid', desc:'You stepped away and came back stronger.', color:'#C9A84C' }
+    if (r.length>=10) return { title:'The Grinder', desc:'High volume, relentless. You show up to every start line.', color:'#9aa5b4' }
+    const shorts=racedR.filter(rc=>['5K','5k','10K','10k'].some(d=>(rc.distance||'').includes(d)))
+    if (shorts.length>=2&&prProg>=1) return { title:'The Speedster', desc:'Built for pace. You thrive at the sharp end.', color:'#1E5FA8' }
+    if (r.length<=3) return { title:'The Contender', desc:'Your passport is just getting started. The best is ahead.', color:'#C9A84C' }
+    if (hasMarathon2) return { title:'The Marathoner', desc:'The classic distance, run seriously.', color:'#C9A84C' }
+    return { title:'The Road Runner', desc:'Consistent, committed, always moving forward.', color:'#9aa5b4' }
+  })()
+
   return (
     <div style={{ minHeight:'100vh', background:t.isDark?t.bg:'#eef0f5', fontFamily:"'Barlow',sans-serif", position:'relative', transition:'background 0.25s', overflowX:'hidden', maxWidth:'100vw', boxSizing:'border-box' }}>
       <ParallaxBackground t={t} />
@@ -1452,18 +1541,42 @@ export default function Home() {
       {/* Desktop greeting */}
       {!isMobile && (
         <div style={{ position:'relative', zIndex:10, background:t.greetingBg, backdropFilter:'blur(2px)', borderBottom:`1px solid ${t.navBorder}`, padding:'40px 40px 34px', transition:'background 0.25s' }}>
-          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'24px' }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:'32px' }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:t.text, letterSpacing:'2px', lineHeight:1, marginBottom:'4px' }}>{greeting}{firstName?`, ${firstName.toUpperCase()}`:''}.</div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>THE START LINE IS CALLING.</div>
-            </div>
-            <div style={{ flexShrink:0, alignSelf:'center', opacity:0.35, border:`1px dashed ${t.border}`, borderRadius:'10px', padding:'10px 18px', display:'flex', alignItems:'center', gap:'8px', minWidth:'160px' }}>
-              <div style={{ width:28, height:28, borderRadius:'6px', background:t.border }} />
-              <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'8px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase' }}>Sponsored by</div>
-                <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'14px', color:t.textMuted, letterSpacing:'1px' }}>Partner Name</div>
+              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,64px)', color:'#C9A84C', letterSpacing:'2px', lineHeight:1 }}>
+                {greetingLine2}
               </div>
             </div>
+            {/* Career score + archetype — identity summary, always visible */}
+            {passportRaces.length > 0 && (
+              <div style={{ display:'flex', alignItems:'center', gap:'20px', flexShrink:0 }}>
+                {careerScoreForGreeting && (
+                  <div style={{ textAlign:'center' }}>
+                    <div style={{ position:'relative', width:96, height:96 }}>
+                      <svg viewBox="0 0 96 96" width="96" height="96">
+                        <circle cx="48" cy="48" r="40" fill="none" stroke={t.isDark?'rgba(255,255,255,0.06)':'rgba(27,42,74,0.1)'} strokeWidth="8"/>
+                        <circle cx="48" cy="48" r="40" fill="none" stroke="#C9A84C" strokeWidth="8"
+                          strokeDasharray={((careerScoreForGreeting/100)*251.3).toFixed(2)+' 251.3'}
+                          strokeLinecap="round" transform="rotate(-90 48 48)"/>
+                      </svg>
+                      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, lineHeight:1 }}>{careerScoreForGreeting}</div>
+                        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'18px', color:'#C9A84C', lineHeight:1 }}>{careerGradeForGreeting}</div>
+                      </div>
+                    </div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginTop:'5px' }}>Career Score</div>
+                  </div>
+                )}
+                {runnerArchetype && (
+                  <div style={{ background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:'12px', padding:'12px 18px', maxWidth:'200px' }}>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'rgba(201,168,76,0.6)', textTransform:'uppercase', marginBottom:'4px' }}>Pacer Says</div>
+                    <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'22px', color:'#C9A84C', letterSpacing:'0.5px', lineHeight:1, marginBottom:'5px' }}>{runnerArchetype.title}</div>
+                    <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, lineHeight:1.5 }}>{runnerArchetype.desc}</div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
