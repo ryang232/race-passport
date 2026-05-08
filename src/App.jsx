@@ -28,6 +28,8 @@ import Privacy from './pages/Privacy'
 import TrainingBlock from './pages/TrainingBlock'
 import AuthCallback from './pages/AuthCallback'
 import WarRoom from './pages/WarRoom'
+import LandingPreview from './pages/LandingPreview'
+import HomePreview from './pages/HomePreview'
 
 // ── RunSignup OAuth callback handler ─────────────────────────────────────────
 function RunSignupCallback() {
@@ -103,6 +105,8 @@ export default function App() {
             <Route path="/passport"                element={<Passport />} />
             <Route path="/profile"                 element={<Profile />} />
             <Route path="/warroom"                 element={<WarRoom />} />
+            <Route path="/landing-preview"         element={<LandingPreview />} />
+            <Route path="/home-preview"            element={<HomePreview />} />
             <Route path="/:username"               element={<PublicProfile />} />
           </Routes>
         </BrowserRouter>
