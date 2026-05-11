@@ -5,7 +5,6 @@ import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
-import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useIsMobile } from '../lib/useIsMobile'
 const FEATURED_RACE_NAMES = [
   'boston marathon','new york city marathon','chicago marathon','marine corps marathon',
@@ -130,13 +129,7 @@ function matchesSearch(race, q) {
   )
 }
 
-function parseCityState(race) {
-  if (race.city && race.state) return { city: race.city, state: race.state }
-  const loc = race.location || ''
-  const parts = loc.split(',').map(s => s.trim())
-  if (parts.length >= 2) return { city: parts[0], state: parts[parts.length-1].toUpperCase().slice(0,2) }
-  return { city:'', state:'' }
-}
+
 function nameContainsKeyword(name, kw) {
   if (kw.length <= 4) {
     const re = new RegExp('(^|\\s|-)' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|-|$)', 'i')
@@ -166,190 +159,121 @@ function classifyDistance(race) {
   return 'OTHER'
 }
 const API_BASE = '/api/runsignup'
-const enrichCache = new Set()
-if (typeof window !== 'undefined') {
-  window.__rp_clearEnrichCache = () => enrichCache.clear()
-}
 const SS_KEY = 'rp_discover_state'
-function CardStamp({ distance, size=50 }) {
+
+// ── Stamp — left anchor of every card ────────────────────────────────────────
+function CardStamp({ distance, size=44 }) {
   const colors  = getDistanceColor(distance)
   const cleaned = (distance||'').replace(' mi','').replace(' miles','')
-  const fs = size <= 36
-    ? (cleaned.length > 4 ? 7 : cleaned.length > 2 ? 9 : 12)
-    : (cleaned.length > 4 ? 10 : cleaned.length > 2 ? 13 : 17)
+  const fs = cleaned.length > 4 ? 9 : cleaned.length > 2 ? 12 : 16
   return (
-    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.95)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
-      <div style={{ position:'absolute', inset: size<=36 ? 2 : 3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
+    <div style={{ width:size, height:size, borderRadius:'50%', border:`2px solid ${colors.stampBorder}`, background:'rgba(255,255,255,0.97)', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', flexShrink:0 }}>
+      <div style={{ position:'absolute', inset:3, borderRadius:'50%', border:`0.75px dashed ${colors.stampDash}` }} />
       <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:fs, color:colors.stampText, letterSpacing:'0.3px', position:'relative', zIndex:1, textAlign:'center', lineHeight:1 }}>{cleaned}</span>
     </div>
   )
 }
-function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }) {
-  const [hovered, setHovered]         = useState(false)
-  const [race, setRace]               = useState(initialRace)
-  const [photo, setPhoto]             = useState(PHOTO_PLACEHOLDER)
-  const [photoLoaded, setPhotoLoaded] = useState(false)
-  const [isLogo, setIsLogo]           = useState(false)
-  const cardRef = useRef(null)
-  const effectiveLogo = initialRace.logo_url || initialRace.hero_image || race.logo_url || race.hero_image
-  // Logo enrichment: Supabase logo_url is the source of truth
-  // City photos are the intentional fallback for races without logos
-  useEffect(() => {
-    if (featured || effectiveLogo || enrichCache.has(race.id)) return
-    enrichCache.add(race.id)
-    // No API call needed — city photo fallback handles this gracefully
-  }, [race.id, effectiveLogo, featured])
-  useEffect(() => {
-    setPhotoLoaded(false)
-    setIsLogo(false)
-    if (effectiveLogo) {
-      setPhoto(effectiveLogo)
-      setIsLogo(true)
-      return
-    }
-    setPhoto(PHOTO_PLACEHOLDER)
-    const enriched = { ...race, ...parseCityState(race) }
-    if (featured) {
-      const tid = setTimeout(() => {
-        loadRacePhoto(enriched).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
-      }, 50)
-      return () => clearTimeout(tid)
-    } else {
-      const observer = new IntersectionObserver(([entry]) => {
-        if (!entry.isIntersecting) return
-        observer.disconnect()
-        loadRacePhoto(enriched).then(url => { if (url) { setPhoto(url); setPhotoLoaded(true) } })
-      }, { rootMargin:'150px' })
-      if (cardRef.current) observer.observe(cardRef.current)
-      return () => observer.disconnect()
-    }
-  }, [effectiveLogo, race.id, race.city, race.state, featured])
-  const imgH = compact ? 110 : featured ? 170 : 200
-  const cardW = featured
-    ? (compact ? 'clamp(160px,50vw,220px)' : 'clamp(220px,20vw,300px)')
-    : (compact ? 'clamp(160px,50vw,220px)' : undefined)
+
+// ── Slim race card — Option C, no image, no hover animation ──────────────────
+function RaceCard({ race, isActive, onClick, t }) {
+  const location = [race.city, race.state].filter(Boolean).join(', ') || race.location || ''
+  const borderColor = isActive ? '#C9A84C' : t.border
   return (
-    <div ref={cardRef}
-      onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
-      onClick={onClick}
-      style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink: featured||compact ? 0 : undefined, width: cardW, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered&&!compact?'translateY(-5px)':'none', outline:isActive?'2.5px solid #C9A84C':'none', outlineOffset:'2px' }}>
-      <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
-        {isLogo ? (
-          <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding: compact?'10px':'16px', background:'#1B2A4A' }}>
-            <img src={photo} alt={race.name}
-              style={{ maxWidth:'85%', maxHeight:'85%', objectFit:'contain', opacity: photoLoaded?1:0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }}
-              onLoad={() => setPhotoLoaded(true)} onError={() => { setIsLogo(false); setPhotoLoaded(false) }} />
-          </div>
+    <div id={'rc-' + race.id} onClick={onClick}
+      style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px 16px', borderRadius:'12px', background:t.surface, border:`1.5px solid ${borderColor}`, cursor:'pointer', transition:'border-color 0.15s', width:'100%' }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = '#C9A84C' }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = t.border }}>
+      <CardStamp distance={race.distance||''} size={44} />
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:t.text, letterSpacing:'0.5px', lineHeight:1.15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{race.name}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {location}{location && race.date ? ' · ' : ''}{race.date}
+        </div>
+      </div>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink:0, opacity:0.3 }}>
+        <path d="M3 1l4 4-4 4" stroke={t.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+      </svg>
+    </div>
+  )
+}
+
+// ── Featured card — logo on navy, shown only in Featured section ──────────────
+function FeaturedCard({ race, onClick, t }) {
+  const [imgLoaded, setImgLoaded] = useState(false)
+  const logo = race.logo_url || race.hero_image
+  return (
+    <div onClick={onClick}
+      style={{ flexShrink:0, width:'clamp(200px,18vw,260px)', borderRadius:'14px', overflow:'hidden', background:t.surface, border:`1.5px solid ${t.border}`, cursor:'pointer', transition:'border-color 0.15s' }}
+      onMouseEnter={e => e.currentTarget.style.borderColor='#C9A84C'}
+      onMouseLeave={e => e.currentTarget.style.borderColor=t.border}>
+      {/* Image zone */}
+      <div style={{ height:130, background:'#1B2A4A', display:'flex', alignItems:'center', justifyContent:'center', position:'relative', padding:'16px' }}>
+        {logo ? (
+          <img src={logo} alt={race.name}
+            style={{ maxWidth:'80%', maxHeight:'80%', objectFit:'contain', opacity:imgLoaded?1:0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }}
+            onLoad={() => setImgLoaded(true)}
+            onError={e => { e.target.style.display='none' }} />
         ) : (
-          <>
-            <img src={photo} alt={race.name}
-              style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.5s', transform:hovered&&!compact?'scale(1.05)':'scale(1)', opacity:photoLoaded?1:0 }}
-              onLoad={() => setPhotoLoaded(true)} onError={e => e.target.style.display='none'} />
-            <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(0,0,0,0.05) 20%,rgba(0,0,0,0.5))' }} />
-          </>
-        )}
-        {!featured && !compact && (
-          <div style={{ position:'absolute', inset:0, background:'rgba(27,42,74,0.92)', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'12px', opacity:hovered?1:0, transition:'opacity 0.25s', padding:'16px', zIndex:5 }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'10px', width:'100%' }}>
-              {[
-                { label:'Distance', value: race.distance || '—' },
-                { label:'Price',    value: race.price ? `$${race.price}` : 'See Site' },
-                { label:'Date',     value: race.date || '—' },
-                { label:'Location', value: race.city || race.location || '—' },
-              ].map(s => (
-                <div key={s.label} style={{ textAlign:'center' }}>
-                  <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'rgba(255,255,255,0.5)', textTransform:'uppercase', marginBottom:'3px' }}>{s.label}</div>
-                  <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'16px', color:'#fff', letterSpacing:'0.5px', lineHeight:1, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{s.value}</div>
-                </div>
-              ))}
-            </div>
+          /* No logo — large stamp on navy */
+          <div style={{ opacity:0.6 }}>
+            <CardStamp distance={race.distance||''} size={64} />
           </div>
         )}
-        {featured && (
-          <div style={{ position:'absolute', top:8, right:8, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:'4px' }}>
-            {race.price && <div style={{ background:'rgba(27,42,74,0.9)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:700, letterSpacing:'1px', color:'#C9A84C' }}>${race.price}</div>}
-            {race.date && <div style={{ background:'rgba(27,42,74,0.85)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'0.5px', color:'rgba(255,255,255,0.9)' }}>{race.date}</div>}
+        {/* Date badge */}
+        {race.date && (
+          <div style={{ position:'absolute', top:8, right:8, background:'rgba(0,0,0,0.55)', borderRadius:'6px', padding:'2px 8px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, color:'rgba(255,255,255,0.9)', letterSpacing:'0.5px' }}>
+            {race.date}
           </div>
         )}
-        <div style={{ position:'absolute', bottom:8, left:8 }}>
-          <CardStamp distance={race.distance||''} size={featured ? 44 : compact ? 32 : 50} />
-        </div>
       </div>
-      <div style={{ padding: compact ? '8px 10px' : '12px 14px', borderTop:`1px solid ${t.borderLight}` }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:compact?13:featured?15:18, color:t.text, letterSpacing:'0.5px', marginBottom:'4px', lineHeight:1.2, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis' }}>{race.name}</div>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:'4px' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact?10:12, color:t.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{race.city||race.location}</div>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize: compact?10:13, fontWeight:600, color:t.text, flexShrink:0 }}>{race.date}</div>
+      {/* Info zone */}
+      <div style={{ padding:'10px 12px', borderTop:`1px solid ${t.borderLight}` }}>
+        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', color:t.text, letterSpacing:'0.5px', lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', marginBottom:'3px' }}>{race.name}</div>
+        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+          {[race.city, race.state].filter(Boolean).join(', ') || race.location}
         </div>
       </div>
     </div>
   )
 }
-function ScrollRow({ children }) {
-  const ref = useRef(null)
-  const [showLeft, setShowLeft]   = useState(false)
-  const [showRight, setShowRight] = useState(true)
-  const [hovering, setHovering]   = useState(false)
-  const check = () => {
-    const el = ref.current; if (!el) return
-    setShowLeft(el.scrollLeft > 10)
-    setShowRight(el.scrollLeft < el.scrollWidth - el.clientWidth - 10)
-  }
-  useEffect(() => {
-    const el = ref.current
-    if (el) { el.addEventListener('scroll', check); check() }
-    return () => el?.removeEventListener('scroll', check)
-  }, [])
-  const scroll = d => ref.current?.scrollBy({ left:d*360, behavior:'smooth' })
-  const btn = { position:'absolute', top:'45%', transform:'translateY(-50%)', zIndex:10, width:40, height:40, borderRadius:'50%', background:'#1B2A4A', border:'none', color:'#fff', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 4px 16px rgba(27,42,74,0.25)', transition:'background 0.15s' }
-  return (
-    <div style={{ position:'relative' }} onMouseEnter={() => setHovering(true)} onMouseLeave={() => setHovering(false)}>
-      {showLeft && hovering && <button onClick={() => scroll(-1)} style={{ ...btn, left:-20 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7l5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>}
-      {showRight && hovering && <button onClick={() => scroll(1)} style={{ ...btn, right:-20 }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2l5 5-5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg></button>}
-      <div ref={ref} style={{ display:'flex', gap:'12px', overflowX:'auto', paddingBottom:'8px', paddingTop:'4px', scrollbarWidth:'none' }}>
-        {children}
-      </div>
-    </div>
-  )
-}
-function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRef, navigate, compact }) {
+
+// ── Distance section — vertical list, not scroll row ─────────────────────────
+function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRef, navigate }) {
   const [shown, setShown] = useState(PER_SECTION_INITIAL)
   const visible = races.slice(0, shown)
   const hasMore = races.length > shown
   return (
-    <div style={{ marginBottom:'36px' }}>
-      <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'14px' }}>
-        <div style={{ width:8, height:8, borderRadius:'50%', background:group.color, flexShrink:0 }} />
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact ? '18px' : '24px', color:t.text, letterSpacing:'1px' }}>{group.label}</span>
+    <div style={{ marginBottom:'32px' }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
+        <div style={{ width:7, height:7, borderRadius:'50%', background:group.color, flexShrink:0 }} />
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>{group.label}</span>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{races.length} race{races.length!==1?'s':''}</span>
         <div style={{ flex:1, height:'1px', background:t.borderLight }} />
       </div>
-      <ScrollRow>
+      <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
         {visible.map(race => (
-          <div key={race.id} id={'rc-' + race.id} style={{ flexShrink:0, width: compact ? 'clamp(160px,50vw,220px)' : 'clamp(240px,22vw,320px)' }}>
-            <RaceCard race={race} t={t} compact={compact} isActive={activeId===race.id}
-              onClick={() => {
-                setActiveId(race.id)
-                if (mapInstanceRef.current && race.lat && race.lng) {
-                  mapInstanceRef.current.flyTo([race.lat,race.lng],11,{animate:true,duration:0.8})
-                }
-                navigate('/race-detail/' + race.id)
-              }} />
-          </div>
+          <RaceCard key={race.id} race={race} t={t} isActive={activeId===race.id}
+            onClick={() => {
+              setActiveId(race.id)
+              if (mapInstanceRef.current && race.lat && race.lng) {
+                mapInstanceRef.current.flyTo([race.lat,race.lng],11,{animate:true,duration:0.8})
+              }
+              navigate('/race-detail/' + race.id)
+            }} />
         ))}
         {hasMore && (
-          <div style={{ flexShrink:0, width: compact ? 'clamp(140px,40vw,180px)' : 'clamp(240px,22vw,320px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-            <button onClick={() => setShown(s => s + PER_SECTION_INITIAL)}
-              style={{ padding:'12px 20px', border:`1.5px solid ${t.border}`, borderRadius:'14px', background:t.surface, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', display:'flex', flexDirection:'column', alignItems:'center', gap:'8px', width:'100%', height: compact ? '110px' : '200px', justifyContent:'center' }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-              {Math.min(PER_SECTION_INITIAL, races.length - shown)} More
-            </button>
-          </div>
+          <button onClick={() => setShown(s => s + PER_SECTION_INITIAL)}
+            style={{ width:'100%', padding:'10px', border:`1.5px dashed ${t.border}`, borderRadius:'12px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'border-color 0.15s, color 0.15s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+            Show {Math.min(PER_SECTION_INITIAL, races.length - shown)} More
+          </button>
         )}
-      </ScrollRow>
+      </div>
     </div>
   )
 }
+
 export default function Discover() {
   const navigate  = useNavigate()
   const location  = useLocation()
@@ -440,12 +364,7 @@ export default function Discover() {
     return races
   })()
   const groupedRaces = DISTANCE_GROUPS.map(group => ({ ...group, races: filtered.filter(r => classifyDistance(r) === group.key) })).filter(g => g.races.length > 0)
-  useEffect(() => {
-    if (filtered.length === 0) return
-    const toPreload = [], seen = new Set()
-    DISTANCE_GROUPS.forEach(group => { filtered.filter(r => classifyDistance(r) === group.key).slice(0,8).forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); toPreload.push(r) } }) })
-    toPreload.forEach(race => { const enriched = { ...race, ...parseCityState(race) }; loadRacePhoto(enriched) })
-  }, [filtered.length, committed])
+
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true)
@@ -460,9 +379,15 @@ export default function Discover() {
         }
         setAllRaces(all)
         const isFeaturedSafe = (r) => { const name=(r.name||'').toLowerCase(); return !/\btraining\b/.test(name)&&!/\bprogram\b/.test(name)&&!/\bbus\b/.test(name)&&!/\bcharter\b/.test(name) }
-        const namedFeatured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && r.logo_url && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
+        // Named featured first (logo optional), fall back to any quality race
+        const namedFeatured = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && FEATURED_RACE_NAMES.some(name => (r.name||'').toLowerCase().includes(name)))
         const logoFeatured  = all.filter(r => isActualRace(r) && isFeaturedSafe(r) && r.logo_url)
-        setFeaturedRaces(namedFeatured.length >= 3 ? namedFeatured.slice(0,8) : logoFeatured.slice(0,8))
+        const fallbackFeat  = all.filter(r => isActualRace(r) && isFeaturedSafe(r))
+        setFeaturedRaces(
+          namedFeatured.length >= 3 ? namedFeatured.slice(0,10) :
+          logoFeatured.length  >= 3 ? logoFeatured.slice(0,10)  :
+          fallbackFeat.slice(0,10)
+        )
       } catch(e) { console.error('Failed to load races:', e) }
       setLoading(false)
     }
@@ -757,11 +682,11 @@ export default function Discover() {
                 ))}
               </div>
             ) : (
-              <ScrollRow>
-                {featuredRaces.filter(r => r.logo_url).map(race => (
-                  <RaceCard key={race.id} race={race} featured compact={isMobile} t={t} onClick={() => navigate('/race-detail/' + race.id)} />
+              <div style={{ display:'flex', gap:'12px', overflowX:'auto', paddingBottom:'8px', scrollbarWidth:'none' }}>
+                {featuredRaces.map(race => (
+                  <FeaturedCard key={race.id} race={race} t={t} onClick={() => navigate('/race-detail/' + race.id)} />
                 ))}
-              </ScrollRow>
+              </div>
             )}
           </div>
         )}
@@ -797,7 +722,7 @@ export default function Discover() {
               </div>
             ) : (
               groupedRaces.map(group => (
-                <DistanceSection key={group.key} group={group} races={group.races} t={t} compact={isMobile} activeId={activeId} setActiveId={setActiveId} mapInstanceRef={mapInstanceRef} navigate={navigate} />
+                <DistanceSection key={group.key} group={group} races={group.races} t={t} activeId={activeId} setActiveId={setActiveId} mapInstanceRef={mapInstanceRef} navigate={navigate} />
               ))
             )}
           </div>
