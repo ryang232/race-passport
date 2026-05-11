@@ -174,25 +174,23 @@ function CardStamp({ distance, size=44 }) {
   )
 }
 
-// ── Slim race card — Option C, no image, no hover animation ──────────────────
-function RaceCard({ race, isActive, onClick, t }) {
-  const location = [race.city, race.state].filter(Boolean).join(', ') || race.location || ''
-  const borderColor = isActive ? '#C9A84C' : t.border
+// ── Race card — rectangular, horizontal scroll, no image ─────────────────────
+function RaceCard({ race, isActive, onClick, t, compact }) {
+  const loc = [race.city, race.state].filter(Boolean).join(', ') || race.location || ''
+  const w = compact ? 'clamp(160px,50vw,220px)' : 'clamp(220px,20vw,280px)'
   return (
-    <div id={'rc-' + race.id} onClick={onClick}
-      style={{ display:'flex', alignItems:'center', gap:'14px', padding:'12px 16px', borderRadius:'12px', background:t.surface, border:`1.5px solid ${borderColor}`, cursor:'pointer', transition:'border-color 0.15s', width:'100%' }}
-      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor = '#C9A84C' }}
-      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor = t.border }}>
-      <CardStamp distance={race.distance||''} size={44} />
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:t.text, letterSpacing:'0.5px', lineHeight:1.15, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{race.name}</div>
-        <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.textMuted, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-          {location}{location && race.date ? ' · ' : ''}{race.date}
+    <div id={'rc-' + race.id} onClick={onClick} style={{ flexShrink:0, width:w, borderRadius:'12px', background:t.surface, border:`1.5px solid ${isActive?'#C9A84C':t.border}`, cursor:'pointer', transition:'border-color 0.15s', overflow:'hidden' }}
+      onMouseEnter={e => { if (!isActive) e.currentTarget.style.borderColor='#C9A84C' }}
+      onMouseLeave={e => { if (!isActive) e.currentTarget.style.borderColor=t.border }}>
+      <div style={{ display:'flex', alignItems:'center', gap:'12px', padding: compact?'10px 12px':'12px 14px' }}>
+        <CardStamp distance={race.distance||''} size={compact?36:44} />
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:compact?14:17, color:t.text, letterSpacing:'0.5px', lineHeight:1.2, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{race.name}</div>
+          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:compact?10:12, color:t.textMuted, marginTop:'2px', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {loc}{loc && race.date ? ' · ' : ''}{race.date}
+          </div>
         </div>
       </div>
-      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ flexShrink:0, opacity:0.3 }}>
-        <path d="M3 1l4 4-4 4" stroke={t.text} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-      </svg>
     </div>
   )
 }
@@ -237,8 +235,64 @@ function FeaturedCard({ race, onClick, t }) {
   )
 }
 
-// ── Distance section — vertical list, not scroll row ─────────────────────────
-function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRef, navigate }) {
+// ── Horizontal scroll row — drag to scroll, click still works ────────────────
+function ScrollRow({ children, compact }) {
+  const ref = useRef(null)
+  const dragging = useRef(false)
+  const dragDist = useRef(0)
+
+  useEffect(() => {
+    const el = ref.current; if (!el) return
+    let startX = 0, scrollLeft = 0, active = false
+
+    const onDown = e => {
+      active = true; dragging.current = false; dragDist.current = 0
+      startX = (e.touches ? e.touches[0].pageX : e.pageX)
+      scrollLeft = el.scrollLeft
+      el.style.cursor = 'grabbing'
+    }
+    const onMove = e => {
+      if (!active) return
+      const x = (e.touches ? e.touches[0].pageX : e.pageX)
+      const delta = startX - x
+      dragDist.current = Math.abs(delta)
+      if (dragDist.current > 4) {
+        dragging.current = true
+        el.scrollLeft = scrollLeft + delta
+        if (e.cancelable) e.preventDefault()
+      }
+    }
+    const onUp = () => { active = false; el.style.cursor = 'grab' }
+
+    el.addEventListener('mousedown',  onDown, { passive:true })
+    el.addEventListener('touchstart', onDown, { passive:true })
+    window.addEventListener('mouseup',   onUp)
+    el.addEventListener('touchend',   onUp)
+    el.addEventListener('mousemove',  onMove, { passive:false })
+    el.addEventListener('touchmove',  onMove, { passive:false })
+    return () => {
+      el.removeEventListener('mousedown',  onDown)
+      el.removeEventListener('touchstart', onDown)
+      window.removeEventListener('mouseup',   onUp)
+      el.removeEventListener('touchend',   onUp)
+      el.removeEventListener('mousemove',  onMove)
+      el.removeEventListener('touchmove',  onMove)
+    }
+  }, [])
+
+  // Suppress click on children when a drag just happened
+  const handleClick = e => { if (dragging.current) e.stopPropagation() }
+
+  return (
+    <div ref={ref} onClickCapture={handleClick}
+      style={{ display:'flex', gap:'10px', overflowX:'auto', paddingBottom:'6px', paddingTop:'3px', scrollbarWidth:'none', cursor:'grab' }}>
+      {children}
+    </div>
+  )
+}
+
+// ── Distance section — horizontal scroll of slim cards ────────────────────────
+function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRef, navigate, compact }) {
   const [shown, setShown] = useState(PER_SECTION_INITIAL)
   const visible = races.slice(0, shown)
   const hasMore = races.length > shown
@@ -246,13 +300,13 @@ function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRe
     <div style={{ marginBottom:'32px' }}>
       <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
         <div style={{ width:7, height:7, borderRadius:'50%', background:group.color, flexShrink:0 }} />
-        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'20px', color:t.text, letterSpacing:'1px' }}>{group.label}</span>
+        <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: compact?'18px':'22px', color:t.text, letterSpacing:'1px' }}>{group.label}</span>
         <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{races.length} race{races.length!==1?'s':''}</span>
         <div style={{ flex:1, height:'1px', background:t.borderLight }} />
       </div>
-      <div style={{ display:'flex', flexDirection:'column', gap:'6px' }}>
+      <ScrollRow compact={compact}>
         {visible.map(race => (
-          <RaceCard key={race.id} race={race} t={t} isActive={activeId===race.id}
+          <RaceCard key={race.id} race={race} t={t} compact={compact} isActive={activeId===race.id}
             onClick={() => {
               setActiveId(race.id)
               if (mapInstanceRef.current && race.lat && race.lng) {
@@ -262,14 +316,16 @@ function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRe
             }} />
         ))}
         {hasMore && (
-          <button onClick={() => setShown(s => s + PER_SECTION_INITIAL)}
-            style={{ width:'100%', padding:'10px', border:`1.5px dashed ${t.border}`, borderRadius:'12px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'border-color 0.15s, color 0.15s' }}
-            onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
-            onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
-            Show {Math.min(PER_SECTION_INITIAL, races.length - shown)} More
-          </button>
+          <div style={{ flexShrink:0, width: compact?'clamp(120px,35vw,160px)':'clamp(180px,15vw,220px)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+            <button onClick={() => setShown(s => s + PER_SECTION_INITIAL)}
+              style={{ width:'100%', height:'100%', minHeight:60, border:`1.5px dashed ${t.border}`, borderRadius:'12px', background:'transparent', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase', transition:'border-color 0.15s, color 0.15s', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:'4px' }}
+              onMouseEnter={e => { e.currentTarget.style.borderColor='#C9A84C'; e.currentTarget.style.color='#C9A84C' }}
+              onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>
+              +{Math.min(PER_SECTION_INITIAL, races.length-shown)} More
+            </button>
+          </div>
         )}
-      </div>
+      </ScrollRow>
     </div>
   )
 }
@@ -722,7 +778,7 @@ export default function Discover() {
               </div>
             ) : (
               groupedRaces.map(group => (
-                <DistanceSection key={group.key} group={group} races={group.races} t={t} activeId={activeId} setActiveId={setActiveId} mapInstanceRef={mapInstanceRef} navigate={navigate} />
+                <DistanceSection key={group.key} group={group} races={group.races} t={t} compact={isMobile} activeId={activeId} setActiveId={setActiveId} mapInstanceRef={mapInstanceRef} navigate={navigate} />
               ))
             )}
           </div>
