@@ -7,7 +7,6 @@ import { isDemo, DEMO_FIRST_NAME, DEMO_LAST_NAME } from '../lib/demo'
 import { getDistanceColor } from '../lib/colors'
 import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useIsMobile } from '../lib/useIsMobile'
-
 const FEATURED_RACE_NAMES = [
   'boston marathon','new york city marathon','chicago marathon','marine corps marathon',
   'la marathon','los angeles marathon','new york city half','united nyc half',
@@ -17,7 +16,6 @@ const FEATURED_RACE_NAMES = [
   "rock 'n' roll half",'city of oaks marathon','nashville marathon','big sur marathon',
   'bay to breakers','peachtree road race','falmouth road race','new york mini 10k',
 ]
-
 const NON_RACE_KEYWORDS = [
   'coaching','volunteering','volunteer','clinic','seminar','webinar',
   'information','info session','orientation','meeting','workshop','open house',
@@ -34,7 +32,6 @@ const NON_RACE_KEYWORDS = [
   'from couch','learn to run','intro to running','road to','program',
   'virtual race','virtual run','online race',
 ]
-
 const DISTANCE_GROUPS = [
   { key:'5K',   label:'5K',                   color:'#1E5FA8' },
   { key:'10K',  label:'10K',                  color:'#1E5FA8' },
@@ -44,9 +41,7 @@ const DISTANCE_GROUPS = [
   { key:'ULTRA',label:'Ultra',                color:'#9C7C4A' },
   { key:'OTHER',label:'Other',                color:'#6B7A8D' },
 ]
-
 const PER_SECTION_INITIAL = 8
-
 const STATE_NAME_TO_ABBR = {
   'alabama':'AL','alaska':'AK','arizona':'AZ','arkansas':'AR','california':'CA','colorado':'CO',
   'connecticut':'CT','delaware':'DE','florida':'FL','georgia':'GA','hawaii':'HI','idaho':'ID',
@@ -59,27 +54,57 @@ const STATE_NAME_TO_ABBR = {
   'utah':'UT','vermont':'VT','virginia':'VA','washington':'WA','west virginia':'WV',
   'wisconsin':'WI','wyoming':'WY','dc':'DC','district of columbia':'DC',
 }
-
 const TERRAIN_OPTIONS = ['All','Road','Trail','Multi','Bridge/Road']
 const SPORT_OPTIONS   = ['All','Running','Triathlon','Cycling','Swimming']
 const SORT_OPTIONS    = [
   { label:'Date (Soonest)',    value:'date-asc'   },
   { label:'Date (Latest)',     value:'date-desc'  },
-  { label:'Price (Low→High)', value:'price-asc'  },
-  { label:'Price (High→Low)', value:'price-desc' },
+  { label:'Price (Low->High)', value:'price-asc'  },
+  { label:'Price (High->Low)', value:'price-desc' },
 ]
-
 function haversineDistance(lat1,lng1,lat2,lng2) {
   const R=3959,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
 }
 
+// ── FIX 1: Smarter search — handles "City, ST", state names, abbreviations ──
 function matchesSearch(race, q) {
   if (!q) return true
   const lower = q.toLowerCase().trim()
+
+  // Full state name (e.g. "Colorado" -> "CO")
   const abbr = STATE_NAME_TO_ABBR[lower]
-  if (abbr) return (race.state||'').toUpperCase() === abbr
+  if (abbr) {
+    return (race.state||'').toUpperCase() === abbr ||
+           (race.location||'').toUpperCase().includes(abbr)
+  }
+
+  // "City, ST" or "City, State" pattern
+  if (lower.includes(',')) {
+    const parts = lower.split(',').map(s => s.trim())
+    const cityPart = parts[0]
+    const statePart = parts[parts.length-1]
+    const stateAbbr = STATE_NAME_TO_ABBR[statePart] || statePart.toUpperCase().slice(0,2)
+    const cityMatch = (race.city||'').toLowerCase().includes(cityPart) ||
+                      (race.location||'').toLowerCase().includes(cityPart)
+    const stateMatch = (race.state||'').toUpperCase() === stateAbbr ||
+                       (race.location||'').toUpperCase().includes(stateAbbr)
+    return cityMatch && stateMatch
+  }
+
+  // 2-letter abbreviation typed directly (e.g. "MD", "VA")
+  if (lower.length === 2 && /^[a-z]{2}$/.test(lower)) {
+    const upper = lower.toUpperCase()
+    if (Object.values(STATE_NAME_TO_ABBR).includes(upper)) {
+      return (race.state||'').toUpperCase() === upper ||
+             (race.location||'').toUpperCase().includes(' ' + upper) ||
+             (race.location||'').toUpperCase().endsWith(', ' + upper) ||
+             (race.location||'').toUpperCase().endsWith(' ' + upper)
+    }
+  }
+
+  // General text match
   return (
     (race.name||'').toLowerCase().includes(lower) ||
     (race.location||'').toLowerCase().includes(lower) ||
@@ -95,20 +120,17 @@ function parseCityState(race) {
   if (parts.length >= 2) return { city: parts[0], state: parts[parts.length-1].toUpperCase().slice(0,2) }
   return { city:'', state:'' }
 }
-
 function nameContainsKeyword(name, kw) {
   if (kw.length <= 4) {
-    const re = new RegExp(`(^|\\s|-)${kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')}(\\s|-|$)`, 'i')
+    const re = new RegExp('(^|\\s|-)' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '(\\s|-|$)', 'i')
     return re.test(name)
   }
   return name.includes(kw)
 }
-
 function isActualRace(r) {
   const name = (r.name || '').toLowerCase()
   return !NON_RACE_KEYWORDS.some(kw => nameContainsKeyword(name, kw))
 }
-
 function classifyDistance(race) {
   const d = (race.distance || '').toLowerCase().replace(/\s/g,'')
   const name = (race.name || '').toLowerCase()
@@ -126,16 +148,12 @@ function classifyDistance(race) {
   if (d.includes('5k') || d.includes('5km')) return '5K'
   return 'OTHER'
 }
-
 const API_BASE = '/api/runsignup'
 const enrichCache = new Set()
-
-// Clear enrich cache when module reloads (navigation)
 if (typeof window !== 'undefined') {
   window.__rp_clearEnrichCache = () => enrichCache.clear()
 }
 const SS_KEY = 'rp_discover_state'
-
 function CardStamp({ distance, size=50 }) {
   const colors  = getDistanceColor(distance)
   const cleaned = (distance||'').replace(' mi','').replace(' miles','')
@@ -149,7 +167,6 @@ function CardStamp({ distance, size=50 }) {
     </div>
   )
 }
-
 function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }) {
   const [hovered, setHovered]         = useState(false)
   const [race, setRace]               = useState(initialRace)
@@ -157,21 +174,18 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
   const [photoLoaded, setPhotoLoaded] = useState(false)
   const [isLogo, setIsLogo]           = useState(false)
   const cardRef = useRef(null)
-
-  // Always read logo from initialRace first — it updates when allRaces finishes loading
   const effectiveLogo = initialRace.logo_url || initialRace.hero_image || race.logo_url || race.hero_image
-
-  // Enrich via API only if no logo available anywhere
+  // FIX 3: Use get_race_detail which actually returns logo data
   useEffect(() => {
     if (featured || effectiveLogo || enrichCache.has(race.id)) return
     const observer = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting) return
       observer.disconnect()
       enrichCache.add(race.id)
-      fetch(`${API_BASE}?action=enrich_race&race_id=${race.id}`)
+      fetch(`${API_BASE}?action=get_race_detail&race_id=${race.id}`)
         .then(r => r.json())
         .then(data => {
-          const logo = data.logo_url || data.hero_image
+          const logo = data.logo_url || data.race?.logo_url || data.race?.logo?.logo_url
           if (logo) setRace(prev => ({ ...prev, logo_url: logo }))
         })
         .catch(() => {})
@@ -179,18 +193,14 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
     if (cardRef.current) observer.observe(cardRef.current)
     return () => observer.disconnect()
   }, [race.id, effectiveLogo, featured])
-
-  // Photo loading — apply logo immediately, lazy-load city photos
   useEffect(() => {
     setPhotoLoaded(false)
     setIsLogo(false)
-
     if (effectiveLogo) {
       setPhoto(effectiveLogo)
       setIsLogo(true)
       return
     }
-
     setPhoto(PHOTO_PLACEHOLDER)
     const enriched = { ...race, ...parseCityState(race) }
     if (featured) {
@@ -208,12 +218,10 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       return () => observer.disconnect()
     }
   }, [effectiveLogo, race.id, race.city, race.state, featured])
-
   const imgH = compact ? 110 : featured ? 170 : 200
   const cardW = featured
     ? (compact ? 'clamp(160px,50vw,220px)' : 'clamp(220px,20vw,300px)')
     : (compact ? 'clamp(160px,50vw,220px)' : undefined)
-
   return (
     <div ref={cardRef}
       onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
@@ -221,14 +229,12 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
       style={{ borderRadius:'14px', overflow:'hidden', background:t.surface, flexShrink: featured||compact ? 0 : undefined, width: cardW, boxShadow:hovered?t.cardShadowHover:t.cardShadow, cursor:'pointer', transition:'transform 0.2s,box-shadow 0.2s', transform:hovered&&!compact?'translateY(-5px)':'none', outline:isActive?'2.5px solid #C9A84C':'none', outlineOffset:'2px' }}>
       <div style={{ position:'relative', height:imgH, overflow:'hidden', background:'#1B2A4A' }}>
         {isLogo ? (
-          /* Logo: centered on dark background */
           <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding: compact?'10px':'16px', background:'#1B2A4A' }}>
             <img src={photo} alt={race.name}
               style={{ maxWidth:'85%', maxHeight:'85%', objectFit:'contain', opacity: photoLoaded?1:0, transition:'opacity 0.3s', filter:'drop-shadow(0 4px 16px rgba(0,0,0,0.5))' }}
               onLoad={() => setPhotoLoaded(true)} onError={() => { setIsLogo(false); setPhotoLoaded(false) }} />
           </div>
         ) : (
-          /* City photo: full cover */
           <>
             <img src={photo} alt={race.name}
               style={{ width:'100%', height:'100%', objectFit:'cover', transition:'transform 0.4s, opacity 0.5s', transform:hovered&&!compact?'scale(1.05)':'scale(1)', opacity:photoLoaded?1:0 }}
@@ -273,7 +279,6 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
     </div>
   )
 }
-
 function ScrollRow({ children }) {
   const ref = useRef(null)
   const [showLeft, setShowLeft]   = useState(false)
@@ -301,7 +306,6 @@ function ScrollRow({ children }) {
     </div>
   )
 }
-
 function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRef, navigate, compact }) {
   const [shown, setShown] = useState(PER_SECTION_INITIAL)
   const visible = races.slice(0, shown)
@@ -316,14 +320,14 @@ function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRe
       </div>
       <ScrollRow>
         {visible.map(race => (
-          <div key={race.id} id={`rc-${race.id}`} style={{ flexShrink:0, width: compact ? 'clamp(160px,50vw,220px)' : 'clamp(240px,22vw,320px)' }}>
+          <div key={race.id} id={'rc-' + race.id} style={{ flexShrink:0, width: compact ? 'clamp(160px,50vw,220px)' : 'clamp(240px,22vw,320px)' }}>
             <RaceCard race={race} t={t} compact={compact} isActive={activeId===race.id}
               onClick={() => {
                 setActiveId(race.id)
                 if (mapInstanceRef.current && race.lat && race.lng) {
                   mapInstanceRef.current.flyTo([race.lat,race.lng],11,{animate:true,duration:0.8})
                 }
-                navigate(`/race-detail/${race.id}`)
+                navigate('/race-detail/' + race.id)
               }} />
           </div>
         ))}
@@ -340,14 +344,12 @@ function DistanceSection({ group, races, t, activeId, setActiveId, mapInstanceRe
     </div>
   )
 }
-
 export default function Discover() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const { user, signOut } = useAuth()
   const { t, isDark, toggleTheme } = useTheme()
   const isMobile  = useIsMobile()
-
   const [profile, setProfile]             = useState(null)
   const [showDropdown, setShowDropdown]   = useState(false)
   const [showMobileMenu, setShowMobileMenu] = useState(false)
@@ -355,10 +357,8 @@ export default function Discover() {
   const [featuredRaces, setFeaturedRaces] = useState([])
   const [loading, setLoading]             = useState(true)
   const [showMobileSearch, setShowMobileSearch] = useState(false)
-
   const restoreState = () => { try { const s=sessionStorage.getItem(SS_KEY); return s?JSON.parse(s):null } catch(e){return null} }
   const saved = restoreState()
-
   const [search, setSearch]               = useState(saved?.search || '')
   const [distFilter, setDistFilter]       = useState(saved?.distFilter || 'ALL')
   const [sort, setSort]                   = useState(saved?.sort || 'date-asc')
@@ -377,23 +377,18 @@ export default function Discover() {
   const [activeId, setActiveId]           = useState(null)
   const [mapBounds, setMapBounds]         = useState(null)
   const [showSearchArea, setShowSearchArea] = useState(false)
-
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
   const markersRef     = useRef({})
   const dropdownRef    = useRef(null)
-
   useEffect(() => {
     if (committed) {
       try { sessionStorage.setItem(SS_KEY, JSON.stringify({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo, committed, radius })) } catch(e) {}
     } else { sessionStorage.removeItem(SS_KEY) }
   }, [committed])
-
   const commitSearch = () => { setCommitted({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo }); setActiveId(null); setShowSearchArea(false); setShowMobileSearch(false) }
-  const clearAll = () => { setSearch(''); setDistFilter('ALL'); setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDateFrom(''); setDateTo(''); setCommitted(null); setActiveId(null); setShowSearchArea(false); sessionStorage.removeItem(SS_KEY) }
-
+  const clearAll = () => { setSearch(''); setDistFilter('ALL'); setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDateFrom(''); setDateTo(''); setCommitted(null); setActiveId(null); setMapBounds(null); setShowSearchArea(false); sessionStorage.removeItem(SS_KEY) }
   const isSearching = committed !== null || userLat !== null
-
   const filtered = (() => {
     if (!isSearching) return []
     const c = committed || { search:'', distFilter:'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:'', dateTo:'' }
@@ -410,16 +405,13 @@ export default function Discover() {
     }
     return races
   })()
-
   const groupedRaces = DISTANCE_GROUPS.map(group => ({ ...group, races: filtered.filter(r => classifyDistance(r) === group.key) })).filter(g => g.races.length > 0)
-
   useEffect(() => {
     if (filtered.length === 0) return
     const toPreload = [], seen = new Set()
     DISTANCE_GROUPS.forEach(group => { filtered.filter(r => classifyDistance(r) === group.key).slice(0,8).forEach(r => { if (!seen.has(r.id)) { seen.add(r.id); toPreload.push(r) } }) })
     toPreload.forEach(race => { const enriched = { ...race, ...parseCityState(race) }; loadRacePhoto(enriched) })
   }, [filtered.length, committed])
-
   useEffect(() => {
     const loadAll = async () => {
       setLoading(true)
@@ -442,7 +434,6 @@ export default function Discover() {
     }
     loadAll()
   }, [])
-
   useEffect(() => {
     const loadProfile = async () => { if (!user || isDemo(user?.email)) { setProfile({ full_name:`${DEMO_FIRST_NAME} ${DEMO_LAST_NAME}` }); return }; const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single(); setProfile(data) }
     loadProfile()
@@ -454,7 +445,6 @@ export default function Discover() {
     document.addEventListener('mousedown', handleClick)
     return () => { document.getElementById('rp-discover-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
   }, [user])
-
   useEffect(() => {
     if (!mapRef.current || mapInstanceRef.current) return
     const init = async () => {
@@ -467,11 +457,10 @@ export default function Discover() {
       L.tileLayer(isDark ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution:'© OpenStreetMap © CARTO', maxZoom:18 }).addTo(map)
       L.control.zoom({ position:'topright' }).addTo(map)
       mapInstanceRef.current = map
-      map.on('moveend', () => { const b=map.getBounds(); setMapBounds({ north:b.getNorth(), south:b.getSouth(), east:b.getEast(), west:b.getWest() }); setShowSearchArea(true) })
+      map.on('moveend', () => { setShowSearchArea(true) })
     }
     init()
   }, [])
-
   useEffect(() => {
     const L = window.L; if (!L || !mapInstanceRef.current) return
     const map = mapInstanceRef.current
@@ -482,13 +471,12 @@ export default function Discover() {
     racesToPin.forEach(race => {
       const colors=getDistanceColor(race.distance), cleaned=(race.distance||'').replace(' mi',''), isAct=activeId===race.id, size=isAct?42:36
       const icon = L.divIcon({ className:'', html:`<div class="rp-map-pin${isAct?' active':''}" style="width:${size}px;height:${size}px;background:${colors.mapColor};font-size:${cleaned.length>3?9:cleaned.length>2?10:13}px;">${cleaned}</div>`, iconSize:[size,size], iconAnchor:[size/2,size/2] })
-      const marker = L.marker([race.lat,race.lng],{icon}).addTo(map).on('click',()=>{ setActiveId(race.id); document.getElementById(`rc-${race.id}`)?.scrollIntoView({behavior:'smooth',block:'center'}) })
+      const marker = L.marker([race.lat,race.lng],{icon}).addTo(map).on('click',()=>{ setActiveId(race.id); document.getElementById('rc-' + race.id)?.scrollIntoView({behavior:'smooth',block:'center'}) })
       marker.bindPopup(`<div style="padding:12px 14px;min-width:180px;"><div style="font-family:'Bebas Neue',sans-serif;font-size:15px;color:#1B2A4A;">${race.name}</div><div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;color:#9aa5b4;margin-bottom:6px;">${race.date||''} · ${race.location||''}</div><span style="font-family:'Bebas Neue',sans-serif;font-size:16px;color:#1B2A4A;">${race.price?`$${race.price}`:'TBD'}</span></div>`,{ maxWidth:220 })
       markersRef.current[race.id] = marker
     })
     if (isSearching && racesToPin.length > 0 && !mapBounds) { try { map.fitBounds(L.latLngBounds(racesToPin.map(r=>[r.lat,r.lng])),{padding:[40,40],maxZoom:12,animate:true,duration:0.8}) } catch(e){} }
   }, [filtered, activeId, userLat, userLng, featuredRaces, isSearching])
-
   const requestLocation = () => {
     setLocationStatus('requesting')
     navigator.geolocation.getCurrentPosition(
@@ -497,22 +485,18 @@ export default function Discover() {
       { timeout:10000 }
     )
   }
-
   useEffect(() => { window.scrollTo(0, 0); return () => enrichCache.clear() }, [])
   useEffect(() => { if (location.state?.autoSearch) { const { distFilter:df, dateFrom:from, dateTo:to } = location.state.autoSearch; if (df) setDistFilter(df); if (from) setDateFrom(from); if (to) setDateTo(to); setCommitted({ search:'', distFilter:df||'ALL', sort:'date-asc', maxPrice:400, terrainFilter:'All', sportFilter:'All', dateFrom:from||'', dateTo:to||'' }) } }, [])
   useEffect(() => { if (userLat && userLng && mapInstanceRef.current) { mapInstanceRef.current.flyTo([userLat, userLng], 10, { animate:false }) } }, [mapInstanceRef.current !== null])
-
   const initials      = (profile?.full_name||'RG').split(' ').map(n=>n[0]).join('').toUpperCase().slice(0,2)
   const handleSignOut = async () => { await signOut?.(); navigate('/login') }
   const c = committed || {}
   const activeFilterCount = [c.terrainFilter&&c.terrainFilter!=='All', c.sportFilter&&c.sportFilter!=='All', c.maxPrice&&c.maxPrice<400, !!c.dateFrom, !!c.dateTo].filter(Boolean).length
-
   const DIST_FILTERS = [
     { label:'All', value:'ALL' }, { label:'5K', value:'5K' }, { label:'10K', value:'10K' },
     { label:'13.1', value:'13.1' }, { label:'26.2', value:'26.2' },
     { label:'Tri', value:'TRI' }, { label:'Ultra', value:'ULTRA' }, { label:'Other', value:'OTHER' },
   ]
-
   const NAV_TABS = [
     { label:'Home',     path:'/home',     icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><path d="M3 8.5L10 3l7 5.5V17a1 1 0 01-1 1H4a1 1 0 01-1-1V8.5z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/><path d="M7 18v-5h6v5" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg> },
     { label:'Discover', path:'/discover', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke="currentColor" strokeWidth="1.5"/><path d="M14 14l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
@@ -520,12 +504,9 @@ export default function Discover() {
     { label:'Passport', path:'/passport', icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="10" r="6.5" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg> },
     { label:'Profile',  path:'/profile',  icon:<svg width="18" height="18" viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7" r="3" stroke="currentColor" strokeWidth="1.5"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg> },
   ]
-
   const inputStyle = { border:`1.5px solid ${t.border}`, borderRadius:'8px', padding:'8px 12px', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:t.text, background:t.inputBg, outline:'none' }
-
   return (
     <div style={{ minHeight:'100vh', background:t.bg, fontFamily:"'Barlow',sans-serif", transition:'background 0.25s', overflowX:'hidden' }}>
-
       {/* NAV */}
       <div style={{ position:'sticky', top:0, zIndex:500, background:t.navBg, backdropFilter:'blur(10px)', borderBottom:`1px solid ${t.navBorder}`, boxShadow:t.navShadow }}>
         {isMobile ? (
@@ -536,7 +517,6 @@ export default function Discover() {
                 <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'15px', letterSpacing:'2px', color:t.text }}>RACE PASSPORT</span>
               </div>
               <div style={{ display:'flex', alignItems:'center', gap:'8px' }}>
-                {/* Search icon */}
                 <button onClick={() => setShowMobileSearch(!showMobileSearch)} style={{ width:36, height:36, borderRadius:'8px', border:`1.5px solid ${t.border}`, background:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
                   <svg width="16" height="16" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="5.5" stroke={t.text} strokeWidth="1.5"/><path d="M14 14l3 3" stroke={t.text} strokeWidth="1.5" strokeLinecap="round"/></svg>
                 </button>
@@ -547,8 +527,6 @@ export default function Discover() {
                 </button>
               </div>
             </div>
-
-            {/* Mobile search bar — expands below nav */}
             {showMobileSearch && (
               <div style={{ padding:'8px 16px 12px', borderTop:`1px solid ${t.border}`, background:t.navBg, animation:'slideDown 0.2s ease' }}>
                 <div style={{ display:'flex', gap:'8px' }}>
@@ -560,7 +538,6 @@ export default function Discover() {
                   </div>
                   <button onClick={commitSearch} style={{ padding:'8px 16px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }}>Go</button>
                 </div>
-                {/* Distance pills on mobile */}
                 <div style={{ display:'flex', gap:'6px', marginTop:'8px', overflowX:'auto', paddingBottom:'2px', scrollbarWidth:'none' }}>
                   {DIST_FILTERS.map(f => (
                     <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)}
@@ -569,7 +546,6 @@ export default function Discover() {
                 </div>
               </div>
             )}
-
             {showMobileMenu && (
               <div style={{ background:t.surface, borderTop:`1px solid ${t.border}` }}>
                 {NAV_TABS.map(tab => (
@@ -627,7 +603,6 @@ export default function Discover() {
           </div>
         )}
       </div>
-
       {/* LOCATION BANNER */}
       {showLocationBanner && locationStatus === 'idle' && (
         <div style={{ background:'#1B2A4A', padding: isMobile ? '10px 16px' : '12px 40px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:'12px' }}>
@@ -644,19 +619,18 @@ export default function Discover() {
             <button onClick={requestLocation} disabled={locationStatus==='requesting'} style={{ padding: isMobile ? '6px 14px' : '8px 20px', border:'none', borderRadius:'8px', background:'#C9A84C', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#1B2A4A', cursor:'pointer', textTransform:'uppercase' }}>
               {locationStatus==='requesting' ? 'Requesting...' : 'Allow'}
             </button>
-            <button onClick={() => setShowLocationBanner(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.35)', cursor:'pointer', fontSize:'18px', lineHeight:1, padding:0 }}>✕</button>
+            <button onClick={() => setShowLocationBanner(false)} style={{ background:'none', border:'none', color:'rgba(255,255,255,0.35)', cursor:'pointer', fontSize:'18px', lineHeight:1, padding:0 }}>x</button>
           </div>
         </div>
       )}
-
       {/* DESKTOP SEARCH BAR */}
       {!isMobile && (
         <div style={{ background:t.navBg, backdropFilter:'blur(12px)', borderBottom:`1px solid ${t.navBorder}`, padding:'14px 40px', position:'sticky', top:'64px', zIndex:40, boxShadow:'0 4px 24px rgba(27,42,74,0.08)' }}>
           <div style={{ display:'flex', alignItems:'center', gap:'10px', marginBottom:'10px' }}>
             <div style={{ flex:1, display:'flex', alignItems:'center', gap:'8px', background:t.inputBg, border:`1.5px solid ${t.border}`, borderRadius:'10px', padding:'10px 14px' }}>
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke={t.textMuted} strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke={t.textMuted} strokeWidth="1.3" strokeLinecap="round"/></svg>
-              <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key==='Enter'&&commitSearch()} placeholder="Search races, cities, states..." style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, width:'100%' }} />
-              {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontSize:'18px', lineHeight:1, padding:0 }}>×</button>}
+              <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key==='Enter'&&commitSearch()} placeholder="Search by state (Texas), city (Austin, TX), or race name..." style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, width:'100%' }} />
+              {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontSize:'18px', lineHeight:1, padding:0 }}>x</button>}
             </div>
             <button onClick={commitSearch} style={{ padding:'10px 24px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap' }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Search</button>
             <select value={sort} onChange={e => setSort(e.target.value)} style={{ ...inputStyle, appearance:'none', cursor:'pointer' }}>
@@ -671,7 +645,7 @@ export default function Discover() {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
             {DIST_FILTERS.map(f => { const isAct=distFilter===f.value; return <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)} style={{ color:isAct?'#fff':t.textMuted, borderColor:isAct?'#1B2A4A':t.border, background:isAct?'#1B2A4A':t.surface }}>{f.label}</button> })}
-            {isSearching && <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}><span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{loading?'Loading...':`${filtered.length} races`}</span><button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear ×</button></div>}
+            {isSearching && <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}><span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{loading?'Loading...':`${filtered.length} races`}</span><button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear x</button></div>}
           </div>
           {showFilters && (
             <div style={{ marginTop:'12px', paddingTop:'12px', borderTop:`1px solid ${t.borderLight}`, display:'flex', gap:'24px', alignItems:'flex-start', flexWrap:'wrap', animation:'slideDown 0.2s ease' }}>
@@ -685,13 +659,20 @@ export default function Discover() {
           )}
         </div>
       )}
-
       {/* MAP */}
       <div style={{ position:'relative', height: isMobile ? '30vh' : '45vh', background:t.isDark?'#0f1520':'#e8eaed' }}>
         <div ref={mapRef} style={{ width:'100%', height:'100%' }} />
+        {/* FIX 2: Search This Area — reads actual map bounds from instance */}
         {showSearchArea && (
           <div style={{ position:'absolute', bottom:16, left:'50%', transform:'translateX(-50%)', zIndex:400 }}>
-            <button onClick={() => { setCommitted(prev => ({ ...(prev||{search:'',distFilter:'ALL',sort:'date-asc',maxPrice:400,terrainFilter:'All',sportFilter:'All',dateFrom:'',dateTo:''}), mapBoundsSearch:true })); setShowSearchArea(false) }}
+            <button onClick={() => {
+              const map = mapInstanceRef.current
+              if (!map) return
+              const b = map.getBounds()
+              setMapBounds({ north:b.getNorth(), south:b.getSouth(), east:b.getEast(), west:b.getWest() })
+              setCommitted(prev => ({ ...(prev||{search:'',distFilter:'ALL',sort:'date-asc',maxPrice:400,terrainFilter:'All',sportFilter:'All',dateFrom:'',dateTo:''}), _t:Date.now() }))
+              setShowSearchArea(false)
+            }}
               style={{ padding: isMobile ? '8px 16px' : '10px 22px', border:'none', borderRadius:'24px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase', boxShadow:'0 4px 20px rgba(0,0,0,0.35)', display:'flex', alignItems:'center', gap:'6px' }}>
               <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3"/><path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/></svg>
               Search This Area
@@ -701,7 +682,7 @@ export default function Discover() {
         {!isMobile && (
           <div style={{ position:'absolute', bottom:16, left:16, background:t.isDark?'rgba(26,34,53,0.95)':'rgba(255,255,255,0.95)', borderRadius:'10px', padding:'10px 14px', border:`1px solid ${t.border}`, zIndex:400 }}>
             <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Distance</div>
-            {[{label:'5K · 10K · 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
+            {[{label:'5K / 10K / 13.1',color:'#1E5FA8'},{label:'Marathon 26.2',color:'#C9A84C'},{label:'Triathlon',color:'#B83232'},{label:'Ultra',color:'#9C7C4A'}].map(l => (
               <div key={l.label} style={{ display:'flex', alignItems:'center', gap:'7px', marginBottom:'5px' }}>
                 <div style={{ width:10, height:10, borderRadius:'50%', background:l.color, flexShrink:0 }} />
                 <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', color:t.textMuted }}>{l.label}</span>
@@ -715,7 +696,6 @@ export default function Discover() {
           </div>
         )}
       </div>
-
       {/* CONTENT */}
       <div style={{ padding: isMobile ? '20px 16px 80px' : '32px 40px 80px' }}>
         {!isSearching && (
@@ -738,13 +718,12 @@ export default function Discover() {
             ) : (
               <ScrollRow>
                 {featuredRaces.filter(r => r.logo_url).map(race => (
-                  <RaceCard key={race.id} race={race} featured compact={isMobile} t={t} onClick={() => navigate(`/race-detail/${race.id}`)} />
+                  <RaceCard key={race.id} race={race} featured compact={isMobile} t={t} onClick={() => navigate('/race-detail/' + race.id)} />
                 ))}
               </ScrollRow>
             )}
           </div>
         )}
-
         {isSearching && (
           <div style={{ animation:'fadeIn 0.3s ease both' }}>
             <div style={{ marginBottom:'24px', display:'flex', alignItems:'baseline', justifyContent:'space-between', flexWrap:'wrap', gap:'8px' }}>
@@ -757,8 +736,8 @@ export default function Discover() {
                 </div>
               </div>
               <div style={{ display:'flex', gap:'8px', alignItems:'center' }}>
-                {mapBounds && <button onClick={() => { setMapBounds(null); setShowSearchArea(false) }} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', background:'none', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'8px', padding:'5px 12px', cursor:'pointer', textTransform:'uppercase' }}>Clear Area ×</button>}
-                {isSearching && <button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear ×</button>}
+                {mapBounds && <button onClick={() => { setMapBounds(null); setShowSearchArea(false) }} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', background:'none', border:'1px solid rgba(201,168,76,0.3)', borderRadius:'8px', padding:'5px 12px', cursor:'pointer', textTransform:'uppercase' }}>Clear Area x</button>}
+                {isSearching && <button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear x</button>}
               </div>
             </div>
             {(loading || allRaces.length === 0) ? (
@@ -772,7 +751,7 @@ export default function Discover() {
             ) : filtered.length === 0 ? (
               <div style={{ textAlign:'center', padding:'48px 24px', background:t.surface, borderRadius:'16px', border:`1.5px solid ${t.border}` }}>
                 <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'28px', color:t.text, letterSpacing:'1px', marginBottom:'8px' }}>NO RACES FOUND</div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'16px' }}>Try a state name like "Maryland" or a city like "Boston".</div>
+                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:t.textMuted, marginBottom:'16px' }}>Try a state name like "Maryland" or "Texas", a city like "Austin, TX", or a race name.</div>
                 <button onClick={clearAll} style={{ padding:'10px 24px', border:'none', borderRadius:'8px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1.5px', color:'#fff', cursor:'pointer', textTransform:'uppercase' }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Clear Filters</button>
               </div>
             ) : (
