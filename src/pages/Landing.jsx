@@ -379,14 +379,11 @@ export default function Landing() {
         <div className="pv-hero-content">
           <div className="pv-eyebrow">Coming Soon &nbsp;·&nbsp; Built for Racers</div>
 
-          {/* Emotional hook leads */}
-          <p className="pv-hook">Finish lines deserve more than a medal drawer.</p>
-
-          {/* Rational headline follows */}
+          {/* Headline */}
           <h1 className="pv-headline">Every Race.<br/><span>One Passport.</span></h1>
 
-          {/* Identity anchor */}
-          <p className="pv-destination">Go Run the World.</p>
+          {/* Tagline */}
+          <p className="pv-hook">Go Run the World.</p>
 
           <div className="pv-hero-actions">
             {LIVE
