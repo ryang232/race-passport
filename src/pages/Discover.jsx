@@ -68,6 +68,23 @@ function haversineDistance(lat1,lng1,lat2,lng2) {
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a))
 }
 
+// Geocode a city/state string to lat/lng using free Nominatim API
+const geocodeCache = {}
+async function geocodeCity(query) {
+  if (geocodeCache[query]) return geocodeCache[query]
+  try {
+    const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=us&q=' + encodeURIComponent(query)
+    const res = await fetch(url, { headers: { 'Accept-Language': 'en', 'User-Agent': 'RacePassport/1.0' } })
+    const data = await res.json()
+    if (data && data[0]) {
+      const result = { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+      geocodeCache[query] = result
+      return result
+    }
+  } catch(e) {}
+  return null
+}
+
 // ── FIX 1: Smarter search — handles "City, ST", state names, abbreviations ──
 function matchesSearch(race, q) {
   if (!q) return true
@@ -175,23 +192,12 @@ function RaceCard({ race: initialRace, isActive, onClick, featured, t, compact }
   const [isLogo, setIsLogo]           = useState(false)
   const cardRef = useRef(null)
   const effectiveLogo = initialRace.logo_url || initialRace.hero_image || race.logo_url || race.hero_image
-  // FIX 3: Use get_race_detail which actually returns logo data
+  // Logo enrichment: Supabase logo_url is the source of truth
+  // City photos are the intentional fallback for races without logos
   useEffect(() => {
     if (featured || effectiveLogo || enrichCache.has(race.id)) return
-    const observer = new IntersectionObserver(([entry]) => {
-      if (!entry.isIntersecting) return
-      observer.disconnect()
-      enrichCache.add(race.id)
-      fetch(`${API_BASE}?action=get_race_detail&race_id=${race.id}`)
-        .then(r => r.json())
-        .then(data => {
-          const logo = data.logo_url || data.race?.logo_url || data.race?.logo?.logo_url
-          if (logo) setRace(prev => ({ ...prev, logo_url: logo }))
-        })
-        .catch(() => {})
-    }, { rootMargin:'200px' })
-    if (cardRef.current) observer.observe(cardRef.current)
-    return () => observer.disconnect()
+    enrichCache.add(race.id)
+    // No API call needed — city photo fallback handles this gracefully
   }, [race.id, effectiveLogo, featured])
   useEffect(() => {
     setPhotoLoaded(false)
@@ -377,6 +383,10 @@ export default function Discover() {
   const [activeId, setActiveId]           = useState(null)
   const [mapBounds, setMapBounds]         = useState(null)
   const [showSearchArea, setShowSearchArea] = useState(false)
+  const [citySearchLat, setCitySearchLat] = useState(null)
+  const [citySearchLng, setCitySearchLng] = useState(null)
+  const [cityRadius, setCityRadius]       = useState(25)
+  const [geocoding, setGeocoding]         = useState(false)
   const mapRef         = useRef(null)
   const mapInstanceRef = useRef(null)
   const markersRef     = useRef({})
@@ -386,8 +396,29 @@ export default function Discover() {
       try { sessionStorage.setItem(SS_KEY, JSON.stringify({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo, committed, radius })) } catch(e) {}
     } else { sessionStorage.removeItem(SS_KEY) }
   }, [committed])
-  const commitSearch = () => { setCommitted({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo }); setActiveId(null); setShowSearchArea(false); setShowMobileSearch(false) }
-  const clearAll = () => { setSearch(''); setDistFilter('ALL'); setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDateFrom(''); setDateTo(''); setCommitted(null); setActiveId(null); setMapBounds(null); setShowSearchArea(false); sessionStorage.removeItem(SS_KEY) }
+  const commitSearch = async () => {
+    setActiveId(null); setShowSearchArea(false); setShowMobileSearch(false)
+    // Detect "City, ST" pattern and geocode for radius search
+    const lower = search.toLowerCase().trim()
+    const isCityState = lower.includes(',') && !STATE_NAME_TO_ABBR[lower]
+    const isStateName = !!STATE_NAME_TO_ABBR[lower]
+    if (isCityState && search.trim()) {
+      setGeocoding(true)
+      const geo = await geocodeCity(search.trim())
+      setGeocoding(false)
+      if (geo) {
+        setCitySearchLat(geo.lat)
+        setCitySearchLng(geo.lng)
+        if (mapInstanceRef.current) mapInstanceRef.current.flyTo([geo.lat, geo.lng], 10, { animate:true, duration:0.8 })
+      } else {
+        setCitySearchLat(null); setCitySearchLng(null)
+      }
+    } else {
+      setCitySearchLat(null); setCitySearchLng(null)
+    }
+    setCommitted({ search, distFilter, sort, maxPrice, terrainFilter, sportFilter, dateFrom, dateTo })
+  }
+  const clearAll = () => { setSearch(''); setDistFilter('ALL'); setMaxPrice(400); setTerrainFilter('All'); setSportFilter('All'); setDateFrom(''); setDateTo(''); setCommitted(null); setActiveId(null); setMapBounds(null); setShowSearchArea(false); setCitySearchLat(null); setCitySearchLng(null); setCityRadius(25); sessionStorage.removeItem(SS_KEY) }
   const isSearching = committed !== null || userLat !== null
   const filtered = (() => {
     if (!isSearching) return []
@@ -398,7 +429,10 @@ export default function Discover() {
       const matchDist = c.distFilter === 'ALL' ? true : classifyDistance(r) === c.distFilter
       return matchDist && matchesSearch(r, c.search) && (!r.price||r.price<=c.maxPrice) && (c.terrainFilter==='All'||(r.terrain||'').toLowerCase().includes(c.terrainFilter.toLowerCase())) && (c.sportFilter==='All'||r.sport===c.sportFilter) && (!c.dateFrom||(r.date_sort||'')>=c.dateFrom) && (!c.dateTo||(r.date_sort||'')<=c.dateTo)
     })
-    if (userLat && userLng) {
+    // City geocode search — radius around searched city
+    if (citySearchLat && citySearchLng) {
+      races = races.filter(r => { if (!r.lat||!r.lng) return false; const dist=haversineDistance(citySearchLat,citySearchLng,r.lat,r.lng); r._distMi=Math.round(dist*10)/10; return dist<=cityRadius }).sort((a,b) => (a._distMi||999)-(b._distMi||999))
+    } else if (userLat && userLng) {
       races = races.filter(r => { if (!r.lat||!r.lng) return false; const dist=haversineDistance(userLat,userLng,r.lat,r.lng); r._distMi=Math.round(dist*10)/10; return dist<=radius }).sort((a,b) => (a._distMi||999)-(b._distMi||999))
     } else {
       races.sort((a,b) => { if (c.sort==='date-asc') return (a.date_sort||'').localeCompare(b.date_sort||''); if (c.sort==='date-desc') return (b.date_sort||'').localeCompare(a.date_sort||''); if (c.sort==='price-asc') return (a.price||0)-(b.price||0); if (c.sort==='price-desc') return (b.price||0)-(a.price||0); return 0 })
@@ -632,7 +666,7 @@ export default function Discover() {
               <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key==='Enter'&&commitSearch()} placeholder="Search by state (Texas), city (Austin, TX), or race name..." style={{ border:'none', background:'transparent', outline:'none', fontFamily:"'Barlow',sans-serif", fontSize:'14px', color:t.text, width:'100%' }} />
               {search && <button onClick={() => setSearch('')} style={{ background:'none', border:'none', cursor:'pointer', color:t.textMuted, fontSize:'18px', lineHeight:1, padding:0 }}>x</button>}
             </div>
-            <button onClick={commitSearch} style={{ padding:'10px 24px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', whiteSpace:'nowrap' }} onMouseEnter={e => e.currentTarget.style.background='#C9A84C'} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>Search</button>
+            <button onClick={commitSearch} disabled={geocoding} style={{ padding:'10px 24px', border:'none', borderRadius:'10px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:geocoding?'wait':'pointer', textTransform:'uppercase', whiteSpace:'nowrap', opacity:geocoding?0.7:1 }} onMouseEnter={e => { if(!geocoding) e.currentTarget.style.background='#C9A84C' }} onMouseLeave={e => e.currentTarget.style.background='#1B2A4A'}>{geocoding ? 'Finding...' : 'Search'}</button>
             <select value={sort} onChange={e => setSort(e.target.value)} style={{ ...inputStyle, appearance:'none', cursor:'pointer' }}>
               {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>Sort: {o.label}</option>)}
             </select>
@@ -645,6 +679,12 @@ export default function Discover() {
           </div>
           <div style={{ display:'flex', alignItems:'center', gap:'8px', flexWrap:'wrap' }}>
             {DIST_FILTERS.map(f => { const isAct=distFilter===f.value; return <button key={f.value} className="dist-pill" onClick={() => setDistFilter(f.value)} style={{ color:isAct?'#fff':t.textMuted, borderColor:isAct?'#1B2A4A':t.border, background:isAct?'#1B2A4A':t.surface }}>{f.label}</button> })}
+            {citySearchLat && (
+              <div style={{ display:'flex', alignItems:'center', gap:'6px', padding:'5px 12px', border:'1.5px solid rgba(201,168,76,0.3)', borderRadius:'20px', background:'rgba(201,168,76,0.06)', cursor:'pointer' }} onClick={() => setShowFilters(true)}>
+                <div style={{ width:6, height:6, borderRadius:'50%', background:'#C9A84C' }} />
+                <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', fontWeight:600, letterSpacing:'1px', color:'#C9A84C', whiteSpace:'nowrap' }}>{cityRadius} mi radius</span>
+              </div>
+            )}
             {isSearching && <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:'12px' }}><span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>{loading?'Loading...':`${filtered.length} races`}</span><button onClick={clearAll} style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:'#c53030', background:'none', border:'none', cursor:'pointer', textTransform:'uppercase', padding:0 }}>Clear x</button></div>}
           </div>
           {showFilters && (
@@ -652,6 +692,7 @@ export default function Discover() {
               <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Date Range</div><div style={{ display:'flex', alignItems:'center', gap:'8px' }}><input type="date" style={inputStyle} value={dateFrom} onChange={e => setDateFrom(e.target.value)} /><span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:t.textMuted }}>to</span><input type="date" style={inputStyle} value={dateTo} onChange={e => setDateTo(e.target.value)} /></div></div>
               <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Max Fee: ${maxPrice}</div><input type="range" min={25} max={400} step={5} value={maxPrice} onChange={e => setMaxPrice(Number(e.target.value))} style={{ width:'160px', accentColor:'#C9A84C' }} /></div>
               {locationStatus === 'granted' && <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Radius: {radius} mi</div><input type="range" min={10} max={200} step={5} value={radius} onChange={e => setRadius(Number(e.target.value))} style={{ width:'140px', accentColor:'#C9A84C' }} /></div>}
+              {citySearchLat && <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:'#C9A84C', textTransform:'uppercase', marginBottom:'8px' }}>Search Radius: {cityRadius} mi</div><input type="range" min={10} max={150} step={5} value={cityRadius} onChange={e => setCityRadius(Number(e.target.value))} style={{ width:'140px', accentColor:'#C9A84C' }} /></div>}
               <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Terrain</div><div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>{TERRAIN_OPTIONS.map(ter => <button key={ter} className="filter-chip" onClick={() => setTerrainFilter(ter)} style={{ background:terrainFilter===ter?'#1B2A4A':t.surface, color:terrainFilter===ter?'#fff':t.textMuted, border:`1.5px solid ${terrainFilter===ter?'#1B2A4A':t.border}` }}>{ter}</button>)}</div></div>
               <div><div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase', marginBottom:'8px' }}>Sport</div><div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>{SPORT_OPTIONS.map(sp => <button key={sp} className="filter-chip" onClick={() => setSportFilter(sp)} style={{ background:sportFilter===sp?'#1B2A4A':t.surface, color:sportFilter===sp?'#fff':t.textMuted, border:`1.5px solid ${sportFilter===sp?'#1B2A4A':t.border}` }}>{sp}</button>)}</div></div>
               <button onClick={clearAll} style={{ alignSelf:'flex-end', padding:'7px 16px', border:`1.5px solid ${t.border}`, borderRadius:'8px', background:t.surface, fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', fontWeight:600, letterSpacing:'1px', color:t.textMuted, cursor:'pointer', textTransform:'uppercase' }} onMouseEnter={e => { e.currentTarget.style.borderColor='#c53030'; e.currentTarget.style.color='#c53030' }} onMouseLeave={e => { e.currentTarget.style.borderColor=t.border; e.currentTarget.style.color=t.textMuted }}>Clear All</button>
