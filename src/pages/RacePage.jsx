@@ -679,7 +679,10 @@ export default function RacePage() {
       setRace(data); setStory(data.story||''); setGear(data.gear||[]); setStickers(data.stickers||[])
     }
     loadRace()
+  }, [numId, id])
 
+  // Styles injected once on mount — never torn down on race navigation
+  useEffect(() => {
     const style = document.createElement('style')
     style.id = 'rp-racepage-styles'
     style.textContent = `
@@ -700,7 +703,7 @@ export default function RacePage() {
     const handleClick = e => { if (dropdownRef.current && !dropdownRef.current.contains(e.target)) setShowDropdown(false) }
     document.addEventListener('mousedown', handleClick)
     return () => { document.getElementById('rp-racepage-styles')?.remove(); document.removeEventListener('mousedown', handleClick) }
-  }, [numId, id])
+  }, [])
 
   // ── Fetch historical weather ──────────────────────────────────────────────
   useEffect(() => {
@@ -994,7 +997,7 @@ export default function RacePage() {
                   <div style={{ display:'flex', alignItems:'center', gap:'6px', marginBottom:'6px' }}>
                     <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'2.5px', color:'#C9A84C' }}>PACER</span>
                     <div style={{ width:3, height:3, borderRadius:'50%', background:'rgba(201,168,76,0.5)' }} />
-                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Your AI Race Coach</span>
+                    <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'10px', letterSpacing:'1.5px', color:t.textMuted, textTransform:'uppercase' }}>Race Intelligence</span>
                   </div>
                   <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize: isMobile?'20px':'24px', color:t.text, letterSpacing:'1px', marginBottom:'8px', lineHeight:1.1 }}>{pacerReflection.headline}</div>
                   <p style={{ fontFamily:"'Barlow',sans-serif", fontSize: isMobile?'13px':'14px', color:t.text, margin:'0 0 10px', lineHeight:1.65 }}>{pacerReflection.reflection}</p>
