@@ -25,6 +25,7 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
 - Be warm, enthusiastic, and genuinely excited about this runner's journey.
 - Short, punchy, coach-in-your-corner energy. Not clinical. Not cold.`
 
+  // ── Standard Claude call (no tools) ──────────────────────────────────────
   const callClaude = async (prompt, max_tokens = 300) => {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -43,6 +44,38 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
     const data = await response.json()
     const text = data.content?.[0]?.text || ''
     return text.replace(/```json|```/g, '').trim()
+  }
+
+  // ── Claude call WITH web search tool ─────────────────────────────────────
+  const callClaudeWithSearch = async (prompt, max_tokens = 1000) => {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-beta': 'web-search-2025-03-05',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-6',
+        max_tokens,
+        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+        messages: [{ role: 'user', content: prompt }],
+      }),
+    })
+    if (!response.ok) {
+      const err = await response.text()
+      throw new Error(`Claude search error: ${response.status} ${err}`)
+    }
+    const data = await response.json()
+    // Extract all text blocks from the response (web search may produce multiple)
+    const text = (data.content || [])
+      .filter(b => b.type === 'text')
+      .map(b => b.text)
+      .join('\n')
+      .replace(/```json|```/g, '')
+      .trim()
+    return text
   }
 
   const buildRaceSummary = (races) => {
@@ -69,44 +102,158 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
     return prMap
   }
 
-  // ── race_lookup: Pacer-assisted manual race entry ─────────────────────────
+  // ── race_lookup: web-search-powered race confirmation + vibe ──────────────
   if (action === 'race_lookup') {
-    const q = query || req.body.query
+    const {
+      query: q,
+      year,
+      distance,
+      first_name,
+      last_name,
+      dob,
+    } = req.body
+
     if (!q) return res.status(400).json({ error: 'query required' })
 
-    const prompt = `You are a race data assistant with deep knowledge of endurance events in the United States.
-The user entered this race query: "${q}"
+    const raceName  = q.trim()
+    const raceYear  = year || ''
+    const raceDist  = distance || ''
+    const hasRunner = !!(first_name && last_name)
 
-Identify the specific race they are referring to and return ONLY a JSON object (no markdown, no explanation, no code fences) with these exact fields:
+    // ── Step 1: Web search for race details + personality ─────────────────
+    const detailsPrompt = `You are a race data assistant for an endurance sports app called Race Passport.
+
+Search the web for this race: "${raceName}"${raceYear ? ` in ${raceYear}` : ''}${raceDist ? `, ${raceDist} distance` : ''}.
+
+Do TWO searches:
+1. Search for the official race details: exact name, date, location, distance, official website
+2. Search for the race's reputation and personality: what runners say about it, what makes it special, course highlights, difficulty, scenery, crowd support, notable features
+
+Then return ONLY a single JSON object (no markdown, no explanation) with exactly these fields:
 {
-  "name": "official event/series name ONLY — do NOT include the distance in the name field. e.g. 'Baltimore Running Festival' not 'Baltimore Running Festival Marathon'. e.g. 'Cherry Blossom Ten Mile Run' not 'Cherry Blossom 10 Miler Half Marathon'",
-  "date": "Month YYYY format e.g. Oct 2024",
-  "date_sort": "YYYY-MM-DD use actual race date, 01 for day if unknown",
+  "name": "official event/series name only — no distance in the name. e.g. 'Baltimore Running Festival' not 'Baltimore Running Festival 10K'",
+  "date": "Month YYYY format e.g. Apr 2022",
+  "date_sort": "YYYY-MM-DD — use actual race date, 01 for day if unknown",
   "location": "City, ST",
   "city": "city name only",
   "state": "2-letter state abbreviation",
-  "distance": "normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other — infer from the query if the user specified a distance",
-  "confidence": 3
+  "distance": "${raceDist || 'normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other'}",
+  "confidence": 3,
+  "race_vibe": "2-3 sentences MAX. Pacer voice — warm, enthusiastic, specific. Call out what makes THIS race special: the scenery, the crowd, the course, the vibe, the prestige. Something a runner would love to read about a race they just finished. No generic praise. Reference real details found in your search.",
+  "website": "official race website URL or empty string"
 }
 
 CRITICAL RULES:
-- The name field must NEVER include the distance. Keep it as the event/series name only.
-- If the user says 'Baltimore Running Festival 10K' the name is 'Baltimore Running Festival' and the distance is '10K'
-- If you recognize the race confidently, set confidence to 3
-- If it is a partial match or you are not certain, set confidence to 2
-- ALWAYS return valid JSON even if uncertain — use your best guess
-- For well-known races like Cherry Blossom, Boston Marathon, Marine Corps Marathon, Baltimore Running Festival, Frederick Running Festival, you should have high confidence
-- Never return an error — always return JSON`
+- name field NEVER includes the distance
+- If user said 'Baltimore Running Festival 10K' → name is 'Baltimore Running Festival', distance is '10K'
+- confidence 3 = found it definitively via web search
+- confidence 2 = pretty sure but not 100% confirmed
+- confidence 1 = couldn't find it, using best guess
+- race_vibe must be specific to THIS race — not generic running praise
+- ALWAYS return valid JSON even if search fails — use best knowledge as fallback`
+
+    // ── Step 2: Attempt to find runner's result (if name provided) ────────
+    let resultPrompt = null
+    if (hasRunner && raceYear) {
+      resultPrompt = `You are a race results assistant.
+
+Search the web for the race result of this specific runner:
+- Race: "${raceName}" ${raceYear}${raceDist ? ` ${raceDist}` : ''}
+- Runner: ${first_name} ${last_name}${dob ? ` (born ${dob})` : ''}
+
+Search for their result on the race's official results page, RunSignup, or any results aggregator.
+
+Return ONLY a JSON object (no markdown):
+{
+  "found": true or false,
+  "official_time": "finish time in H:MM:SS or MM:SS format, or empty string if not found",
+  "place_overall": "overall place number or empty string",
+  "place_age_group": "age group place or empty string",
+  "bib": "bib number or empty string",
+  "results_url": "URL where result was found, or empty string"
+}
+
+If you cannot find a result for this specific person, return found: false and empty strings for all other fields. Do NOT guess or fabricate a time.`
+    }
 
     try {
-      const text = await callClaude(prompt, 300)
-      const parsed = JSON.parse(text)
-      return res.status(200).json(parsed)
-    } catch(e) {
+      // Fire both searches — details always, result only if we have a name
+      const searches = [callClaudeWithSearch(detailsPrompt, 1200)]
+      if (resultPrompt) searches.push(callClaudeWithSearch(resultPrompt, 600))
+
+      const [detailsText, resultText] = await Promise.all(searches)
+
+      // Parse details
+      let details = {}
+      try {
+        // Find JSON object in the response
+        const jsonMatch = detailsText.match(/\{[\s\S]*\}/)
+        details = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+      } catch(e) {
+        details = {
+          name: raceName,
+          date: raceYear ? `Jan ${raceYear}` : '',
+          date_sort: raceYear ? `${raceYear}-01-01` : null,
+          location: '', city: '', state: '',
+          distance: raceDist || 'Other',
+          confidence: 1,
+          race_vibe: '',
+          website: '',
+        }
+      }
+
+      // Parse result (if searched)
+      let runnerResult = { found: false, official_time: '', place_overall: '', place_age_group: '', bib: '', results_url: '' }
+      if (resultText) {
+        try {
+          const jsonMatch = resultText.match(/\{[\s\S]*\}/)
+          if (jsonMatch) runnerResult = { ...runnerResult, ...JSON.parse(jsonMatch[0]) }
+        } catch(e) { /* use default */ }
+      }
+
+      // If user pre-selected distance, always use that over what Claude returned
+      if (raceDist) details.distance = raceDist
+
       return res.status(200).json({
-        name: q, date: '', date_sort: null, location: '', city: '', state: '',
-        distance: 'Other', confidence: 1,
+        ...details,
+        runner_result: runnerResult,
       })
+
+    } catch(e) {
+      // Full fallback — web search failed, use pure Claude knowledge
+      try {
+        const fallbackPrompt = `You are a race data assistant with deep knowledge of endurance events in the United States.
+The user is looking for: "${raceName}"${raceYear ? ` (${raceYear})` : ''}${raceDist ? `, ${raceDist}` : ''}
+
+Return ONLY a JSON object (no markdown) with these fields:
+{
+  "name": "official event/series name only — no distance",
+  "date": "Month YYYY",
+  "date_sort": "YYYY-MM-DD",
+  "location": "City, ST",
+  "city": "city only",
+  "state": "2-letter abbreviation",
+  "distance": "${raceDist || 'normalized distance'}",
+  "confidence": 2,
+  "race_vibe": "2-3 sentences about what makes this race special. Warm, specific, Pacer voice.",
+  "website": ""
+}`
+        const text = await callClaude(fallbackPrompt, 400)
+        const jsonMatch = text.match(/\{[\s\S]*\}/)
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+        if (raceDist) parsed.distance = raceDist
+        return res.status(200).json({
+          ...parsed,
+          runner_result: { found: false, official_time: '', place_overall: '', place_age_group: '', bib: '', results_url: '' },
+        })
+      } catch(e2) {
+        return res.status(200).json({
+          name: raceName, date: raceYear ? `Jan ${raceYear}` : '', date_sort: raceYear ? `${raceYear}-01-01` : null,
+          location: '', city: '', state: '', distance: raceDist || 'Other', confidence: 1,
+          race_vibe: '', website: '',
+          runner_result: { found: false, official_time: '', place_overall: '', place_age_group: '', bib: '', results_url: '' },
+        })
+      }
     }
   }
 
@@ -386,9 +533,6 @@ Respond ONLY with valid JSON, no markdown:
     const raceState = race.state || ''
     const userState = profile?.state || ''
     const isTri = distance.includes('70.3') || distance.includes('140.6') || distance.includes('tri')
-    const isMarathon = distance.includes('26.2') || distance.toLowerCase().includes('marathon')
-    const isHalf = distance.includes('13.1') || distance.toLowerCase().includes('half')
-    const isUltra = distance.includes('50') || distance.includes('100') || distance.toLowerCase().includes('ultra')
     const needsTravel = raceState && userState && raceState.toUpperCase() !== userState.toUpperCase()
 
     const prompt = `You are Pacer, an enthusiastic AI running coach generating a personalized race day checklist.
@@ -482,7 +626,7 @@ Each section: 5-10 specific actionable items. Respond ONLY with valid JSON, no m
     }
   }
 
-  // ── Goal race suggestions ─────────────────────────────────────────────────
+  // ── goal_race_suggestions ─────────────────────────────────────────────────
   if (action === 'goal_race_suggestions') {
     const { distance, month, year, location, races: raceList } = req.body
     if (!raceList?.length) return res.status(400).json({ error: 'races required' })
@@ -496,7 +640,7 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
 {"top_race_ids": ["id1", "id2", "id3"], "reason": "one sentence explaining your picks"}`
 
       const result = await callClaude(prompt, 200)
-      const clean = result.replace(/\`\`\`json|\`\`\`/g, '').trim()
+      const clean = result.replace(/```json|```/g, '').trim()
       const parsed = JSON.parse(clean)
       return res.status(200).json(parsed)
     } catch(e) {
@@ -504,14 +648,13 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
     }
   }
 
-  // ── race_score: individual race grade ───────────────────────────────────────
+  // ── race_score ────────────────────────────────────────────────────────────
   if (action === 'race_score') {
-    const { race, all_races, report_card_grades, strava_data, is_partial } = req.body
+    const { race, all_races, report_card_grades, strava_data, is_partial, pool_data } = req.body
     if (!race) return res.status(400).json({ error: 'race required' })
 
     const safeRaces = Array.isArray(all_races) ? all_races : []
 
-    // ── Performance metrics (40% of full score, 100% of partial) ─────────────
     const toSecs = t => {
       if (!t) return null
       const p = t.split(':').map(Number)
@@ -521,7 +664,6 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
     const raceSecs = toSecs(race.time)
     const sameDist = safeRaces.filter(r => r.distance === race.distance && r.time && r.id !== race.id)
 
-    // Time percentile vs same distance
     let timePercentile = 50
     if (raceSecs && sameDist.length > 0) {
       const sameDistSecs = sameDist.map(r => toSecs(r.time)).filter(Boolean)
@@ -529,10 +671,18 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
       timePercentile     = Math.round((fasterCount / sameDistSecs.length) * 100)
     }
 
-    // Pace vs personal average across all distances (normalized to per-mile)
+    // Community percentile from pool_data (if provided and has enough results)
+    let communityPercentile = null
+    let communityContext = ''
+    if (pool_data && pool_data.count >= 20 && raceSecs) {
+      const fasterInPool = (pool_data.times || []).filter(t => t > raceSecs).length
+      communityPercentile = Math.round((fasterInPool / pool_data.count) * 100)
+      communityContext = `Community data: ${pool_data.count} Race Passport runners have run this race/distance. This runner is in the ${communityPercentile}th percentile among similar-age runners in the community.`
+    }
+
     const DIST_MILES = { '5K':3.10559,'10K':6.21371,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31.07,'70.3':null,'140.6':null,'Ultra':50 }
     const raceMiles = DIST_MILES[race.distance]
-    let paceScore = 70 // neutral default
+    let paceScore = 70
     if (raceSecs && raceMiles) {
       const racePacePerMile = raceSecs / raceMiles
       const allPaces = safeRaces.map(r => {
@@ -541,8 +691,7 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
       }).filter(Boolean)
       if (allPaces.length > 0) {
         const avgPace = allPaces.reduce((a,b) => a+b, 0) / allPaces.length
-        // Faster pace than average = higher score
-        const paceRatio = avgPace / racePacePerMile  // >1 means faster than avg
+        const paceRatio = avgPace / racePacePerMile
         paceScore = Math.min(100, Math.max(40, Math.round(50 + (paceRatio - 1) * 200)))
       }
     }
@@ -551,7 +700,6 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
     const prBonus   = isPR ? 8 : 0
     const perfScore = Math.min(100, Math.max(60, Math.round((timePercentile * 0.5 + paceScore * 0.5) + prBonus)))
 
-    // ── Full score: 60% report card + 40% performance ────────────────────────
     let finalScore = perfScore
     if (!is_partial && report_card_grades && report_card_grades.length > 0) {
       const gradeToNum = { 'A+':98,'A':95,'A-':92,'B+':88,'B':85,'B-':82,'C+':78,'C':75,'C-':72,'D+':68,'D':65,'D-':62,'F':50 }
@@ -570,7 +718,6 @@ Pick the 3 best races for this runner. Consider: prestige, beginner-friendliness
 
     const grade = gradeFromScore(finalScore)
 
-    // ── Ask Pacer for a one-sentence justification ───────────────────────────
     try {
       const distSummary = sameDist.length > 0
         ? `Runner has completed ${sameDist.length} other ${race.distance} race(s). This finish time ranked them in the ${timePercentile}th percentile of their own ${race.distance} history.`
@@ -584,9 +731,10 @@ FINISH TIME: ${race.time || 'not recorded'}
 PERSONAL RECORD: ${isPR ? 'YES' : 'No'}
 PERFORMANCE SCORE: ${finalScore}/100 (Grade: ${grade})
 ${distSummary}
+${communityContext}
 ${is_partial ? 'NOTE: Partial grade — training not yet assessed.' : 'TRAINING GRADE (60% of score): Included in calculation.'}
 
-Write ONE sentence (max 20 words) celebrating this performance and explaining the grade. Be warm and specific. No markdown.
+Write ONE sentence (max 20 words) celebrating this performance and explaining the grade. Be warm and specific.${communityPercentile !== null ? ' Reference their community ranking.' : ''} No markdown.
 ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
 
       const text = await callClaude(prompt, 80)
@@ -595,6 +743,7 @@ ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
         grade,
         justification: text.trim().replace(/^"|"$/g, ''),
         is_partial: !!is_partial,
+        community_percentile: communityPercentile,
       })
     } catch(e) {
       return res.status(200).json({
@@ -604,6 +753,7 @@ ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
           ? 'New personal record — this shows real growth in your racing journey!'
           : 'Solid performance that adds to your racing legacy.',
         is_partial: !!is_partial,
+        community_percentile: communityPercentile,
       })
     }
   }
