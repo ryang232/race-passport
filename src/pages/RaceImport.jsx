@@ -394,8 +394,14 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
       if (best && best.score >= AUTO_MATCH_THRESHOLD) {
         const detailResp = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${best.activity.id}`)
         const detail = await detailResp.json()
-        setStravaActivity(detail.id ? detail : best.activity)
-        setStravaState('found')
+        const act = detail.id ? detail : best.activity
+        // Auto-confirm if very high confidence (score >= 45), otherwise show confirm card
+        if (best.score >= 45) {
+          confirmActivity(act)
+        } else {
+          setStravaActivity(act)
+          setStravaState('found')
+        }
       } else {
         const candidates = scored.slice(0, 10).map(s => s.activity)
         setStravaCandidates(candidates)
@@ -503,7 +509,15 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
             <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'6px'}}>
               Date <span style={{fontWeight:400,color:'#b0b8c4'}}>(optional)</span>
             </label>
-            <input value={date} onChange={e=>setDate(e.target.value)} placeholder="e.g. Oct 2023"
+            <input value={date} onChange={e=>{
+              setDate(e.target.value)
+              // If Strava previously searched with wrong date, reset so user can re-search
+              if (stravaState === 'nomatch' || stravaState === 'confirmed') {
+                setStravaState('idle')
+                setStravaActivity(null)
+                setStravaTime('')
+              }
+            }} placeholder="e.g. Oct 2023"
               style={inp()} onFocus={e=>e.target.style.borderColor='#C9A84C'} onBlur={e=>e.target.style.borderColor='#e2e6ed'}/>
           </div>
           <div>
@@ -694,6 +708,7 @@ export default function RaceImport() {
   const [stravaProfile, setStravaProfile]     = useState(null)
   const [stravaConnected, setStravaConnected] = useState(false)
   const [stravaConnecting, setStravaConnecting] = useState(false)
+  const [stravaGateChoice, setStravaGateChoice] = useState(null) // null | 'connect' | 'skip'
 
   const inputRef = useRef(null)
 
@@ -733,6 +748,16 @@ export default function RaceImport() {
         if (restored.length > 0) setRaces(restored)
       } catch(e) {}
       sessionStorage.removeItem(SESSION_KEY)
+    }
+    // Restore persisted races from back navigation
+    if (!saved) {
+      const persisted = sessionStorage.getItem(SESSION_KEY + '_persist')
+      if (persisted) {
+        try {
+          const restored = JSON.parse(persisted)
+          if (restored.length > 0) setRaces(restored)
+        } catch(e) {}
+      }
     }
 
     init()
@@ -817,6 +842,10 @@ export default function RaceImport() {
     setSearchError('')
     setPopupOpen(false)
     setTimeout(() => inputRef.current?.focus(), 100)
+    // Persist to sessionStorage so navigating back restores races
+    setTimeout(() => {
+      setRaces(p => { sessionStorage.setItem(SESSION_KEY + '_persist', JSON.stringify(p)); return p })
+    }, 50)
 
     // Contribute to pool (non-blocking) if consent given and official time exists
     if (poolConsent && details.official_time && details.date_sort && userProfile) {
@@ -943,31 +972,65 @@ export default function RaceImport() {
             ADD YOUR<br/>RACE HISTORY
           </h1>
           <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'16px',color:'#6b7a8d',margin:0,fontWeight:300,lineHeight:1.7}}>
-            Type a race name, pick your distance and year — Pacer will search the web to confirm it and look up your result.
+            Type a race name, pick your distance and year — Pacer searches the web to confirm it and matches your Strava activity automatically.
           </p>
         </div>
 
-        {/* Strava connect */}
+        {/* Strava gate — connect first or skip */}
         <div style={{marginBottom:'16px',animation:'fadeIn 0.4s ease 0.05s both'}}>
           {stravaConnected ? (
+            /* Already connected */
             <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px 16px',background:'rgba(252,76,2,0.05)',border:'1.5px solid rgba(252,76,2,0.2)',borderRadius:'12px'}}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,color:'#FC4C02',letterSpacing:'0.5px'}}>Strava Connected</span>
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)',marginLeft:'auto'}}>Activities will match automatically</span>
             </div>
+          ) : stravaGateChoice === null ? (
+            /* Gate — choose connect or skip */
+            <div style={{border:'1.5px solid rgba(252,76,2,0.25)',borderRadius:'14px',overflow:'hidden',background:'rgba(252,76,2,0.02)'}}>
+              <div style={{padding:'14px 16px',borderBottom:'1px solid rgba(252,76,2,0.12)'}}>
+                <div style={{display:'flex',alignItems:'center',gap:'8px',marginBottom:'4px'}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,color:'#FC4C02',letterSpacing:'0.5px'}}>Connect Strava First</span>
+                </div>
+                <p style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d',margin:0,lineHeight:1.5}}>
+                  Pacer will automatically match your race to a Strava activity — pulling in your route map, splits, and elevation. No manual entry needed.
+                </p>
+              </div>
+              <div style={{display:'flex',gap:'0'}}>
+                <button onClick={connectStrava} disabled={stravaConnecting}
+                  style={{flex:2,padding:'13px',border:'none',background:'#FC4C02',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1px',color:'#fff',cursor:'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',transition:'opacity 0.15s'}}
+                  onMouseEnter={e=>e.currentTarget.style.opacity='0.85'}
+                  onMouseLeave={e=>e.currentTarget.style.opacity='1'}>
+                  {stravaConnecting
+                    ? <div style={{width:12,height:12,border:'2px solid rgba(255,255,255,0.3)',borderTopColor:'#fff',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
+                    : <svg width="12" height="12" viewBox="0 0 24 24" fill="#fff"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                  }
+                  {stravaConnecting ? 'Connecting...' : 'Connect Strava'}
+                </button>
+                <button onClick={()=>setStravaGateChoice('skip')}
+                  style={{flex:1,padding:'13px',border:'none',borderLeft:'1px solid rgba(252,76,2,0.2)',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,letterSpacing:'1px',color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase',transition:'all 0.15s'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background='rgba(0,0,0,0.03)';e.currentTarget.style.color='#1B2A4A'}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='transparent';e.currentTarget.style.color='#9aa5b4'}}>
+                  I Don't Have Strava
+                </button>
+              </div>
+            </div>
           ) : (
-            <button onClick={connectStrava} disabled={stravaConnecting||popupOpen}
-              style={{width:'100%',padding:'13px 16px',border:'1.5px solid rgba(252,76,2,0.35)',borderRadius:'12px',background:'rgba(252,76,2,0.04)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1.5px',color:popupOpen?'#9aa5b4':'#FC4C02',cursor:popupOpen||stravaConnecting?'not-allowed':'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',transition:'all 0.15s',opacity:popupOpen?0.5:1}}
-              onMouseEnter={e=>{if(!popupOpen&&!stravaConnecting)e.currentTarget.style.background='rgba(252,76,2,0.09)'}}
-              onMouseLeave={e=>e.currentTarget.style.background='rgba(252,76,2,0.04)'}>
-              {stravaConnecting
-                ? <div style={{width:14,height:14,border:'2px solid rgba(252,76,2,0.3)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
-                : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-              }
-              {stravaConnecting ? 'Connecting...' : popupOpen ? 'Close race search to connect Strava' : 'Sync Strava to Pull in Race Activities'}
-            </button>
+            /* Skipped — show subtle reminder */
+            <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'10px 14px',background:'#f8f9fb',border:'1.5px solid #e2e6ed',borderRadius:'12px'}}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="#9aa5b4"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4',flex:1}}>Strava not connected — you can always add it later from your profile</span>
+              <button onClick={()=>setStravaGateChoice(null)}
+                style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#FC4C02',background:'none',border:'none',cursor:'pointer',fontWeight:600,letterSpacing:'0.5px',whiteSpace:'nowrap'}}>
+                Connect →
+              </button>
+            </div>
           )}
         </div>
+
+        {/* Search bar — gated behind Strava choice */}
+        {(stravaConnected || stravaGateChoice !== null) && (<>
 
         {/* Search bar */}
         <div style={{marginBottom:'12px',animation:'fadeIn 0.4s ease 0.1s both'}}>
@@ -1086,7 +1149,22 @@ export default function RaceImport() {
             </p>
           </div>
         )}
+
+      </>)
+      }
       </div>
+
+        {/* Gate prompt — shown when no Strava choice made yet */}
+        {!stravaConnected && stravaGateChoice === null && (
+          <div style={{textAlign:'center',padding:'40px 20px',animation:'fadeIn 0.4s ease 0.2s both'}}>
+            <div style={{display:'flex',justifyContent:'center',gap:'12px',marginBottom:'16px',opacity:0.15}}>
+              {['5K','13.1','26.2'].map(d=><MiniStamp key={d} distance={d} size={50}/>)}
+            </div>
+            <p style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px',color:'#b0b8c4',lineHeight:1.7,margin:0}}>
+              Connect Strava above to get started, or select "I Don't Have Strava" to continue without it.
+            </p>
+          </div>
+        )}
 
       {/* Fixed bottom bar */}
       <div style={{position:'fixed',bottom:0,left:0,right:0,zIndex:10,padding:'16px 20px 36px',background:'linear-gradient(to top,#fff 65%,rgba(255,255,255,0))'}}>
