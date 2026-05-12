@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 
 export default function SignUp() {
   const navigate = useNavigate()
@@ -8,7 +7,6 @@ export default function SignUp() {
   const [error, setError]                 = useState(null)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [appleLoading, setAppleLoading]   = useState(false)
-  const [checking, setChecking]           = useState(false)
 
   useEffect(() => {
     const style = document.createElement('style')
@@ -35,61 +33,13 @@ export default function SignUp() {
     return () => document.getElementById('rp-signup-styles')?.remove()
   }, [])
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     setError(null)
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address')
       return
     }
-    setChecking(true)
-
-    // Check if email already exists by attempting a password reset
-    // We use signInWithOtp with shouldCreateUser:false to probe existence
-    // Better: attempt to sign in and check the error type
-    try {
-      // Use the admin-safe approach: try OTP with shouldCreateUser false
-      const { error: probeError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
-        options: { shouldCreateUser: false }
-      })
-
-      if (!probeError) {
-        // OTP sent successfully — means account EXISTS
-        setChecking(false)
-        setError(
-          <span>
-            An account with this email already exists.{' '}
-            <Link to="/login" style={{ color:'#C9A84C', fontWeight:600 }}>Sign in instead →</Link>
-          </span>
-        )
-        return
-      }
-
-      // If error says user not found, email is new — proceed to verify
-      const msg = probeError.message?.toLowerCase() || ''
-      if (msg.includes('user not found') || msg.includes('no user') || msg.includes('not found')) {
-        // New user — send verification code and go to verify page
-        const { error: otpError } = await supabase.auth.signInWithOtp({
-          email: email.trim(),
-          options: { shouldCreateUser: true }
-        })
-        setChecking(false)
-        if (otpError) {
-          setError(otpError.message)
-          return
-        }
-        navigate('/verify-email', {
-          state: { email: email.trim(), isNewUser: true, nextStep: 'create-account' }
-        })
-      } else {
-        // Some other error — likely rate limit or network
-        setChecking(false)
-        setError(probeError.message)
-      }
-    } catch(e) {
-      setChecking(false)
-      setError('Something went wrong. Please try again.')
-    }
+    navigate('/create-account', { state: { email: email.trim() } })
   }
 
   const handleGoogleSignUp = async () => {
@@ -158,12 +108,9 @@ export default function SignUp() {
         </div>
 
         <button className="rp-primary" onClick={handleContinue}
-          disabled={!email.includes('@') || checking}
-          style={{ marginBottom:'4px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
-          {checking
-            ? <><div style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Checking...</>
-            : 'Continue'
-          }
+          disabled={!email.includes('@')}
+          style={{ marginBottom:'4px' }}>
+          Continue
         </button>
 
         <div className="rp-divider"><span>OR</span></div>
