@@ -762,5 +762,51 @@ ${is_partial ? 'End with energy about unlocking the full grade.' : ''}`
     }
   }
 
+  // ── goal_race_lookup: web search for a specific goal race ───────────────
+  if (action === 'goal_race_lookup') {
+    const { query: q, month, year } = req.body
+    if (!q) return res.status(400).json({ error: 'query required' })
+
+    const prompt = `You are a race data assistant for an endurance sports app called Race Passport.
+
+A runner has set this as their goal race: "${q}"${month ? ` in ${month}` : ''}${year ? ` ${year}` : ''}.
+
+Do TWO searches:
+1. Search "${q}" — find the official race name, city, state, typical month, distance, website
+2. Search "${q} race experience reviews" — find what makes this race special, its prestige, course highlights, why runners love it
+
+Return ONLY a JSON object (no markdown):
+{
+  "name": "official race name only — no distance, no year",
+  "location": "City, ST",
+  "city": "city only",
+  "state": "2-letter state abbreviation",
+  "distance": "normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other",
+  "typical_month": "month this race typically occurs e.g. October",
+  "website": "official website URL or empty string",
+  "confidence": 3,
+  "pacer_message": "3-4 sentences MAX. Pacer voice — warm, enthusiastic, specific. First: celebrate that they set this goal (be specific about why THIS race is a great goal). Second: one specific thing that makes this race iconic or special. Third: one motivating insight about what it takes or means to finish it. If this year has any notable milestone for this race (50th anniversary, 100th edition, etc.) call it out with excitement. No generic praise — real details only."
+}
+
+CRITICAL: pacer_message must reference real specific details about this race. confidence 3 if found definitively, 2 if partial.`
+
+    try {
+      const text = await callClaudeWithSearch(prompt, 800)
+      const jsonMatch = text.match(/\{[\s\S]*\}/)
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+      return res.status(200).json(parsed)
+    } catch(e) {
+      try {
+        const fallback = `You are a race data assistant. Tell me about "${q}" as a goal race for a runner. Return ONLY JSON: {"name":"${q}","location":"","city":"","state":"","distance":"Other","typical_month":"","website":"","confidence":1,"pacer_message":"Setting a goal race is the first step toward your next great achievement — this is how champions are made!"}`
+        const text = await callClaude(fallback, 300)
+        const jsonMatch = text.match(/\{[\s\S]*\}/)
+        const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+        return res.status(200).json(parsed)
+      } catch(e2) {
+        return res.status(200).json({ name: q, location:'', city:'', state:'', distance:'Other', typical_month:'', website:'', confidence:1, pacer_message:"Setting a goal race is the first step — and you've already taken it. Let's get to work." })
+      }
+    }
+  }
+
   return res.status(400).json({ error: 'Unknown action: ' + action })
 }
