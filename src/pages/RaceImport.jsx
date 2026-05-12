@@ -101,19 +101,47 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
   const rendered = useRef(false)
   const isTri = activity?.isTriathlon && activity?.segments?.length > 0
 
+  const mapInstanceRef = useRef(null)
+  const mapLayersRef  = useRef([])
+
+  const redrawMap = (L, poly, map) => {
+    // Clear existing layers
+    mapLayersRef.current.forEach(l => { try { map.removeLayer(l) } catch(e){} })
+    mapLayersRef.current = []
+    const allBounds = []
+    if (isTri) {
+      const segsToShow = activeSegment === 'all'
+        ? activity.segments
+        : [activity.segments[activeSegment]].filter(Boolean)
+      segsToShow.forEach(seg => {
+        if (!seg?.map?.summary_polyline) return
+        const type = (seg.type||seg.sport_type||'').toLowerCase()
+        const color = SEG_COLORS[type] || '#FC4C02'
+        const latlngs = poly.decode(seg.map.summary_polyline)
+        if (!latlngs.length) return
+        const line = L.polyline(latlngs, { color, weight: activeSegment==='all'?3:5, opacity:0.95 }).addTo(map)
+        mapLayersRef.current.push(line)
+        allBounds.push(...latlngs)
+      })
+    } else {
+      const latlngs = poly.decode(activity.map.summary_polyline)
+      if (latlngs.length) {
+        const line = L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
+        mapLayersRef.current.push(line)
+        allBounds.push(...latlngs)
+      }
+    }
+    if (allBounds.length) map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16], animate: true })
+  }
+
   useEffect(() => {
     if (!mapRef.current) return
-    // Reset render flag when segment changes so map redraws
-    if (rendered.current && activeSegment !== undefined) { rendered.current = false }
-    if (rendered.current) return
     const hasData = isTri
       ? activity.segments.some(s => s.map?.summary_polyline)
       : activity?.map?.summary_polyline
     if (!hasData) return
-    rendered.current = true
-    const draw = async () => {
-      // draw is called initially and also when activeSegment changes via re-render
-      // We store the map instance to allow segment switching
+
+    const init = async () => {
       try {
         if (!window.L) {
           const link = document.createElement('link'); link.rel='stylesheet'; link.href='https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(link)
@@ -124,33 +152,15 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
         }
         const L = window.L, poly = window.polyline
         if (!poly || !L || !mapRef.current) return
-        const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
-        const allBounds = []
-        if (isTri) {
-          const segsToShow = activeSegment === 'all'
-            ? activity.segments
-            : [activity.segments[activeSegment]].filter(Boolean)
-          segsToShow.forEach(seg => {
-            if (!seg?.map?.summary_polyline) return
-            const type = (seg.type||seg.sport_type||'').toLowerCase()
-            const color = SEG_COLORS[type] || '#FC4C02'
-            const latlngs = poly.decode(seg.map.summary_polyline)
-            if (!latlngs.length) return
-            L.polyline(latlngs, { color, weight: activeSegment==='all'?3:4, opacity:0.95 }).addTo(map)
-            allBounds.push(...latlngs)
-          })
-        } else {
-          const latlngs = poly.decode(activity.map.summary_polyline)
-          if (latlngs.length) {
-            L.polyline(latlngs, { color:'#FC4C02', weight:3, opacity:0.9 }).addTo(map)
-            allBounds.push(...latlngs)
-          }
+        if (!mapInstanceRef.current) {
+          const map = L.map(mapRef.current, { zoomControl:false, dragging:false, scrollWheelZoom:false, doubleClickZoom:false, attributionControl:false })
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom:18 }).addTo(map)
+          mapInstanceRef.current = { map, L, poly }
         }
-        if (allBounds.length) map.fitBounds(L.latLngBounds(allBounds), { padding:[16,16] })
+        redrawMap(mapInstanceRef.current.L, mapInstanceRef.current.poly, mapInstanceRef.current.map)
       } catch(e) {}
     }
-    draw()
+    init()
   }, [activity, activeSegment])
 
   const triTotals = isTri ? {
@@ -199,12 +209,27 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
         </div>
       )}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,borderTop:'1px solid rgba(252,76,2,0.1)'}}>
-        {[
-          { label:'Distance', value: fmtDist(displayActivity.distance) },
-          { label:'Total Time', value: fmtTime(displayActivity.moving_time) },
-          { label:'Pace', value: isTri ? '—' : fmtPace(displayActivity.moving_time, displayActivity.distance) },
-          { label:'Elevation', value: elev },
-        ].map((s,i) => (
+        {(() => {
+          // Show segment-specific stats when a segment is selected
+          if (isTri && activeSegment !== 'all' && activity.segments[activeSegment]) {
+            const seg = activity.segments[activeSegment]
+            const segType = (seg.type||seg.sport_type||'').toLowerCase()
+            const segElev = seg.total_elevation_gain ? `${Math.round(seg.total_elevation_gain*3.281)}ft` : '—'
+            return [
+              { label:'Distance', value: fmtDist(seg.distance) },
+              { label:'Time', value: fmtTime(seg.moving_time) },
+              { label:'Pace', value: segType==='swim' ? '—' : fmtPace(seg.moving_time, seg.distance) },
+              { label:'Elevation', value: segElev },
+            ]
+          }
+          // Total race stats
+          return [
+            { label:'Total Distance', value: fmtDist(displayActivity.distance) },
+            { label:'Total Time', value: fmtTime(displayActivity.moving_time) },
+            { label:'Pace', value: isTri ? '—' : fmtPace(displayActivity.moving_time, displayActivity.distance) },
+            { label:'Elevation', value: elev },
+          ]
+        })().map((s,i) => (
           <div key={s.label} style={{padding:'10px 0',textAlign:'center',borderRight:i<3?'1px solid rgba(252,76,2,0.1)':'none'}}>
             <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'16px',color:'#1B2A4A',letterSpacing:'0.5px',lineHeight:1}}>{s.value}</div>
             <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'9px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginTop:'2px'}}>{s.label}</div>
@@ -732,6 +757,257 @@ function RaceRow({ race, onRemove, onUpdate, index, stravaConnected, stravaProfi
           onMouseEnter={e=>e.currentTarget.style.background='rgba(197,48,48,0.08)'}
           onMouseLeave={e=>e.currentTarget.style.background='none'}>×</button>
       </div>
+    </div>
+  )
+}
+
+// ── Strava Import Tab ────────────────────────────────────────────────────────
+function StravaImportTab({ stravaActivities, stravaActLoading, stravaActFilter, setStravaActFilter, userProfile, stravaProfile, onAddRace }) {
+  const [selectedActivity, setSelectedActivity] = useState(null)
+  const [raceName, setRaceName]                 = useState('')
+  const [raceDist, setRaceDist]                 = useState('')
+  const [searching, setSearching]               = useState(false)
+  const [pacerResult, setPacerResult]           = useState(null)
+
+  // Fuzzy match — check if all words in query appear somewhere in text
+  const fuzzyMatch = (text, query) => {
+    if (!query.trim()) return true
+    const words = query.toLowerCase().trim().split(/\s+/)
+    const haystack = text.toLowerCase()
+    return words.every(w => haystack.includes(w))
+  }
+
+  const filtered = (stravaActivities || []).filter(a => {
+    if (!stravaActFilter.trim()) return true
+    const name = a.name || ''
+    const distMi = ((a.distance||0)/1609.34).toFixed(1)
+    const date = a.start_date_local ? new Date(a.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''
+    const combined = [name, distMi + ' mi', date].join(' ')
+    return fuzzyMatch(combined, stravaActFilter)
+  })
+
+  const selectActivity = (a) => {
+    setSelectedActivity(a)
+    setPacerResult(null)
+    // Pre-fill race name from activity name
+    setRaceName(a.name || '')
+    // Guess distance from activity distance
+    const distMi = (a.distance||0)/1609.34
+    const type = (a.type||a.sport_type||'').toLowerCase()
+    let guessedDist = ''
+    if (type.includes('swim')) guessedDist = ''
+    else if (Math.abs(distMi-3.1)<0.3) guessedDist='5K'
+    else if (Math.abs(distMi-6.2)<0.4) guessedDist='10K'
+    else if (Math.abs(distMi-10)<0.5) guessedDist='10 mi'
+    else if (Math.abs(distMi-13.1)<0.6) guessedDist='13.1'
+    else if (Math.abs(distMi-26.2)<1) guessedDist='26.2'
+    else if (Math.abs(distMi-70.3)<2) guessedDist='70.3'
+    else if (Math.abs(distMi-140.6)<3) guessedDist='140.6'
+    setRaceDist(guessedDist)
+  }
+
+  const handleFindRace = async () => {
+    if (!raceName.trim()) return
+    setSearching(true)
+    setPacerResult(null)
+    try {
+      const yearStr = selectedActivity?.start_date_local ? String(new Date(selectedActivity.start_date_local).getFullYear()) : ''
+      const body = {
+        action: 'race_lookup',
+        query: raceName.trim(),
+        year: yearStr,
+        distance: raceDist || '',
+        location_hint: '',
+      }
+      if (userProfile) {
+        body.first_name = userProfile.first_name || userProfile.full_name?.trim().split(' ')[0] || ''
+        body.last_name  = userProfile.last_name  || userProfile.full_name?.trim().split(' ').slice(1).join(' ') || ''
+        body.dob        = userProfile.dob || userProfile.date_of_birth || ''
+      }
+      const resp = await fetch('/api/pacer', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
+      const data = await resp.json()
+      if (!data.error) {
+        data.strava_activity = selectedActivity
+        setPacerResult(data)
+      }
+    } catch(e) {
+      const yearStr = selectedActivity?.start_date_local ? String(new Date(selectedActivity.start_date_local).getFullYear()) : ''
+      setPacerResult({
+        name: raceName.trim(),
+        date: yearStr ? `Jan ${yearStr}` : '',
+        date_sort: yearStr ? `${yearStr}-01-01` : null,
+        location:'', city:'', state:'', distance: raceDist||'Other',
+        confidence:1, race_vibe:'', strava_activity: selectedActivity,
+      })
+    }
+    setSearching(false)
+  }
+
+  const handleAddFromStrava = () => {
+    if (!pacerResult) return
+    const yearStr = selectedActivity?.start_date_local ? String(new Date(selectedActivity.start_date_local).getFullYear()) : ''
+    onAddRace({
+      name: pacerResult.name || raceName,
+      date: pacerResult.date || (yearStr ? `Jan ${yearStr}` : ''),
+      date_sort: pacerResult.date_sort || (yearStr ? `${yearStr}-01-01` : null),
+      location: pacerResult.location || '',
+      city: pacerResult.city || '',
+      state: pacerResult.state || '',
+      distance: raceDist || pacerResult.distance || 'Other',
+      time: fmtTime(selectedActivity?.moving_time) || '',
+      confidence: pacerResult.confidence || 2,
+      official_time: '',
+      strava_activity: selectedActivity,
+      runner_result: null,
+    })
+    setSelectedActivity(null)
+    setPacerResult(null)
+    setRaceName('')
+    setRaceDist('')
+  }
+
+  const typeColor = (a) => {
+    const t = (a.type||a.sport_type||'').toLowerCase()
+    return t==='swim'?'#0EA5E9':t.includes('ride')?'#F97316':'#FC4C02'
+  }
+  const typeEmoji = (a) => {
+    const t = (a.type||a.sport_type||'').toLowerCase()
+    return t==='swim'?'🏊':t.includes('ride')?'🚴':'🏃'
+  }
+
+  return (
+    <div style={{animation:'fadeIn 0.25s ease both'}}>
+
+      {/* Search input */}
+      <div style={{position:'relative',marginBottom:'12px'}}>
+        <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',fontSize:'16px',pointerEvents:'none'}}>🔍</div>
+        <input value={stravaActFilter} onChange={e=>setStravaActFilter(e.target.value)}
+          placeholder="Search your Strava — name, race, distance..."
+          style={{width:'100%',padding:'14px 14px 14px 42px',borderRadius:'14px',border:'2px solid #e2e6ed',background:'#fafbfc',color:'#1B2A4A',fontSize:'15px',fontFamily:"'Barlow',sans-serif",outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
+          onFocus={e=>{e.target.style.borderColor='#FC4C02'}}
+          onBlur={e=>{e.target.style.borderColor='#e2e6ed'}}/>
+      </div>
+
+      {stravaActLoading && (
+        <div style={{textAlign:'center',padding:'32px 0'}}>
+          <div style={{width:24,height:24,border:'3px solid rgba(252,76,2,0.2)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite',margin:'0 auto 10px'}}/>
+          <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',color:'#9aa5b4',letterSpacing:'1px',textTransform:'uppercase'}}>Loading your activities...</span>
+        </div>
+      )}
+
+      {!stravaActLoading && stravaActivities !== null && !selectedActivity && (
+        filtered.length === 0 ? (
+          <div style={{textAlign:'center',padding:'32px 20px',color:'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px'}}>
+            No matching activities found
+          </div>
+        ) : (
+          <div style={{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'440px',overflowY:'auto'}}>
+            {filtered.slice(0,60).map(a => {
+              const distMi = ((a.distance||0)/1609.34).toFixed(1)
+              const time   = fmtTime(a.moving_time)
+              const date   = a.start_date_local ? new Date(a.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''
+              const tc     = typeColor(a)
+              const te     = typeEmoji(a)
+              return (
+                <div key={a.id} onClick={()=>selectActivity(a)}
+                  style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',border:'1.5px solid #e2e6ed',borderRadius:'12px',cursor:'pointer',transition:'all 0.15s',background:'#fafbfc'}}
+                  onMouseEnter={e=>{e.currentTarget.style.borderColor=tc;e.currentTarget.style.background=`${tc}08`}}
+                  onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e6ed';e.currentTarget.style.background='#fafbfc'}}>
+                  <div style={{width:36,height:36,borderRadius:'10px',background:`${tc}12`,border:`1.5px solid ${tc}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontSize:'16px'}}>
+                    {te}
+                  </div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px',fontWeight:600,color:'#1B2A4A',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.name}</div>
+                    <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',marginTop:'1px'}}>{date} · {distMi} mi · {time}</div>
+                  </div>
+                  <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#9aa5b4" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                </div>
+              )
+            })}
+          </div>
+        )
+      )}
+
+      {/* Selected activity — inline race form */}
+      {selectedActivity && (
+        <div style={{animation:'slideDown 0.25s ease both'}}>
+          {/* Selected activity header */}
+          <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px 14px',background:'rgba(252,76,2,0.04)',border:'1.5px solid rgba(252,76,2,0.2)',borderRadius:'12px',marginBottom:'14px'}}>
+            <span style={{fontSize:'20px'}}>{typeEmoji(selectedActivity)}</span>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,color:'#FC4C02',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{selectedActivity.name}</div>
+              <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)'}}>
+                {selectedActivity.start_date_local ? new Date(selectedActivity.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''}
+                {' · '}{((selectedActivity.distance||0)/1609.34).toFixed(1)} mi
+                {' · '}{fmtTime(selectedActivity.moving_time)}
+              </div>
+            </div>
+            <button onClick={()=>{setSelectedActivity(null);setPacerResult(null);setRaceName('');setRaceDist('')}}
+              style={{background:'none',border:'none',cursor:'pointer',color:'#9aa5b4',fontSize:'18px',padding:'0 2px'}}>×</button>
+          </div>
+
+          {/* Race name — editable */}
+          <div style={{marginBottom:'12px'}}>
+            <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'6px'}}>
+              What race was this? <span style={{color:'#C9A84C'}}>*</span>
+            </label>
+            <input value={raceName} onChange={e=>{setRaceName(e.target.value);setPacerResult(null)}}
+              placeholder="e.g. Marine Corps Marathon, Baltimore Running Festival..."
+              style={{width:'100%',padding:'12px 14px',borderRadius:'10px',border:'1.5px solid #e2e6ed',background:'#fafbfc',color:'#1B2A4A',fontSize:'16px',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600,outline:'none',boxSizing:'border-box',transition:'border-color 0.15s'}}
+              onFocus={e=>e.target.style.borderColor='#C9A84C'}
+              onBlur={e=>e.target.style.borderColor='#e2e6ed'}
+              onKeyDown={e=>e.key==='Enter'&&handleFindRace()}/>
+          </div>
+
+          {/* Distance */}
+          <div style={{marginBottom:'14px'}}>
+            <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'8px'}}>Distance</label>
+            <div style={{display:'flex',flexWrap:'wrap',gap:'6px'}}>
+              {DISTANCES.map(d=>(
+                <button key={d} className={`ri-dist-btn${raceDist===d?' sel':''}`} onClick={()=>setRaceDist(prev=>prev===d?'':d)}>{d}</button>
+              ))}
+            </div>
+          </div>
+
+          {/* Pacer vibe result */}
+          {pacerResult && pacerResult.race_vibe && pacerResult.confidence >= 3 && (
+            <div style={{marginBottom:'14px',padding:'14px 16px',background:'rgba(27,42,74,0.03)',border:'1.5px solid rgba(27,42,74,0.08)',borderRadius:'12px',borderLeft:'4px solid #C9A84C'}}>
+              <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'7px'}}>
+                <span style={{fontSize:'13px'}}>⚡</span>
+                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',fontWeight:600,letterSpacing:'2px',color:'#C9A84C',textTransform:'uppercase'}}>Pacer on this race</span>
+              </div>
+              <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'14px',color:'#3d4f6b',lineHeight:1.65,margin:0,fontWeight:300}}>{pacerResult.race_vibe}</p>
+            </div>
+          )}
+
+          {searching && <div style={{marginBottom:'12px'}}><PacerThinking label="Pacer is researching this race..."/></div>}
+
+          {/* Action buttons */}
+          <div style={{display:'flex',gap:'8px'}}>
+            {!pacerResult ? (
+              <button onClick={handleFindRace} disabled={!raceName.trim()||searching}
+                style={{flex:1,padding:'13px',border:'none',borderRadius:'12px',background:raceName.trim()&&!searching?'#C9A84C':'#e2e6ed',color:raceName.trim()&&!searching?'#1B2A4A':'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1.5px',textTransform:'uppercase',cursor:raceName.trim()&&!searching?'pointer':'not-allowed',transition:'background 0.2s'}}
+                onMouseEnter={e=>{if(raceName.trim()&&!searching)e.currentTarget.style.background='#b8913a'}}
+                onMouseLeave={e=>{if(raceName.trim()&&!searching)e.currentTarget.style.background='#C9A84C'}}>
+                {searching ? '...' : '⚡ Find This Race'}
+              </button>
+            ) : (
+              <>
+                <button onClick={()=>{setPacerResult(null)}}
+                  style={{flex:1,padding:'13px',border:'1.5px solid #e2e6ed',borderRadius:'12px',background:'#fff',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase'}}>
+                  Search Again
+                </button>
+                <button onClick={handleAddFromStrava} disabled={!raceDist}
+                  style={{flex:2,padding:'13px',border:'none',borderRadius:'12px',background:raceDist?'#1B2A4A':'#e2e6ed',color:raceDist?'#fff':'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1.5px',textTransform:'uppercase',cursor:raceDist?'pointer':'not-allowed',transition:'background 0.2s'}}
+                  onMouseEnter={e=>{if(raceDist)e.currentTarget.style.background='#C9A84C'}}
+                  onMouseLeave={e=>{if(raceDist)e.currentTarget.style.background='#1B2A4A'}}>
+                  Add to My Passport →
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1264,108 +1540,15 @@ export default function RaceImport() {
 
         {/* ── Strava import tab ── */}
         {importTab === 'strava' && stravaConnected && (
-          <div style={{animation:'fadeIn 0.25s ease both'}}>
-            {/* Filter input */}
-            <div style={{position:'relative',marginBottom:'12px'}}>
-              <div style={{position:'absolute',left:'14px',top:'50%',transform:'translateY(-50%)',fontSize:'16px',pointerEvents:'none'}}>🔍</div>
-              <input value={stravaActFilter} onChange={e=>setStravaActFilter(e.target.value)}
-                placeholder="Search by name, e.g. marathon, turkey trot, 2023..."
-                style={{width:'100%',padding:'14px 14px 14px 42px',borderRadius:'14px',border:'2px solid #e2e6ed',background:'#fafbfc',color:'#1B2A4A',fontSize:'15px',fontFamily:"'Barlow',sans-serif",outline:'none',boxSizing:'border-box',transition:'border-color 0.2s'}}
-                onFocus={e=>{e.target.style.borderColor='#FC4C02'}}
-                onBlur={e=>{e.target.style.borderColor='#e2e6ed'}}/>
-            </div>
-
-            {stravaActLoading && (
-              <div style={{textAlign:'center',padding:'32px 0'}}>
-                <div style={{width:24,height:24,border:'3px solid rgba(252,76,2,0.2)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite',margin:'0 auto 10px'}}/>
-                <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',color:'#9aa5b4',letterSpacing:'1px',textTransform:'uppercase'}}>Loading your activities...</span>
-              </div>
-            )}
-
-            {!stravaActLoading && stravaActivities !== null && (() => {
-              const filterVal = stravaActFilter.toLowerCase().trim()
-              const shown = stravaActivities.filter(a => {
-                if (!filterVal) return true
-                const name = (a.name||'').toLowerCase()
-                const date = a.start_date_local ? new Date(a.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}).toLowerCase() : ''
-                return name.includes(filterVal) || date.includes(filterVal)
-              })
-              return shown.length === 0 ? (
-                <div style={{textAlign:'center',padding:'32px 20px',color:'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px'}}>
-                  No matching activities found
-                </div>
-              ) : (
-                <div style={{display:'flex',flexDirection:'column',gap:'8px',maxHeight:'480px',overflowY:'auto'}}>
-                  {shown.slice(0,50).map(a => {
-                    const type = (a.type||a.sport_type||'').toLowerCase()
-                    const distMi = ((a.distance||0)/1609.34).toFixed(1)
-                    const time = fmtTime(a.moving_time)
-                    const date = a.start_date_local ? new Date(a.start_date_local).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : ''
-                    const typeColor = type==='swim'?'#0EA5E9':type.includes('ride')?'#F97316':'#FC4C02'
-                    const typeLabel = type==='swim'?'Swim 🏊':type.includes('ride')?'Bike 🚴':'Run 🏃'
-                    return (
-                      <div key={a.id} onClick={async ()=>{
-                        // Pre-fill race card from this activity, then Pacer looks it up
-                        const guessedName = a.name || 'My Race'
-                        const dateStr = a.start_date_local ? new Date(a.start_date_local).toLocaleDateString('en-US',{month:'short',year:'numeric'}) : ''
-                        const yearStr = a.start_date_local ? String(new Date(a.start_date_local).getFullYear()) : ''
-                        setImportTab('pacer')
-                        setQuery(guessedName)
-                        setSelectedYear(yearStr)
-                        // Trigger Pacer lookup with the activity pre-filled
-                        setSearching(true)
-                        setSearchError('')
-                        setPacerResult(null)
-                        setPopupOpen(true)
-                        try {
-                          const body = {
-                            action: 'race_lookup',
-                            query: guessedName,
-                            year: yearStr,
-                            distance: selectedDist || '',
-                            location_hint: '',
-                          }
-                          if (userProfile) {
-                            body.first_name = userProfile.first_name || userProfile.full_name?.trim().split(' ')[0] || ''
-                            body.last_name  = userProfile.last_name  || userProfile.full_name?.trim().split(' ').slice(1).join(' ') || ''
-                            body.dob        = userProfile.dob || userProfile.date_of_birth || ''
-                          }
-                          const resp = await fetch('/api/pacer', {
-                            method:'POST', headers:{'Content-Type':'application/json'},
-                            body: JSON.stringify(body),
-                          })
-                          const data = await resp.json()
-                          // Pre-attach the Strava activity so it's already confirmed
-                          data.strava_activity = a
-                          data.strava_pre_confirmed = true
-                          if (!data.error) setPacerResult(data)
-                        } catch(e) {
-                          setPacerResult({
-                            name: guessedName, date: dateStr, date_sort: a.start_date_local?.substring(0,10)||null,
-                            location:'', city:'', state:'', distance: selectedDist||'Other',
-                            confidence:1, race_vibe:'', strava_activity: a, strava_pre_confirmed: true,
-                          })
-                        }
-                        setSearching(false)
-                      }}
-                        style={{display:'flex',alignItems:'center',gap:'12px',padding:'12px 14px',border:'1.5px solid #e2e6ed',borderRadius:'12px',cursor:'pointer',transition:'all 0.15s',background:'#fafbfc'}}
-                        onMouseEnter={e=>{e.currentTarget.style.borderColor='#FC4C02';e.currentTarget.style.background='rgba(252,76,2,0.02)'}}
-                        onMouseLeave={e=>{e.currentTarget.style.borderColor='#e2e6ed';e.currentTarget.style.background='#fafbfc'}}>
-                        <div style={{width:36,height:36,borderRadius:'10px',background:`${typeColor}12`,border:`1.5px solid ${typeColor}30`,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:typeColor,fontWeight:600}}>
-                          {typeLabel.split(' ')[1]}
-                        </div>
-                        <div style={{flex:1,minWidth:0}}>
-                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px',fontWeight:600,color:'#1B2A4A',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{a.name}</div>
-                          <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',marginTop:'1px'}}>{date} · {distMi} mi · {time}</div>
-                        </div>
-                        <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M5 3l4 4-4 4" stroke="#9aa5b4" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </div>
+          <StravaImportTab
+            stravaActivities={stravaActivities}
+            stravaActLoading={stravaActLoading}
+            stravaActFilter={stravaActFilter}
+            setStravaActFilter={setStravaActFilter}
+            userProfile={userProfile}
+            stravaProfile={stravaProfile}
+            onAddRace={handleAddRace}
+          />
         )}
 
         {/* Added races */}
