@@ -702,7 +702,7 @@ export default function RaceImport() {
 
     const init = async () => {
       if (locationState?.firstName) setFirstName(locationState.firstName)
-      if (!user || isDemo(user?.email)) { setFirstName('Ryan'); return }
+      if (!user) return
 
       try {
         const { data: { session } } = await supabase.auth.getSession()
