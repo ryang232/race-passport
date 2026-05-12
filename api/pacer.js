@@ -139,7 +139,7 @@ Then return ONLY a single JSON object (no markdown, no explanation) with exactly
   "state": "2-letter state abbreviation",
   "distance": "${raceDist || 'normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other'}",
   "confidence": 3,
-  "race_vibe": "2-3 sentences MAX. Pacer voice — warm, enthusiastic, specific. Call out what makes THIS race special: the scenery, the crowd, the course, the vibe, the prestige. Something a runner would love to read about a race they just finished. No generic praise. Reference real details found in your search.",
+  "race_vibe": "EXACTLY 2 sentences. No more. Pacer voice — warm, punchy, specific to THIS race. One sentence on what makes the course or setting special. One sentence on the vibe, crowd, or prestige. Real details only. No filler. No generic running praise.",
   "website": "official race website URL or empty string"
 }
 
