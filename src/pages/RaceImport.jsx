@@ -710,7 +710,7 @@ export default function RaceImport() {
         if (!uid) return
 
         const { data: prof } = await supabase.from('profiles')
-          .select('full_name,first_name,last_name,dob,gender,strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
+          .select('full_name,first_name,last_name,dob,date_of_birth,gender,strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
           .eq('id', uid).single()
 
         if (prof) {
@@ -776,7 +776,7 @@ export default function RaceImport() {
       if (userProfile) {
         body.first_name = userProfile.first_name || userProfile.full_name?.trim().split(' ')[0] || ''
         body.last_name  = userProfile.last_name  || userProfile.full_name?.trim().split(' ').slice(1).join(' ') || ''
-        body.dob        = userProfile.dob || ''
+        body.dob        = userProfile.dob || userProfile.date_of_birth || ''
       }
 
       const resp = await fetch('/api/pacer', {
@@ -825,7 +825,7 @@ export default function RaceImport() {
         const uid = session?.user?.id
         if (uid) {
           const raceDateObj = new Date(details.date_sort)
-          const dobObj = userProfile.dob ? new Date(userProfile.dob) : null
+          const dobObj = userProfile.dob || userProfile.date_of_birth ? new Date(userProfile.dob || userProfile.date_of_birth) : null
           let ageAtRace = null
           if (dobObj && !isNaN(dobObj) && !isNaN(raceDateObj)) {
             ageAtRace = raceDateObj.getFullYear() - dobObj.getFullYear()
