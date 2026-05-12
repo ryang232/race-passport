@@ -124,39 +124,56 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
     // Strategy: search race name first (always works), then runner experience
     // No date searching — year is user-provided, Pacer doesn't need to find it
     const locationHint = req.body.location_hint || ''
-    const searchQuery = locationHint ? `${raceName} ${locationHint}` : raceName
 
-    const detailsPrompt = `You are a race data assistant for an endurance sports app called Race Passport.
+    // Normalize triathlon brand names so IRONMAN races are found correctly
+    let searchQuery = locationHint ? raceName + ' ' + locationHint : raceName
+    const lowerQ = searchQuery.toLowerCase()
+    const isTri = raceDist === '70.3' || raceDist === '140.6' || lowerQ.includes('triathlon')
+    if (isTri && (lowerQ.includes('ironman') || lowerQ.includes('iron man'))) {
+      if (raceDist === '70.3' || lowerQ.includes('70.3')) {
+        searchQuery = searchQuery.replace(/ironman/gi, 'IRONMAN 70.3').replace(/iron man/gi, 'IRONMAN 70.3')
+        // Clean up double "70.3 70.3" if user already included it
+        searchQuery = searchQuery.replace(/IRONMAN 70\.3 70\.3/g, 'IRONMAN 70.3')
+      } else {
+        searchQuery = searchQuery.replace(/ironman/gi, 'IRONMAN').replace(/iron man/gi, 'IRONMAN')
+      }
+    }
 
-You need to find information about this race: "${searchQuery}"${raceDist ? ` (${raceDist})` : ''}.${raceYear ? ` The user ran it in ${raceYear}.` : ''}
+    const triNote = isTri ? 'IMPORTANT: This is a triathlon event. IRONMAN races always use the official brand name with the prefix "IRONMAN" or "IRONMAN 70.3" or "IRONMAN 140.6". Search for the official branded name.' : ''
 
-Do TWO searches:
-1. Search "${searchQuery}" — find the official race name, city, state, distance, and what makes it special. This is your primary search — it should always return something useful.
-2. Search "${searchQuery} runners experience highlights" — find what runners say about it: scenery, crowd, course features, prestige, what makes it memorable.
+    const buildDetailsPrompt = () => {
+      const triNote = isTri ? 'IMPORTANT: This is a triathlon. IRONMAN races use the official brand name: "IRONMAN 70.3 [location]" or "IRONMAN [location]". Always search with the full IRONMAN brand prefix.' : ''
+      const nameRule = isTri
+        ? 'For IRONMAN races use the full brand name e.g. IRONMAN 70.3 Eagleman or IRONMAN Maryland. Never abbreviate IRONMAN.'
+        : 'e.g. Los Angeles Marathon not Los Angeles Marathon 26.2'
+      const distRule = raceDist || 'normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other'
+      const dateVal = raceYear ? 'Jan ' + raceYear : ''
+      const dateSortVal = raceYear ? raceYear + '-01-01' : ''
 
-Return ONLY a single JSON object (no markdown, no explanation) with exactly these fields:
-{
-  "name": "official event/series name only — NEVER include the distance or year. 'Los Angeles Marathon' not 'Los Angeles Marathon 26.2'. 'Cherry Blossom' not 'Cherry Blossom 10 Miler'",
-  "date": "${raceYear ? `${raceYear}-01-01` : ''}",
-  "date_sort": "${raceYear ? `${raceYear}-01-01` : 'null'}",
-  "location": "City, ST",
-  "city": "city name only",
-  "state": "2-letter state abbreviation",
-  "distance": "${raceDist || 'normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other'}",
-  "confidence": 3,
-  "race_vibe": "EXACTLY 2 sentences. No more. Pacer voice — warm, punchy, specific to THIS race. One sentence on what makes the course or setting special. One sentence on the vibe, crowd, or prestige. Real details only — no generic running praise.",
-  "website": "official race website URL or empty string"
-}
-
-CRITICAL RULES:
-- name field NEVER includes the distance or year
-- confidence 3 = the race exists and you found its name and location (this should be MOST races)
-- confidence 2 = you found the race name but are uncertain about location or details
-- confidence 1 = you genuinely cannot find this race at all after searching
-- DO NOT downgrade confidence just because runner reviews were sparse — if you found the race, confidence is 3
-- race_vibe: if you found real specific details about the course, crowd, or prestige, include them. If not, set to empty string. Never fabricate.
-- ALWAYS return valid JSON even if searches return little`
-
+      return [
+        'You are a race data assistant for an endurance sports app called Race Passport.',
+        triNote,
+        'Find information about: "' + searchQuery + '"' + (raceDist ? ' (' + raceDist + ')' : '') + '.' + (raceYear ? ' User ran it in ' + raceYear + '.' : ''),
+        'Do TWO searches:',
+        '1. Search "' + searchQuery + '" — find official race name, city, state, distance, what makes it special.',
+        '2. Search "' + searchQuery + ' race experience" — find what athletes say about the course, crowd, vibe.',
+        'Return ONLY a JSON object (no markdown):',
+        '{',
+        '  "name": "official event name only — NEVER include distance or year. ' + nameRule + '",',
+        '  "date": "' + dateVal + '",',
+        '  "date_sort": "' + dateSortVal + '",',
+        '  "location": "City, ST",',
+        '  "city": "city name only",',
+        '  "state": "2-letter abbreviation",',
+        '  "distance": "' + distRule + '",',
+        '  "confidence": 3,',
+        '  "race_vibe": "EXACTLY 2 sentences. Pacer voice — warm, specific to THIS race. Real details only. Empty string if nothing specific found.",',
+        '  "website": "official URL or empty string"',
+        '}',
+        'RULES: confidence 3 if race found (name + location). confidence 2 if uncertain. confidence 1 if not found at all. Never downgrade just because reviews were sparse. Never fabricate vibe details.',
+      ].filter(Boolean).join('\n')
+    }
+    const detailsPrompt = buildDetailsPrompt()
     // ── Step 2: Attempt to find runner's result (if name provided) ────────
     let resultPrompt = null
     if (hasRunner && raceYear) {
