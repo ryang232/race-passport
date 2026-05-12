@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase'
 import { isDemo } from '../lib/demo'
 
 const DISTANCES = ['5K','10K','10 mi','13.1','26.2','50K','70.3','140.6','Ultra']
+const GOAL_SESSION_KEY = 'rp_goal_race_state'
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const CURRENT_YEAR = new Date().getFullYear()
 const YEARS = Array.from({ length: 5 }, (_, i) => String(CURRENT_YEAR + i))
@@ -79,6 +80,19 @@ export default function GoalRaces() {
 
   useEffect(() => {
     injectStyles()
+    // Restore goal state from sessionStorage (back navigation)
+    try {
+      const saved = sessionStorage.getItem(GOAL_SESSION_KEY)
+      if (saved) {
+        const s = JSON.parse(saved)
+        if (s.mode)             setMode(s.mode)
+        if (s.raceQuery)        setRaceQuery(s.raceQuery)
+        if (s.goalRaceResult)   setGoalRaceResult(s.goalRaceResult)
+        if (s.selectedDistance) setSelectedDistance(s.selectedDistance)
+        if (s.targetMonth)      setTargetMonth(s.targetMonth)
+        if (s.targetYear)       setTargetYear(s.targetYear)
+      }
+    } catch(e) {}
     return () => document.getElementById('rp-gr3-styles')?.remove()
   }, [])
 
@@ -108,6 +122,15 @@ export default function GoalRaces() {
     setSearching(false)
   }
 
+  // Persist goal state to sessionStorage whenever it changes
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(GOAL_SESSION_KEY, JSON.stringify({
+        mode, raceQuery, goalRaceResult, selectedDistance, targetMonth, targetYear
+      }))
+    } catch(e) {}
+  }, [mode, raceQuery, goalRaceResult, selectedDistance, targetMonth, targetYear])
+
   const handleSaveAndContinue = async () => {
     setSaving(true)
     try {
@@ -132,6 +155,7 @@ export default function GoalRaces() {
       }
     } catch(e) {}
     setSaving(false)
+    sessionStorage.removeItem(GOAL_SESSION_KEY)
     navigate('/build-passport', { state: { imported: importedCount, firstName } })
   }
 
