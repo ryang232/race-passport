@@ -10,6 +10,9 @@ const DISTANCES = ['5K','10K','10 mi','13.1','26.2','50K','70.3','140.6','Ultra'
 
 const SESSION_KEY = 'rp_race_import_races'
 
+const CURRENT_YEAR = new Date().getFullYear()
+const YEARS = Array.from({ length: CURRENT_YEAR - 1979 }, (_, i) => String(CURRENT_YEAR - i))
+
 function injectStyles() {
   if (document.getElementById('rp-ri2-styles')) return
   const s = document.createElement('style')
@@ -25,6 +28,9 @@ function injectStyles() {
     .ri-dist-btn{padding:9px 16px;border-radius:8px;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:600;cursor:pointer;transition:all 0.12s;border:1.5px solid #e2e6ed;background:#fafbfc;color:#9aa5b4}
     .ri-dist-btn.sel{background:#1B2A4A;color:#fff;border-color:#1B2A4A}
     .ri-dist-btn:hover:not(.sel){border-color:#1B2A4A;color:#1B2A4A;background:#fff}
+    .ri-search-dist-btn{padding:7px 13px;border-radius:20px;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.12s;border:1.5px solid #e2e6ed;background:#fafbfc;color:#9aa5b4;white-space:nowrap}
+    .ri-search-dist-btn.sel{background:#C9A84C;color:#1B2A4A;border-color:#C9A84C}
+    .ri-search-dist-btn:hover:not(.sel){border-color:#C9A84C;color:#1B2A4A;background:rgba(201,168,76,0.08)}
     .ri-row{animation:fadeIn 0.3s ease both;cursor:pointer;transition:background 0.15s}
     .ri-row:hover{background:#f8f9fb!important}
     div::-webkit-scrollbar{display:none}
@@ -32,7 +38,6 @@ function injectStyles() {
   document.head.appendChild(s)
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
 function fmtTime(secs) {
   if (!secs) return ''
   const h = Math.floor(secs/3600), m = Math.floor((secs%3600)/60), s = secs%60
@@ -46,7 +51,12 @@ function fmtPace(secs, meters) {
   return `${Math.floor(spm/60)}:${String(Math.round(spm%60)).padStart(2,'0')}/mi`
 }
 
-// ── Mini stamp ────────────────────────────────────────────────────────────────
+function timeToSecs(t) {
+  if (!t) return null
+  const p = t.split(':').map(Number)
+  return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + (p[1]||0)
+}
+
 function MiniStamp({ distance, size=46 }) {
   const c = getDistanceColor(distance)
   const t = (distance||'').replace(' mi','').replace(' miles','')
@@ -59,7 +69,6 @@ function MiniStamp({ distance, size=46 }) {
   )
 }
 
-// ── Ticker background ─────────────────────────────────────────────────────────
 function TickerBg() {
   return (
     <div style={{position:'fixed',top:'50%',transform:'translateY(-55%)',left:0,whiteSpace:'nowrap',pointerEvents:'none',zIndex:0}}>
@@ -70,8 +79,7 @@ function TickerBg() {
   )
 }
 
-// ── Pacer thinking animation ──────────────────────────────────────────────────
-function PacerThinking({ label='Pacer is looking this up...' }) {
+function PacerThinking({ label='Pacer is searching for this race...' }) {
   return (
     <div style={{display:'flex',alignItems:'center',gap:'12px',padding:'16px 20px',background:'rgba(201,168,76,0.06)',border:'1.5px solid rgba(201,168,76,0.2)',borderRadius:'14px',animation:'shimmer 1.2s ease infinite'}}>
       <span style={{fontSize:'20px'}}>⚡</span>
@@ -136,7 +144,6 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
     draw()
   }, [activity])
 
-  // For triathlon, compute totals across segments
   const triTotals = isTri ? {
     distance: activity.segments.reduce((s,a) => s + (a.distance||0), 0),
     moving_time: activity.segments.reduce((s,a) => s + (a.moving_time||0), 0),
@@ -151,7 +158,6 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
 
   return (
     <div style={{marginTop:'16px',borderRadius:'12px',overflow:'hidden',border:'1.5px solid rgba(252,76,2,0.25)',animation:'slideDown 0.3s ease both'}}>
-      {/* Header */}
       <div style={{background:'rgba(252,76,2,0.06)',padding:'10px 14px',display:'flex',alignItems:'center',gap:'8px',borderBottom:'1px solid rgba(252,76,2,0.15)'}}>
         <svg width="12" height="12" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#FC4C02',textTransform:'uppercase'}}>
@@ -159,9 +165,7 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
         </span>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)',marginLeft:'auto'}}>{date}</span>
       </div>
-      {/* Map */}
       <div ref={mapRef} style={{height:'160px',background:'#f8f9fb'}}/>
-      {/* Tri segment legend */}
       {isTri && (
         <div style={{display:'flex',gap:'0',borderTop:'1px solid rgba(252,76,2,0.1)'}}>
           {activity.segments.map((seg,i) => {
@@ -177,7 +181,6 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
           })}
         </div>
       )}
-      {/* Stats */}
       <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:0,borderTop:'1px solid rgba(252,76,2,0.1)'}}>
         {[
           { label:'Distance', value: fmtDist(displayActivity.distance) },
@@ -191,13 +194,11 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
           </div>
         ))}
       </div>
-      {/* Activity name */}
       <div style={{padding:'8px 14px',borderTop:'1px solid rgba(252,76,2,0.1)',background:'rgba(252,76,2,0.02)'}}>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d'}}>
           {isTri ? `Swim · Bike · Run — ${date}` : `"${activity.name}"`}
         </span>
       </div>
-      {/* Confirm/reject */}
       {t === 'confirm' && (
         <div style={{display:'flex',gap:'8px',padding:'12px 14px',borderTop:'1px solid rgba(252,76,2,0.1)'}}>
           <button onClick={onReject}
@@ -215,7 +216,6 @@ function StravaActivityCard({ activity, onConfirm, onReject, t='confirm' }) {
   )
 }
 
-// ── Manual Strava activity picker ─────────────────────────────────────────────
 function StravaManualPicker({ candidates, onSelect, onSkip }) {
   return (
     <div style={{marginTop:'16px',animation:'slideDown 0.3s ease both'}}>
@@ -257,24 +257,37 @@ function StravaManualPicker({ candidates, onSelect, onSkip }) {
   )
 }
 
-// ── Race edit form (Pacer popup) ──────────────────────────────────────────────
+// ── Race edit form ────────────────────────────────────────────────────────────
 function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport →', isNew=true, stravaProfile, stravaConnected }) {
-  const [name, setName]           = useState(initial.name||'')
-  const [date, setDate]           = useState(initial.date||'')
-  const [location, setLocation]   = useState(initial.location||'')
-  const [distance, setDistance]   = useState(initial.distance||'')
-  const [time, setTime]           = useState(initial.time||'')
+  const [name, setName]               = useState(initial.name||'')
+  const [date, setDate]               = useState(initial.date||'')
+  const [location, setLocation]       = useState(initial.location||'')
+  const [distance, setDistance]       = useState(initial.distance||'')
+  const [officialTime, setOfficialTime] = useState(initial.official_time||'')
+  const [stravaTime, setStravaTime]   = useState('')
   const nameRef = useRef(null)
 
+  const resultFound   = initial.runner_result?.found === true
+  const placeOverall  = initial.runner_result?.place_overall || ''
+  const placeAG       = initial.runner_result?.place_age_group || ''
+  const resultsUrl    = initial.runner_result?.results_url || ''
+
   // Strava search state
-  const [stravaSearching, setStravaSearching]   = useState(false)
   const [stravaActivity, setStravaActivity]     = useState(initial.strava_activity||null)
   const [stravaCandidates, setStravaCandidates] = useState([])
   const [stravaState, setStravaState]           = useState(
     initial.strava_activity ? 'confirmed' : 'idle'
-  ) // idle | searching | found | manual | confirmed | nomatch
+  )
+  const [stravaSearching, setStravaSearching]   = useState(false)
 
   useEffect(() => { if (isNew && nameRef.current) nameRef.current.focus() }, [])
+
+  // Auto-trigger Strava search when card opens if connected and we have a date
+  useEffect(() => {
+    if (isNew && stravaConnected && stravaProfile && initial.date_sort && stravaState === 'idle') {
+      searchStrava(initial.date_sort, initial.distance)
+    }
+  }, [])
 
   const inp = (extra={}) => ({
     width:'100%', padding:'12px 14px', borderRadius:'10px', border:'1.5px solid #e2e6ed',
@@ -282,44 +295,38 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
     outline:'none', boxSizing:'border-box', transition:'border-color 0.15s', ...extra
   })
 
-  const confidenceLabel = initial.confidence===3 ? 'Pacer Found It' : initial.confidence===2 ? 'Best Guess — Please Verify' : 'Add Your Details'
-  const confidenceColor = initial.confidence===3 ? '#16a34a' : initial.confidence===2 ? '#C9A84C' : '#9aa5b4'
+  const confidenceLabel = resultFound ? 'Result Found' : initial.confidence===3 ? 'Pacer Found It' : initial.confidence===2 ? 'Best Guess — Please Verify' : 'Add Your Details'
+  const confidenceColor = resultFound ? '#16a34a' : initial.confidence===3 ? '#16a34a' : initial.confidence===2 ? '#C9A84C' : '#9aa5b4'
+  const headerBg        = resultFound ? 'rgba(22,163,74,0.05)' : initial.confidence===3 ? 'rgba(22,163,74,0.05)' : 'rgba(201,168,76,0.06)'
+  const headerBorder    = resultFound ? 'rgba(22,163,74,0.12)' : initial.confidence===3 ? 'rgba(22,163,74,0.12)' : 'rgba(201,168,76,0.12)'
+  const cardBorder      = resultFound ? 'rgba(22,163,74,0.3)' : initial.confidence===3 ? 'rgba(22,163,74,0.3)' : 'rgba(201,168,76,0.35)'
 
-  const searchStrava = async () => {
-    if (!stravaProfile || !date) return
+  const searchStrava = async (dateOverride, distOverride) => {
+    if (!stravaProfile) return
+    const useDate = dateOverride || date
+    if (!useDate) return
     setStravaSearching(true)
     setStravaState('searching')
     setStravaActivity(null)
     setStravaCandidates([])
     try {
       const token = stravaProfile.strava_access_token
-
-      // Parse race date — support "Oct 2023", "February 16, 2025", "2025-02-16"
-      const raceDate = new Date(date)
+      const raceDate = new Date(useDate)
       if (isNaN(raceDate)) { setStravaState('nomatch'); setStravaSearching(false); return }
 
-      // Search a wide +-60 day window to catch races where user entered approx date
       const afterTs  = Math.floor(raceDate.getTime()/1000) - 60*86400
       const beforeTs = Math.floor(raceDate.getTime()/1000) + 60*86400
 
       const resp = await fetch(`/api/strava?action=activities&access_token=${token}&per_page=100&after=${afterTs}&before=${beforeTs}`)
       const acts = await resp.json()
-      if (!Array.isArray(acts) || acts.length === 0) {
-        setStravaState('nomatch')
-        setStravaSearching(false)
-        return
-      }
+      if (!Array.isArray(acts) || acts.length === 0) { setStravaState('nomatch'); setStravaSearching(false); return }
 
-      // Only consider relevant activity types
       const runTypes = ['run','virtualrun','walk','ride','swim','elliptical']
       const pool = acts.filter(a => runTypes.includes((a.type||a.sport_type||'').toLowerCase()))
 
-      // Scoring: name match = 50pts, distance match = 30pts, same day = 20pts
-      const DIST_MILES = {
-        '5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,
-        '26.2':26.2,'50K':31,'70.3':70.3,'140.6':140.6
-      }
-      const targetMi = DIST_MILES[distance] || null
+      const DIST_MILES = { '5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31,'70.3':70.3,'140.6':140.6 }
+      const useDist   = distOverride || distance
+      const targetMi  = DIST_MILES[useDist] || null
       const normalize = (s) => (s||'').toLowerCase().replace(/[^a-z0-9\s]/g,'').replace(/\s+/g,' ').trim()
       const raceName  = normalize(name)
       const raceWords = raceName.split(' ').filter(w => w.length > 2)
@@ -327,69 +334,42 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
       const scored = pool.map(a => {
         let score = 0
         const actName = normalize(a.name)
-
-        // Name scoring
-        if (actName === raceName) {
-          score += 50
-        } else {
+        if (actName === raceName) { score += 50 } else {
           const matchedWords = raceWords.filter(w => actName.includes(w))
           score += (matchedWords.length / Math.max(raceWords.length, 1)) * 40
         }
-
-        // Distance scoring
         if (targetMi && a.distance) {
           const actMi = a.distance / 1609.34
           const pctOff = Math.abs(actMi - targetMi) / targetMi
-          if (pctOff <= 0.05)      score += 30
+          if (pctOff <= 0.05) score += 30
           else if (pctOff <= 0.10) score += 20
           else if (pctOff <= 0.20) score += 10
-          else if (pctOff > 0.5)   score -= 30
+          else if (pctOff > 0.5) score -= 30
         }
-
-        // Date scoring
         const actDate = new Date(a.start_date_local)
         const daysDiff = Math.abs((actDate - raceDate) / 86400000)
-        if (daysDiff <= 1)       score += 20
-        else if (daysDiff <= 7)  score += 10
+        if (daysDiff <= 1) score += 20
+        else if (daysDiff <= 7) score += 10
         else if (daysDiff <= 14) score += 5
-
         return { activity: a, score }
       })
 
-      // ── Triathlon: find swim + bike + run on the same day ─────────────────
-      // Covers all tri distances: Sprint, Olympic, 70.3, 140.6
+      // Triathlon detection
       const TRI_DISTANCES = ['70.3','140.6','tri','triathlon','olympic','sprint']
-      const isTri = TRI_DISTANCES.some(d => distance.toLowerCase().includes(d))
-        || (distance === 'Other' && name.toLowerCase().includes('tri'))
+      const isTri = TRI_DISTANCES.some(d => (useDist||'').toLowerCase().includes(d))
+        || (useDist === 'Other' && name.toLowerCase().includes('tri'))
       if (isTri) {
-        // Minimum distances by format — generous lower bounds to catch all formats
-        // Sprint: 0.5mi swim, 10mi bike, 2mi run
-        // Olympic: 0.9mi swim, 20mi bike, 4mi run
-        // 70.3:   1mi swim,   40mi bike, 8mi run
-        // 140.6:  2mi swim,   80mi bike, 20mi run
-        const is140  = distance === '140.6'
-        const is70   = distance === '70.3'
-        const minSwimM  = is140 ? 3000  : is70 ? 1500  : 400    // meters
-        const minBikeMi = is140 ? 80    : is70 ? 40    : 8      // miles
-        const minRunMi  = is140 ? 20    : is70 ? 8     : 1.5    // miles
-
-        const SWIM = ['swim']
-        const BIKE = ['ride','virtualride','ebikeride','mountainbikeride']
-        const RUN  = ['run','virtualrun']
-
-        const sameDay = pool.filter(a => {
-          const actDate = new Date(a.start_date_local)
-          return Math.abs((actDate - raceDate) / 86400000) <= 1
-        })
-        const swimPool = sameDay.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()))
-          .filter(a => (a.distance||0) > minSwimM).sort((a,b) => b.distance - a.distance)
-        const bikePool = sameDay.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()))
-          .filter(a => (a.distance||0)/1609.34 > minBikeMi).sort((a,b) => b.distance - a.distance)
-        const runPool  = sameDay.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()))
-          .filter(a => (a.distance||0)/1609.34 > minRunMi).sort((a,b) => b.distance - a.distance)
+        const is140 = useDist === '140.6', is70 = useDist === '70.3'
+        const minSwimM  = is140 ? 3000 : is70 ? 1500 : 400
+        const minBikeMi = is140 ? 80 : is70 ? 40 : 8
+        const minRunMi  = is140 ? 20 : is70 ? 8 : 1.5
+        const SWIM = ['swim'], BIKE = ['ride','virtualride','ebikeride','mountainbikeride'], RUN = ['run','virtualrun']
+        const sameDay = pool.filter(a => Math.abs((new Date(a.start_date_local) - raceDate) / 86400000) <= 1)
+        const swimPool = sameDay.filter(a => SWIM.includes((a.type||a.sport_type||'').toLowerCase()) && (a.distance||0) > minSwimM).sort((a,b) => b.distance - a.distance)
+        const bikePool = sameDay.filter(a => BIKE.includes((a.type||a.sport_type||'').toLowerCase()) && (a.distance||0)/1609.34 > minBikeMi).sort((a,b) => b.distance - a.distance)
+        const runPool  = sameDay.filter(a => RUN.includes((a.type||a.sport_type||'').toLowerCase()) && (a.distance||0)/1609.34 > minRunMi).sort((a,b) => b.distance - a.distance)
         const segs = [swimPool[0], bikePool[0], runPool[0]].filter(Boolean)
         if (segs.length >= 2) {
-          // Fetch full details for all segments (for polylines)
           const detailed = await Promise.all(segs.map(async seg => {
             try {
               const r = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${seg.id}`)
@@ -400,20 +380,16 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
           setStravaActivity({ isTriathlon: true, segments: detailed })
           setStravaState('found')
         } else {
-          // Fallback — show all same-day activities for manual pick
           setStravaCandidates(sameDay.slice(0, 10))
           setStravaState(sameDay.length > 0 ? 'manual' : 'nomatch')
         }
         setStravaSearching(false)
         return
       }
-      // ── Standard single activity ─────────────────────────────────────────
 
       scored.sort((a, b) => b.score - a.score)
-
       const best = scored[0]
       const AUTO_MATCH_THRESHOLD = 25
-
       if (best && best.score >= AUTO_MATCH_THRESHOLD) {
         const detailResp = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${best.activity.id}`)
         const detail = await detailResp.json()
@@ -424,50 +400,86 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
         setStravaCandidates(candidates)
         setStravaState(candidates.length > 0 ? 'manual' : 'nomatch')
       }
-    } catch(e) {
-      setStravaState('nomatch')
-    }
+    } catch(e) { setStravaState('nomatch') }
     setStravaSearching(false)
   }
 
   const confirmActivity = (act) => {
     setStravaActivity(act)
     setStravaState('confirmed')
-    // Pre-fill finish time — for tri, sum all segment times
-    if (act.isTriathlon && act.segments) {
-      const totalSecs = act.segments.reduce((s, a) => s + (a.moving_time||0), 0)
-      if (totalSecs) setTime(fmtTime(totalSecs))
-    } else if (act.moving_time) {
-      setTime(fmtTime(act.moving_time))
+    // Only pre-fill Strava time if no official time exists
+    if (!officialTime) {
+      if (act.isTriathlon && act.segments) {
+        const totalSecs = act.segments.reduce((s, a) => s + (a.moving_time||0), 0)
+        if (totalSecs) setStravaTime(fmtTime(totalSecs))
+      } else if (act.moving_time) {
+        setStravaTime(fmtTime(act.moving_time))
+      }
     }
   }
 
   const handleSave = () => {
     if (!name.trim() || !distance) return
+    // Official time takes precedence over Strava time
+    const finalTime = officialTime.trim() || stravaTime.trim()
     onSave({
       name: name.trim(), date, date_sort: initial.date_sort||null,
       location, city: initial.city||'', state: initial.state||'',
-      distance, time, confidence: initial.confidence||2,
+      distance, time: finalTime, confidence: initial.confidence||2,
+      official_time: officialTime.trim(),
       strava_activity: stravaState === 'confirmed' ? stravaActivity : null,
+      runner_result: initial.runner_result||null,
     })
   }
 
   return (
-    <div style={{background:'#fff',border:`2px solid ${initial.confidence===3?'rgba(22,163,74,0.3)':'rgba(201,168,76,0.35)'}`,borderRadius:'16px',overflow:'hidden',animation:'slideDown 0.3s ease both',boxShadow:'0 4px 24px rgba(27,42,74,0.08)'}}>
+    <div style={{background:'#fff',border:`2px solid ${cardBorder}`,borderRadius:'16px',overflow:'hidden',animation:'slideDown 0.3s ease both',boxShadow:'0 4px 24px rgba(27,42,74,0.08)'}}>
       {/* Header */}
-      <div style={{background:initial.confidence===3?'rgba(22,163,74,0.05)':'rgba(201,168,76,0.06)',borderBottom:`1px solid ${initial.confidence===3?'rgba(22,163,74,0.12)':'rgba(201,168,76,0.12)'}`,padding:'11px 18px',display:'flex',alignItems:'center',gap:'8px'}}>
+      <div style={{background:headerBg,borderBottom:`1px solid ${headerBorder}`,padding:'11px 18px',display:'flex',alignItems:'center',gap:'8px'}}>
         <span style={{fontSize:'16px'}}>⚡</span>
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'2px',color:confidenceColor,textTransform:'uppercase'}}>{confidenceLabel}</span>
         {onCancel && <button onClick={onCancel} style={{marginLeft:'auto',background:'none',border:'none',cursor:'pointer',color:'#9aa5b4',fontSize:'20px',lineHeight:1,padding:'0 2px'}}>×</button>}
       </div>
 
       <div style={{padding:'18px'}}>
+
+        {/* Pacer vibe block */}
+        {initial.race_vibe && (
+          <div style={{marginBottom:'16px',padding:'14px 16px',background:'rgba(27,42,74,0.03)',border:'1.5px solid rgba(27,42,74,0.08)',borderRadius:'12px',borderLeft:'4px solid #C9A84C'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'7px'}}>
+              <span style={{fontSize:'13px'}}>⚡</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',fontWeight:600,letterSpacing:'2px',color:'#C9A84C',textTransform:'uppercase'}}>Pacer on this race</span>
+            </div>
+            <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'14px',color:'#3d4f6b',lineHeight:1.65,margin:0,fontWeight:300}}>{initial.race_vibe}</p>
+          </div>
+        )}
+
+        {/* Result found badge */}
+        {resultFound && (
+          <div style={{marginBottom:'14px',padding:'10px 14px',background:'rgba(22,163,74,0.06)',border:'1.5px solid rgba(22,163,74,0.2)',borderRadius:'10px',display:'flex',alignItems:'center',flexWrap:'wrap',gap:'8px'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'6px'}}>
+              <div style={{width:7,height:7,borderRadius:'50%',background:'#16a34a',flexShrink:0}}/>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,letterSpacing:'1px',color:'#16a34a',textTransform:'uppercase'}}>Official result found</span>
+            </div>
+            <div style={{display:'flex',gap:'10px',marginLeft:'auto',flexWrap:'wrap'}}>
+              {placeOverall && <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d'}}>{placeOverall} overall</span>}
+              {placeAG && <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#6b7a8d'}}>{placeAG} AG</span>}
+              {resultsUrl && (
+                <a href={resultsUrl} target="_blank" rel="noopener noreferrer"
+                  style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#C9A84C',textDecoration:'none',fontWeight:600}}>
+                  View results ↗
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Race name */}
         <div style={{marginBottom:'14px'}}>
           <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'6px'}}>
             Race Name <span style={{color:'#C9A84C'}}>*</span>
           </label>
-          <input ref={nameRef} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Cherry Blossom 10 Miler"
+          <input ref={nameRef} value={name} onChange={e=>setName(e.target.value)} placeholder="e.g. Cherry Blossom Ten Mile Run"
             style={inp({fontSize:'18px',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600})}
             onFocus={e=>e.target.style.borderColor='#C9A84C'} onBlur={e=>e.target.style.borderColor='#e2e6ed'}/>
         </div>
@@ -502,24 +514,37 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
           </div>
         </div>
 
-        {/* Finish time */}
-        <div style={{marginBottom:'16px'}}>
+        {/* Official time */}
+        <div style={{marginBottom:'14px'}}>
           <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'6px'}}>
-            Finish Time <span style={{fontWeight:400,color:'#b0b8c4'}}>(optional)</span>
-            {stravaState==='confirmed'&&<span style={{color:'#FC4C02',marginLeft:'8px',fontSize:'10px'}}>· from Strava</span>}
+            {resultFound ? 'Official Finish Time' : 'Finish Time'}
+            {' '}<span style={{fontWeight:400,color:'#b0b8c4'}}>(optional)</span>
+            {resultFound && <span style={{marginLeft:'8px',fontSize:'10px',color:'#16a34a',fontWeight:600}}>· from official results</span>}
+            {!resultFound && stravaState==='confirmed' && <span style={{marginLeft:'8px',fontSize:'10px',color:'#FC4C02'}}>· Strava time shown below</span>}
           </label>
-          <input value={time} onChange={e=>setTime(e.target.value)} placeholder="e.g. 1:57:40 or 28:16"
-            style={inp({fontSize:'18px',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600,letterSpacing:'0.5px',borderColor:stravaState==='confirmed'?'rgba(252,76,2,0.3)':'#e2e6ed'})}
-            onFocus={e=>e.target.style.borderColor='#C9A84C'} onBlur={e=>e.target.style.borderColor=stravaState==='confirmed'?'rgba(252,76,2,0.3)':'#e2e6ed'}/>
+          <input value={officialTime} onChange={e=>setOfficialTime(e.target.value)} placeholder="e.g. 1:57:40 or 28:16"
+            style={inp({fontSize:'18px',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600,letterSpacing:'0.5px',borderColor:resultFound?'rgba(22,163,74,0.4)':'#e2e6ed'})}
+            onFocus={e=>e.target.style.borderColor='#C9A84C'} onBlur={e=>e.target.style.borderColor=resultFound?'rgba(22,163,74,0.4)':'#e2e6ed'}/>
         </div>
+
+        {/* Strava time (separate, only shown when confirmed and no official time) */}
+        {stravaState==='confirmed' && !officialTime && stravaTime && (
+          <div style={{marginBottom:'14px'}}>
+            <label style={{display:'block',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,letterSpacing:'1.5px',color:'#9aa5b4',textTransform:'uppercase',marginBottom:'6px'}}>
+              Strava Time <span style={{fontWeight:400,color:'#b0b8c4'}}>(not chip time — verify above)</span>
+            </label>
+            <input value={stravaTime} onChange={e=>setStravaTime(e.target.value)} placeholder=""
+              style={inp({fontSize:'18px',fontFamily:"'Barlow Condensed',sans-serif",fontWeight:600,letterSpacing:'0.5px',borderColor:'rgba(252,76,2,0.3)'})}
+              onFocus={e=>e.target.style.borderColor='#C9A84C'} onBlur={e=>e.target.style.borderColor='rgba(252,76,2,0.3)'}/>
+          </div>
+        )}
 
         {/* Strava section */}
         <div style={{marginBottom:'16px'}}>
           {stravaConnected ? (
             <>
-              {/* Search button */}
               {(stravaState==='idle'||stravaState==='nomatch') && (
-                <button onClick={searchStrava} disabled={stravaSearching||!date}
+                <button onClick={()=>searchStrava()} disabled={stravaSearching||!date}
                   style={{width:'100%',padding:'11px',border:'1.5px solid rgba(252,76,2,0.35)',borderRadius:'10px',background:'rgba(252,76,2,0.04)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1px',color:'#FC4C02',cursor:(!date||stravaSearching)?'not-allowed':'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',opacity:!date?0.5:1,transition:'all 0.15s'}}
                   onMouseEnter={e=>{if(date)e.currentTarget.style.background='rgba(252,76,2,0.08)'}}
                   onMouseLeave={e=>e.currentTarget.style.background='rgba(252,76,2,0.04)'}>
@@ -533,16 +558,12 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
                   No matching Strava activity found near this date.
                 </div>
               )}
-              {/* Searching */}
               {stravaState==='searching' && <div style={{marginTop:'8px'}}><PacerThinking label="Searching your Strava..."/></div>}
-              {/* Found — show map + confirm */}
               {stravaState==='found' && stravaActivity && (
                 <StravaActivityCard activity={stravaActivity} onConfirm={()=>confirmActivity(stravaActivity)} onReject={()=>{setStravaState('manual');setStravaActivity(null)}} />
               )}
-              {/* Manual picker */}
               {stravaState==='manual' && (
                 <StravaManualPicker candidates={stravaCandidates} onSelect={async (a)=>{
-                  // Fetch full detail for polyline
                   try {
                     const token = stravaProfile.strava_access_token
                     const r = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${a.id}`)
@@ -552,18 +573,16 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
                   } catch(e) { setStravaActivity(a); setStravaState('found') }
                 }} onSkip={()=>setStravaState('idle')} />
               )}
-              {/* Confirmed */}
               {stravaState==='confirmed' && stravaActivity && (
                 <StravaActivityCard activity={stravaActivity} t="confirmed" />
               )}
               {stravaState==='confirmed' && (
-                <button onClick={()=>{setStravaState('idle');setStravaActivity(null);}} style={{marginTop:'8px',width:'100%',padding:'8px',border:'1px solid #e2e6ed',borderRadius:'8px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase',letterSpacing:'1px'}}>
+                <button onClick={()=>{setStravaState('idle');setStravaActivity(null);setStravaTime('')}} style={{marginTop:'8px',width:'100%',padding:'8px',border:'1px solid #e2e6ed',borderRadius:'8px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase',letterSpacing:'1px'}}>
                   Remove Strava Activity
                 </button>
               )}
             </>
           ) : (
-            /* Not connected — grayed out */
             <div style={{padding:'11px 16px',border:'1.5px solid #e2e6ed',borderRadius:'10px',background:'#f8f9fb',display:'flex',alignItems:'center',gap:'10px',opacity:0.6}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#9aa5b4"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>Connect Strava above to pull in this activity</span>
@@ -593,37 +612,9 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
 // ── Added race row ────────────────────────────────────────────────────────────
 function RaceRow({ race, onRemove, onUpdate, index, stravaConnected, stravaProfile }) {
   const [editing, setEditing] = useState(false)
-  const [stravaSearching, setStravaSearching] = useState(false)
   const c = getDistanceColor(race.distance)
   const hasStrava = !!race.strava_activity
-
-  // Pull in Strava for an already-added race
-  const pullStrava = async () => {
-    if (!stravaProfile || !race.date) return
-    setStravaSearching(true)
-    try {
-      const token = stravaProfile.strava_access_token
-      const raceDate = new Date(race.date)
-      if (isNaN(raceDate)) { setStravaSearching(false); return }
-      const afterTs  = Math.floor(raceDate.getTime()/1000) - 14*86400
-      const beforeTs = Math.floor(raceDate.getTime()/1000) + 14*86400
-      const resp = await fetch(`/api/strava?action=activities&access_token=${token}&per_page=60&after=${afterTs}&before=${beforeTs}`)
-      const acts = await resp.json()
-      if (!Array.isArray(acts)) { setStravaSearching(false); return }
-      const DIST_MILES = {'5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31}
-      const targetMi = DIST_MILES[race.distance]||null
-      const pool = acts.filter(a => ['run','virtualrun','walk'].includes((a.type||'').toLowerCase()))
-      let match = targetMi ? pool.find(a=>Math.abs((a.distance||0)/1609.34-targetMi)/targetMi<=0.05) : null
-      if (!match) match = pool.find(a=>new Date(a.start_date_local).toDateString()===raceDate.toDateString())
-      if (match) {
-        const r = await fetch(`/api/strava?action=activity&access_token=${token}&activity_id=${match.id}`)
-        const detail = await r.json()
-        const activity = detail.id ? detail : match
-        onUpdate(race.id, { ...race, strava_activity: activity, time: fmtTime(activity.moving_time)||race.time })
-      }
-    } catch(e) {}
-    setStravaSearching(false)
-  }
+  const hasOfficial = !!race.official_time
 
   if (editing) return (
     <div style={{animation:'slideDown 0.25s ease both',animationDelay:`${index*0.05}s`}}>
@@ -634,30 +625,22 @@ function RaceRow({ race, onRemove, onUpdate, index, stravaConnected, stravaProfi
     </div>
   )
 
+  const displayTime = race.official_time || race.time
+
   return (
     <div className="ri-row" onClick={()=>setEditing(true)}
       style={{display:'flex',alignItems:'center',gap:'14px',padding:'14px 16px',background:'#fff',borderRadius:'14px',border:`1.5px solid ${c.stampBorder}25`,borderLeft:`4px solid ${c.stampBorder}`,animationDelay:`${index*0.05}s`,position:'relative'}}>
       <MiniStamp distance={race.distance} size={46}/>
       <div style={{flex:1,minWidth:0}}>
         <div style={{fontFamily:"'Bebas Neue',sans-serif",fontSize:'19px',color:'#1B2A4A',letterSpacing:'0.5px',whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis',lineHeight:1.1}}>{race.name}</div>
-        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',color:'#9aa5b4',marginTop:'2px',display:'flex',alignItems:'center',gap:'8px'}}>
+        <div style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',color:'#9aa5b4',marginTop:'2px',display:'flex',alignItems:'center',gap:'8px',flexWrap:'wrap'}}>
           {[race.location,race.date].filter(Boolean).join(' · ')}
-          {race.time&&<span style={{color:c.stampBorder,fontWeight:600}}>{race.time}</span>}
+          {displayTime&&<span style={{color:c.stampBorder,fontWeight:600}}>{displayTime}</span>}
+          {hasOfficial&&<span style={{fontSize:'10px',color:'#16a34a',fontWeight:600,textTransform:'uppercase',letterSpacing:'0.5px'}}>Official</span>}
           {hasStrava&&<span style={{display:'flex',alignItems:'center',gap:'3px',color:'#FC4C02'}}><svg width="8" height="8" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>Strava</span>}
         </div>
       </div>
       <div style={{display:'flex',alignItems:'center',gap:'8px',flexShrink:0}}>
-        {/* Pull Strava button for connected but not yet matched */}
-        {stravaConnected && !hasStrava && race.date && (
-          <button onClick={e=>{e.stopPropagation();pullStrava()}} disabled={stravaSearching}
-            style={{padding:'5px 10px',border:'1px solid rgba(252,76,2,0.3)',borderRadius:'6px',background:'rgba(252,76,2,0.05)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',fontWeight:600,letterSpacing:'1px',color:'#FC4C02',cursor:'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',gap:'4px',whiteSpace:'nowrap'}}>
-            {stravaSearching
-              ? <div style={{width:8,height:8,border:'1.5px solid rgba(252,76,2,0.3)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
-              : <svg width="8" height="8" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-            }
-            Pull Activity
-          </button>
-        )}
         <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#b0b8c4',letterSpacing:'1px'}}>TAP TO EDIT</span>
         <button onClick={e=>{e.stopPropagation();onRemove(race.id)}}
           style={{background:'none',border:'none',cursor:'pointer',padding:'6px',borderRadius:'6px',color:'#c53030',fontSize:'18px',lineHeight:1}}
@@ -674,17 +657,21 @@ export default function RaceImport() {
   const { state: locationState } = useLocation()
   const { user } = useAuth()
 
-  const [firstName, setFirstName]       = useState('')
-  const [saving, setSaving]             = useState(false)
-  const [query, setQuery]               = useState('')
-  const [searching, setSearching]       = useState(false)
-  const [pacerResult, setPacerResult]   = useState(null)
-  const [searchError, setSearchError]   = useState('')
-  const [races, setRaces]               = useState([])
-  const [popupOpen, setPopupOpen]       = useState(false)
+  const [firstName, setFirstName]   = useState('')
+  const [userProfile, setUserProfile] = useState(null)
+  const [saving, setSaving]         = useState(false)
+  const [query, setQuery]           = useState('')
+  const [selectedYear, setSelectedYear] = useState('')
+  const [selectedDist, setSelectedDist] = useState('')
+  const [searching, setSearching]   = useState(false)
+  const [pacerResult, setPacerResult] = useState(null)
+  const [searchError, setSearchError] = useState('')
+  const [races, setRaces]           = useState([])
+  const [popupOpen, setPopupOpen]   = useState(false)
+  const [poolConsent]               = useState(locationState?.poolConsent !== false)
 
   // Strava state
-  const [stravaProfile, setStravaProfile]   = useState(null)
+  const [stravaProfile, setStravaProfile]     = useState(null)
   const [stravaConnected, setStravaConnected] = useState(false)
   const [stravaConnecting, setStravaConnecting] = useState(false)
 
@@ -695,7 +682,6 @@ export default function RaceImport() {
 
     const init = async () => {
       if (locationState?.firstName) setFirstName(locationState.firstName)
-
       if (!user || isDemo(user?.email)) { setFirstName('Ryan'); return }
 
       try {
@@ -704,21 +690,22 @@ export default function RaceImport() {
         if (!uid) return
 
         const { data: prof } = await supabase.from('profiles')
-          .select('full_name,strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
+          .select('full_name,first_name,last_name,dob,gender,strava_access_token,strava_refresh_token,strava_expires_at,strava_athlete_id,strava_connected')
           .eq('id', uid).single()
 
-        if (prof?.full_name) {
-          const parts = prof.full_name.trim().split(' ')
-          if (parts[0] && !locationState?.firstName) setFirstName(parts[0])
-        }
-        if (prof?.strava_connected && prof?.strava_access_token) {
-          setStravaProfile(prof)
-          setStravaConnected(true)
+        if (prof) {
+          setUserProfile(prof)
+          const fn = prof.first_name || prof.full_name?.trim().split(' ')[0] || ''
+          if (fn && !locationState?.firstName) setFirstName(fn)
+          if (prof.strava_connected && prof.strava_access_token) {
+            setStravaProfile(prof)
+            setStravaConnected(true)
+          }
         }
       } catch(e) {}
     }
 
-    // Restore races from sessionStorage (in case user went through Strava OAuth)
+    // Restore races from sessionStorage (Strava OAuth redirect)
     const saved = sessionStorage.getItem(SESSION_KEY)
     if (saved) {
       try {
@@ -732,11 +719,8 @@ export default function RaceImport() {
     return () => document.getElementById('rp-ri2-styles')?.remove()
   }, [user])
 
-  // Save races to sessionStorage before Strava OAuth redirect
   const connectStrava = async () => {
-    if (races.length > 0) {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify(races))
-    }
+    if (races.length > 0) sessionStorage.setItem(SESSION_KEY, JSON.stringify(races))
     setStravaConnecting(true)
     try {
       const { data: { session } } = await supabase.auth.getSession()
@@ -751,39 +735,100 @@ export default function RaceImport() {
 
   const handleSearch = async () => {
     if (!query.trim()) return
+    if (!selectedDist) {
+      // Gently nudge user to pick a distance
+      inputRef.current?.focus()
+      return
+    }
     setSearching(true)
     setSearchError('')
     setPacerResult(null)
     setPopupOpen(true)
+
     try {
+      const body = {
+        action: 'race_lookup',
+        query: query.trim(),
+        year: selectedYear || '',
+        distance: selectedDist,
+      }
+      // Pass runner identity for result lookup
+      if (userProfile) {
+        body.first_name = userProfile.first_name || userProfile.full_name?.trim().split(' ')[0] || ''
+        body.last_name  = userProfile.last_name  || userProfile.full_name?.trim().split(' ').slice(1).join(' ') || ''
+        body.dob        = userProfile.dob || ''
+      }
+
       const resp = await fetch('/api/pacer', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ action:'race_lookup', query:query.trim() })
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
       })
       const data = await resp.json()
       if (data.error) throw new Error(data.error)
       setPacerResult(data)
     } catch(e) {
       setSearchError("Pacer couldn't find that race — try being more specific.")
-      setPacerResult({ name:query.trim(), date:'', date_sort:null, location:'', city:'', state:'', distance:'', confidence:1 })
+      setPacerResult({
+        name: query.trim(), date: selectedYear ? `Jan ${selectedYear}` : '',
+        date_sort: selectedYear ? `${selectedYear}-01-01` : null,
+        location: '', city: '', state: '', distance: selectedDist || '', confidence: 1,
+        race_vibe: '', runner_result: { found: false },
+      })
     }
     setSearching(false)
   }
 
-  const handleAddRace = (details) => {
-    setRaces(p => [{
-      id:`manual_${Date.now()}`,
-      name:details.name, date:details.date||'', date_sort:details.date_sort||null,
-      location:details.location||'', city:details.city||'', state:details.state||'',
-      distance:details.distance||'Other', time:details.time||'',
-      source:'MANUAL', confidence:details.confidence||2,
-      strava_activity:details.strava_activity||null,
-    }, ...p])
+  const handleAddRace = async (details) => {
+    const newRace = {
+      id: `manual_${Date.now()}`,
+      name: details.name, date: details.date||'', date_sort: details.date_sort||null,
+      location: details.location||'', city: details.city||'', state: details.state||'',
+      distance: details.distance||'Other',
+      time: details.official_time || details.time || '',
+      official_time: details.official_time || '',
+      source: 'MANUAL', confidence: details.confidence||2,
+      strava_activity: details.strava_activity||null,
+      runner_result: details.runner_result||null,
+    }
+    setRaces(p => [newRace, ...p])
     setQuery('')
+    setSelectedDist('')
     setPacerResult(null)
     setSearchError('')
     setPopupOpen(false)
-    setTimeout(()=>inputRef.current?.focus(), 100)
+    setTimeout(() => inputRef.current?.focus(), 100)
+
+    // Contribute to pool (non-blocking) if consent given and official time exists
+    if (poolConsent && details.official_time && details.date_sort && userProfile) {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        const uid = session?.user?.id
+        if (uid) {
+          const raceDateObj = new Date(details.date_sort)
+          const dobObj = userProfile.dob ? new Date(userProfile.dob) : null
+          let ageAtRace = null
+          if (dobObj && !isNaN(dobObj) && !isNaN(raceDateObj)) {
+            ageAtRace = raceDateObj.getFullYear() - dobObj.getFullYear()
+            const m = raceDateObj.getMonth() - dobObj.getMonth()
+            if (m < 0 || (m === 0 && raceDateObj.getDate() < dobObj.getDate())) ageAtRace--
+          }
+          const timeSecs = timeToSecs(details.official_time)
+          if (timeSecs) {
+            const raceYear = raceDateObj.getFullYear()
+            const normalizedName = details.name.toLowerCase().trim()
+            await supabase.from('race_results_pool').insert({
+              user_id: uid,
+              race_name: normalizedName,
+              race_year: raceYear,
+              distance: details.distance,
+              official_time_secs: timeSecs,
+              age_at_race: ageAtRace,
+              gender: userProfile.gender || null,
+            })
+          }
+        }
+      } catch(e) { /* non-blocking — silently ignore */ }
+    }
   }
 
   const handleUpdateRace = (id, updated) => {
@@ -793,67 +838,60 @@ export default function RaceImport() {
   const handleSave = async () => {
     setSaving(true)
     try {
-      const { data:{ session } } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       const userId = session?.user?.id
       if (userId && races.length > 0) {
         const toInsert = races.map(r => ({
-          user_id:userId, name:r.name, date:r.date, date_sort:r.date_sort||null,
-          location:r.location, city:r.city, state:r.state,
-          distance:r.distance, time:r.time, source:r.source, confidence:r.confidence,
+          user_id: userId, name: r.name, date: r.date, date_sort: r.date_sort||null,
+          location: r.location, city: r.city, state: r.state,
+          distance: r.distance, time: r.official_time || r.time,
+          source: r.source, confidence: r.confidence,
         }))
         const { data: inserted } = await supabase
           .from('passport_races')
           .upsert(toInsert, { onConflict:'user_id,name,date', ignoreDuplicates:true })
           .select()
 
-        // ── Fire partial race scores in background (non-blocking) ────────────
         if (inserted && inserted.length > 0) {
-          const allRaces = inserted  // use what we just saved
+          const allRaces = inserted
           const scoreInBackground = async () => {
             for (const race of inserted) {
-              if (!race.time) continue  // can't score without a finish time
+              if (!race.time) continue
               try {
                 const resp = await fetch('/api/pacer', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
+                  method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    action: 'race_score',
-                    is_partial: true,
-                    race: {
-                      id: race.id,
-                      name: race.name,
-                      distance: race.distance,
-                      time: race.time,
-                      is_pr: race.is_pr || false,
-                    },
+                    action: 'race_score', is_partial: true,
+                    race: { id: race.id, name: race.name, distance: race.distance, time: race.time, is_pr: race.is_pr || false },
                     all_races: allRaces,
                   }),
                 })
                 const data = await resp.json()
                 if (data.score) {
                   await supabase.from('passport_races').update({
-                    pacer_score: data.score,
-                    pacer_grade: data.grade,
-                    pacer_score_partial: true,
+                    pacer_score: data.score, pacer_grade: data.grade, pacer_score_partial: true,
                   }).eq('id', race.id)
                 }
-              } catch(e) { /* non-blocking — silently ignore */ }
+              } catch(e) {}
             }
           }
-          scoreInBackground()  // fire and forget
+          scoreInBackground()
         }
       }
     } catch(e) { console.error('Save error:', e) }
     setSaving(false)
-    navigate('/goal-races', { state:{ imported:races.length, firstName } })
+    navigate('/goal-races', { state: { imported: races.length, firstName } })
   }
 
   const closePopup = () => {
     setPacerResult(null)
     setSearchError('')
     setQuery('')
+    setSelectedDist('')
     setPopupOpen(false)
   }
+
+  const distMissing = !selectedDist && query.trim().length > 0
 
   return (
     <div style={{minHeight:'100vh',background:'#fff',fontFamily:"'Barlow',sans-serif",position:'relative',overflow:'hidden'}}>
@@ -885,11 +923,11 @@ export default function RaceImport() {
             ADD YOUR<br/>RACE HISTORY
           </h1>
           <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'16px',color:'#6b7a8d',margin:0,fontWeight:300,lineHeight:1.7}}>
-            Type any race name — Pacer will confirm the details and stamp it to your Passport.
+            Type a race name, pick your distance and year — Pacer will search the web to confirm it and look up your result.
           </p>
         </div>
 
-        {/* Strava connect button */}
+        {/* Strava connect */}
         <div style={{marginBottom:'16px',animation:'fadeIn 0.4s ease 0.05s both'}}>
           {stravaConnected ? (
             <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'12px 16px',background:'rgba(252,76,2,0.05)',border:'1.5px solid rgba(252,76,2,0.2)',borderRadius:'12px'}}>
@@ -898,47 +936,77 @@ export default function RaceImport() {
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)',marginLeft:'auto'}}>Activities will match automatically</span>
             </div>
           ) : (
-            <button
-              onClick={connectStrava}
-              disabled={stravaConnecting || popupOpen}
-              style={{width:'100%',padding:'13px 16px',border:'1.5px solid rgba(252,76,2,0.35)',borderRadius:'12px',background:'rgba(252,76,2,0.04)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1.5px',color: popupOpen?'#9aa5b4':'#FC4C02',cursor:popupOpen||stravaConnecting?'not-allowed':'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',transition:'all 0.15s',opacity:popupOpen?0.5:1}}
-              title={popupOpen?'Close the race search first':''}
-              onMouseEnter={e=>{if(!popupOpen&&!stravaConnecting){e.currentTarget.style.background='rgba(252,76,2,0.09)'}}}
+            <button onClick={connectStrava} disabled={stravaConnecting||popupOpen}
+              style={{width:'100%',padding:'13px 16px',border:'1.5px solid rgba(252,76,2,0.35)',borderRadius:'12px',background:'rgba(252,76,2,0.04)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1.5px',color:popupOpen?'#9aa5b4':'#FC4C02',cursor:popupOpen||stravaConnecting?'not-allowed':'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'10px',transition:'all 0.15s',opacity:popupOpen?0.5:1}}
+              onMouseEnter={e=>{if(!popupOpen&&!stravaConnecting)e.currentTarget.style.background='rgba(252,76,2,0.09)'}}
               onMouseLeave={e=>e.currentTarget.style.background='rgba(252,76,2,0.04)'}>
-              {stravaConnecting ? (
-                <div style={{width:14,height:14,border:'2px solid rgba(252,76,2,0.3)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-              )}
+              {stravaConnecting
+                ? <div style={{width:14,height:14,border:'2px solid rgba(252,76,2,0.3)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite'}}/>
+                : <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+              }
               {stravaConnecting ? 'Connecting...' : popupOpen ? 'Close race search to connect Strava' : 'Sync Strava to Pull in Race Activities'}
             </button>
           )}
         </div>
 
         {/* Search bar */}
-        <div style={{marginBottom:'16px',animation:'fadeIn 0.4s ease 0.1s both'}}>
+        <div style={{marginBottom:'12px',animation:'fadeIn 0.4s ease 0.1s both'}}>
           <div style={{display:'flex',gap:'10px'}}>
             <div style={{flex:1,position:'relative'}}>
               <div style={{position:'absolute',left:'15px',top:'50%',transform:'translateY(-50%)',fontSize:'20px',pointerEvents:'none',zIndex:1}}>⚡</div>
               <input ref={inputRef} value={query}
                 onChange={e=>{ setQuery(e.target.value); if(pacerResult){setPacerResult(null);setSearchError('');setPopupOpen(false)} }}
                 onKeyDown={e=>e.key==='Enter'&&handleSearch()}
-                placeholder="e.g. Cherry Blossom 10 Miler 2023"
+                placeholder="e.g. Cherry Blossom 10 Miler"
                 autoCapitalize="words" autoCorrect="off"
                 style={{width:'100%',padding:'17px 17px 17px 48px',borderRadius:'14px',border:'2px solid #e2e6ed',background:'#fafbfc',color:'#1B2A4A',fontSize:'17px',fontFamily:"'Barlow',sans-serif",outline:'none',boxSizing:'border-box',transition:'border-color 0.2s,box-shadow 0.2s'}}
                 onFocus={e=>{e.target.style.borderColor='#1B2A4A';e.target.style.boxShadow='0 0 0 3px rgba(27,42,74,0.06)'}}
                 onBlur={e=>{e.target.style.borderColor='#e2e6ed';e.target.style.boxShadow='none'}}/>
             </div>
-            <button onClick={handleSearch} disabled={!query.trim()||searching}
-              style={{padding:'0 24px',border:'none',borderRadius:'14px',background:query.trim()&&!searching?'#C9A84C':'#e2e6ed',color:query.trim()&&!searching?'#1B2A4A':'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px',fontWeight:700,letterSpacing:'1.5px',textTransform:'uppercase',cursor:query.trim()&&!searching?'pointer':'not-allowed',transition:'all 0.15s',flexShrink:0}}
-              onMouseEnter={e=>{if(query.trim()&&!searching)e.currentTarget.style.background='#b8913a'}}
-              onMouseLeave={e=>{if(query.trim()&&!searching)e.currentTarget.style.background='#C9A84C'}}>
+            <button onClick={handleSearch} disabled={!query.trim()||searching||!selectedDist}
+              style={{padding:'0 24px',border:'none',borderRadius:'14px',background:query.trim()&&!searching&&selectedDist?'#C9A84C':'#e2e6ed',color:query.trim()&&!searching&&selectedDist?'#1B2A4A':'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'14px',fontWeight:700,letterSpacing:'1.5px',textTransform:'uppercase',cursor:query.trim()&&!searching&&selectedDist?'pointer':'not-allowed',transition:'all 0.15s',flexShrink:0}}
+              onMouseEnter={e=>{if(query.trim()&&!searching&&selectedDist)e.currentTarget.style.background='#b8913a'}}
+              onMouseLeave={e=>{if(query.trim()&&!searching&&selectedDist)e.currentTarget.style.background='#C9A84C'}}>
               {searching?'...':'Look Up'}
             </button>
           </div>
+
+          {/* Distance pills row */}
+          <div style={{marginTop:'10px',display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'2px'}}>
+            {DISTANCES.map(d=>(
+              <button key={d} className={`ri-search-dist-btn${selectedDist===d?' sel':''}`}
+                onClick={()=>setSelectedDist(prev=>prev===d?'':d)}>
+                {d}
+              </button>
+            ))}
+          </div>
+
+          {/* Year pills row */}
+          <div style={{marginTop:'8px',display:'flex',gap:'6px',overflowX:'auto',paddingBottom:'2px'}}>
+            {YEARS.slice(0,15).map(y=>(
+              <button key={y}
+                onClick={()=>setSelectedYear(prev=>prev===y?'':y)}
+                style={{padding:'6px 12px',borderRadius:'20px',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,cursor:'pointer',transition:'all 0.12s',border:'1.5px solid',whiteSpace:'nowrap',flexShrink:0,
+                  borderColor: selectedYear===y?'#1B2A4A':'#e2e6ed',
+                  background:  selectedYear===y?'#1B2A4A':'#fafbfc',
+                  color:       selectedYear===y?'#fff':'#9aa5b4',
+                }}>
+                {y}
+              </button>
+            ))}
+            {/* Older years collapsed into a select */}
+            <select value={YEARS.slice(15).includes(selectedYear)?selectedYear:''}
+              onChange={e=>setSelectedYear(e.target.value)}
+              style={{padding:'6px 10px',borderRadius:'20px',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,cursor:'pointer',border:'1.5px solid #e2e6ed',background:'#fafbfc',color:'#9aa5b4',outline:'none',flexShrink:0}}>
+              <option value="">Older...</option>
+              {YEARS.slice(15).map(y=><option key={y} value={y}>{y}</option>)}
+            </select>
+          </div>
+
+          {/* Helper text */}
           {!pacerResult&&!searching&&!searchError&&(
-            <p style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#b0b8c4',marginTop:'8px',textAlign:'center',marginBottom:0}}>
-              Include the year for best results · Press Enter or tap Look Up
+            <p style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:distMissing?'#C9A84C':'#b0b8c4',marginTop:'8px',textAlign:'center',marginBottom:0,transition:'color 0.2s'}}>
+              {distMissing ? '← Pick your distance to look up this race' : 'Pick a distance and year, then tap Look Up'}
             </p>
           )}
           {searchError&&!pacerResult&&(
