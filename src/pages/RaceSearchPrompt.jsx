@@ -12,9 +12,9 @@ export default function RaceSearchPrompt() {
   const { user }   = useAuth()
   const firstName  = location.state?.firstName || ''
 
-  const [visible, setVisible]       = useState(false)
+  const [visible, setVisible]         = useState(false)
   const [poolConsent, setPoolConsent] = useState(true)
-  const [saving, setSaving]         = useState(false)
+  const [saving, setSaving]           = useState(false)
 
   useEffect(() => {
     setTimeout(() => setVisible(true), 80)
@@ -66,6 +66,15 @@ export default function RaceSearchPrompt() {
 
       <div style={{ position:'relative', zIndex:10, width:'100%', maxWidth:'460px', opacity:visible?1:0, transform:visible?'translateY(0)':'translateY(20px)', transition:'opacity 0.45s ease, transform 0.45s ease' }}>
 
+        {/* Back button */}
+        <button onClick={() => navigate('/create-account')}
+          style={{ display:'flex', alignItems:'center', gap:'5px', background:'none', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'20px', padding:0 }}
+          onMouseEnter={e => e.currentTarget.style.color='#1B2A4A'}
+          onMouseLeave={e => e.currentTarget.style.color='#9aa5b4'}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
+
         {/* Brand mark */}
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:'8px', marginBottom:'24px' }}>
           <div style={{ width:7, height:7, borderRadius:'50%', background:'#C9A84C' }} />
@@ -74,7 +83,7 @@ export default function RaceSearchPrompt() {
 
         {/* Step indicator */}
         <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'8px' }}>
-          <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
+          <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
           <div style={{ height:'3px', width:'36px', background:'#e2e6ed', borderRadius:'2px' }} />
         </div>
@@ -106,7 +115,6 @@ export default function RaceSearchPrompt() {
         {/* Feature cards */}
         <div style={{ display:'flex', flexDirection:'column', gap:'10px', marginBottom:'20px' }}>
 
-          {/* Web search confirmation */}
           <div className="rsp-feature">
             <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(201,168,76,0.1)', border:'1.5px solid rgba(201,168,76,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <span style={{ fontSize:'18px' }}>🔍</span>
@@ -114,12 +122,11 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Real Race Confirmation</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Type a race name, pick your distance and year — Pacer searches the web to confirm the official date, location, and course details. No guessing.
+                Type a race name, pick your distance and year — Pacer searches the web to confirm the official date, location, and course details.
               </div>
             </div>
           </div>
 
-          {/* Personality layer */}
           <div className="rsp-feature">
             <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(27,42,74,0.07)', border:'1.5px solid rgba(27,42,74,0.12)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <span style={{ fontSize:'18px' }}>🏅</span>
@@ -127,25 +134,11 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Race Personality & Insights</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Pacer searches race forums, reviews, and runner communities to tell you what makes each race special — the course, the crowd, the vibe. Every stamp tells a story.
+                Pacer researches each race — the course, the crowd, the vibe — and adds it to your stamp. Every race tells a story.
               </div>
             </div>
           </div>
 
-          {/* Results lookup */}
-          <div className="rsp-feature">
-            <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(22,163,74,0.07)', border:'1.5px solid rgba(22,163,74,0.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-              <span style={{ fontSize:'18px' }}>📊</span>
-            </div>
-            <div>
-              <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Automatic Result Lookup</div>
-              <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Pacer uses your name and date of birth to search for your official finish time. When it finds it, everything fills in automatically.
-              </div>
-            </div>
-          </div>
-
-          {/* Strava */}
           <div className="rsp-feature" style={{ borderColor:'rgba(252,76,2,0.2)', background:'rgba(252,76,2,0.02)' }}>
             <div style={{ width:40, height:40, borderRadius:'10px', background:'rgba(252,76,2,0.08)', border:'1.5px solid rgba(252,76,2,0.2)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
@@ -153,7 +146,7 @@ export default function RaceSearchPrompt() {
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'17px', color:'#1B2A4A', letterSpacing:'0.5px', lineHeight:1, marginBottom:'4px' }}>Strava Activity Match</div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', color:'#6b7a8d', lineHeight:1.5 }}>
-                Connect Strava on the next screen — Pacer will automatically find your matching activity and pull in your route map, splits, and elevation.
+                Connect Strava on the next screen — Pacer will automatically find your matching activity and pull in your route, splits, and elevation.
               </div>
             </div>
           </div>
@@ -167,16 +160,11 @@ export default function RaceSearchPrompt() {
                 Help Make Pacer Smarter
               </div>
               <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', color:'#6b7a8d', lineHeight:1.6 }}>
-                Allow your anonymous finish times to contribute to community grading. When enough Race Passport runners have run the same race, Pacer can tell you how you ranked among them — by age group, distance, and year. No personal info is shared.
+                Allow your anonymous finish times to contribute to community grading. When enough runners have run the same race, Pacer can rank you among them. No personal info shared.
               </div>
             </div>
-            {/* Toggle */}
             <label className="rsp-toggle" style={{ marginTop:'2px' }}>
-              <input
-                type="checkbox"
-                checked={poolConsent}
-                onChange={e => setPoolConsent(e.target.checked)}
-              />
+              <input type="checkbox" checked={poolConsent} onChange={e => setPoolConsent(e.target.checked)} />
               <div className="rsp-toggle-track" />
               <div className="rsp-toggle-thumb" />
             </label>
@@ -192,17 +180,14 @@ export default function RaceSearchPrompt() {
         </div>
 
         {/* CTA */}
-        <button
-          onClick={handleContinue}
-          disabled={saving}
+        <button onClick={handleContinue} disabled={saving}
           style={{ width:'100%', padding:'17px', border:'none', borderRadius:'14px', background:'#1B2A4A', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'15px', fontWeight:600, letterSpacing:'2px', color:'#fff', cursor:'pointer', textTransform:'uppercase', marginBottom:'10px', transition:'background 0.2s', opacity:saving?0.7:1 }}
           onMouseEnter={e => { if(!saving) e.currentTarget.style.background='#C9A84C' }}
           onMouseLeave={e => { if(!saving) e.currentTarget.style.background='#1B2A4A' }}>
           {saving ? 'One sec...' : "Let's Build My Passport →"}
         </button>
 
-        <button
-          onClick={() => navigate('/build-passport', { state:{ firstName } })}
+        <button onClick={() => navigate('/build-passport', { state:{ firstName } })}
           style={{ width:'100%', padding:'14px', border:'1.5px solid #e2e6ed', borderRadius:'14px', background:'#fff', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'13px', fontWeight:600, letterSpacing:'1.5px', color:'#9aa5b4', cursor:'pointer', textTransform:'uppercase', transition:'all 0.15s' }}
           onMouseEnter={e => { e.currentTarget.style.borderColor='#1B2A4A'; e.currentTarget.style.color='#1B2A4A' }}
           onMouseLeave={e => { e.currentTarget.style.borderColor='#e2e6ed'; e.currentTarget.style.color='#9aa5b4' }}>
@@ -210,7 +195,7 @@ export default function RaceSearchPrompt() {
         </button>
 
         <p style={{ textAlign:'center', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#b0b8c4', margin:'16px 0 0', lineHeight:1.6 }}>
-          You can always add races anytime from your Passport page.
+          Everything here can be done later from your Passport page.
         </p>
 
       </div>
