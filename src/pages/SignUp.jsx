@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { supabase } from '../lib/supabase'
 
 export default function SignUp() {
   const navigate = useNavigate()
   const [email, setEmail]                 = useState('')
   const [error, setError]                 = useState(null)
-  const [checking, setChecking]           = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [appleLoading, setAppleLoading]   = useState(false)
 
@@ -35,37 +33,12 @@ export default function SignUp() {
     return () => document.getElementById('rp-signup-styles')?.remove()
   }, [])
 
-  const handleContinue = async () => {
+  const handleContinue = () => {
     setError(null)
     if (!email.trim() || !email.includes('@')) {
       setError('Please enter a valid email address')
       return
     }
-    setChecking(true)
-    try {
-      // Probe email existence — signInWithPassword with garbage password
-      // tells us if the account exists without needing OTP or admin access
-      const { error: probeError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password: 'rp_probe_password_that_wont_match_anything_xyz',
-      })
-      const msg = (probeError?.message || '').toLowerCase()
-      // These errors mean the email EXISTS in the system
-      if (msg.includes('invalid login credentials') || msg.includes('email not confirmed') || msg.includes('invalid credentials')) {
-        setChecking(false)
-        setError(
-          <span>
-            An account with this email already exists.{' '}
-            <Link to="/login" style={{ color:'#C9A84C', fontWeight:600 }}>Sign in instead →</Link>
-          </span>
-        )
-        return
-      }
-      // Any other outcome — email is new, proceed
-    } catch(e) {
-      // Network error etc — let them through, CreateAccount will catch it
-    }
-    setChecking(false)
     navigate('/create-account', { state: { email: email.trim() } })
   }
 
@@ -135,12 +108,9 @@ export default function SignUp() {
         </div>
 
         <button className="rp-primary" onClick={handleContinue}
-          disabled={!email.includes('@') || checking}
-          style={{ marginBottom:'4px', display:'flex', alignItems:'center', justifyContent:'center', gap:'8px' }}>
-          {checking
-            ? <><div style={{ width:14, height:14, border:'2px solid rgba(255,255,255,0.3)', borderTopColor:'#fff', borderRadius:'50%', animation:'spin 0.7s linear infinite' }}/> Checking...</>
-            : 'Continue'
-          }
+          disabled={!email.includes('@')}
+          style={{ marginBottom:'4px' }}>
+          Continue
         </button>
 
         <div className="rp-divider"><span>OR</span></div>
