@@ -282,11 +282,12 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
 
   useEffect(() => { if (isNew && nameRef.current) nameRef.current.focus() }, [])
 
-  // Auto-trigger Strava search when card opens if connected and we have a date
+  // Auto-trigger Strava search silently when card opens
   useEffect(() => {
-    if (isNew && stravaConnected && stravaProfile && initial.date_sort && stravaState === 'idle') {
-      searchStrava(initial.date_sort, initial.distance)
-    }
+    if (!isNew || !stravaConnected || !stravaProfile) return
+    const useDate = initial.date_sort || initial.date || ''
+    if (!useDate) return
+    searchStrava(useDate, initial.distance)
   }, [])
 
   const inp = (extra={}) => ({
@@ -443,8 +444,8 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
 
       <div style={{padding:'18px'}}>
 
-        {/* Pacer vibe block */}
-        {initial.race_vibe && (
+        {/* Pacer vibe block — confidence 3 only */}
+        {initial.race_vibe && initial.confidence >= 3 && (
           <div style={{marginBottom:'16px',padding:'14px 16px',background:'rgba(27,42,74,0.03)',border:'1.5px solid rgba(27,42,74,0.08)',borderRadius:'12px',borderLeft:'4px solid #C9A84C'}}>
             <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'7px'}}>
               <span style={{fontSize:'13px'}}>⚡</span>
@@ -539,29 +540,40 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
           </div>
         )}
 
-        {/* Strava section */}
+        {/* Strava section — silent auto-search, manual override available */}
         <div style={{marginBottom:'16px'}}>
           {stravaConnected ? (
             <>
-              {(stravaState==='idle'||stravaState==='nomatch') && (
-                <button onClick={()=>searchStrava()} disabled={stravaSearching||!date}
-                  style={{width:'100%',padding:'11px',border:'1.5px solid rgba(252,76,2,0.35)',borderRadius:'10px',background:'rgba(252,76,2,0.04)',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'13px',fontWeight:600,letterSpacing:'1px',color:'#FC4C02',cursor:(!date||stravaSearching)?'not-allowed':'pointer',textTransform:'uppercase',display:'flex',alignItems:'center',justifyContent:'center',gap:'8px',opacity:!date?0.5:1,transition:'all 0.15s'}}
-                  onMouseEnter={e=>{if(date)e.currentTarget.style.background='rgba(252,76,2,0.08)'}}
-                  onMouseLeave={e=>e.currentTarget.style.background='rgba(252,76,2,0.04)'}>
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-                  {stravaState==='nomatch' ? 'Try Strava Search Again' : 'Search for This Activity in Strava'}
-                  {!date && <span style={{fontSize:'10px',fontWeight:400,opacity:0.7}}>(add a date first)</span>}
-                </button>
-              )}
-              {stravaState==='nomatch' && (
-                <div style={{marginTop:'8px',padding:'10px 14px',background:'rgba(252,76,2,0.04)',borderRadius:'8px',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4'}}>
-                  No matching Strava activity found near this date.
+              {/* Searching silently */}
+              {stravaState==='searching' && (
+                <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'11px 14px',border:'1.5px solid rgba(252,76,2,0.2)',borderRadius:'10px',background:'rgba(252,76,2,0.03)'}}>
+                  <div style={{width:12,height:12,border:'2px solid rgba(252,76,2,0.3)',borderTopColor:'#FC4C02',borderRadius:'50%',animation:'spin 0.7s linear infinite',flexShrink:0}}/>
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,letterSpacing:'1px',color:'#FC4C02',textTransform:'uppercase'}}>Searching your Strava...</span>
                 </div>
               )}
-              {stravaState==='searching' && <div style={{marginTop:'8px'}}><PacerThinking label="Searching your Strava..."/></div>}
+              {/* No match — show search again */}
+              {stravaState==='nomatch' && (
+                <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'11px 14px',border:'1.5px solid #e2e6ed',borderRadius:'10px',background:'#fafbfc'}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#9aa5b4"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4',flex:1}}>No Strava activity found</span>
+                  <button onClick={()=>searchStrava()} style={{padding:'5px 12px',border:'1.5px solid rgba(252,76,2,0.3)',borderRadius:'6px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',fontWeight:600,color:'#FC4C02',cursor:'pointer',textTransform:'uppercase',letterSpacing:'0.5px',whiteSpace:'nowrap'}}>
+                    Search Again
+                  </button>
+                </div>
+              )}
+              {/* Idle (no date) */}
+              {stravaState==='idle' && (
+                <div style={{display:'flex',alignItems:'center',gap:'10px',padding:'11px 14px',border:'1.5px solid rgba(252,76,2,0.2)',borderRadius:'10px',background:'rgba(252,76,2,0.03)'}}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="#FC4C02"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,color:'#FC4C02',letterSpacing:'0.5px'}}>Strava Connected</span>
+                  <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'rgba(252,76,2,0.6)',marginLeft:'auto'}}>Add a date to match activity</span>
+                </div>
+              )}
+              {/* Found — confirm or reject */}
               {stravaState==='found' && stravaActivity && (
                 <StravaActivityCard activity={stravaActivity} onConfirm={()=>confirmActivity(stravaActivity)} onReject={()=>{setStravaState('manual');setStravaActivity(null)}} />
               )}
+              {/* Manual picker */}
               {stravaState==='manual' && (
                 <StravaManualPicker candidates={stravaCandidates} onSelect={async (a)=>{
                   try {
@@ -571,21 +583,29 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
                     setStravaActivity(detail.id ? detail : a)
                     setStravaState('found')
                   } catch(e) { setStravaActivity(a); setStravaState('found') }
-                }} onSkip={()=>setStravaState('idle')} />
+                }} onSkip={()=>setStravaState('nomatch')} />
               )}
+              {/* Confirmed — show map + wrong/remove options */}
               {stravaState==='confirmed' && stravaActivity && (
-                <StravaActivityCard activity={stravaActivity} t="confirmed" />
-              )}
-              {stravaState==='confirmed' && (
-                <button onClick={()=>{setStravaState('idle');setStravaActivity(null);setStravaTime('')}} style={{marginTop:'8px',width:'100%',padding:'8px',border:'1px solid #e2e6ed',borderRadius:'8px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase',letterSpacing:'1px'}}>
-                  Remove Strava Activity
-                </button>
+                <>
+                  <StravaActivityCard activity={stravaActivity} t="confirmed" />
+                  <div style={{marginTop:'8px',display:'flex',gap:'8px'}}>
+                    <button onClick={()=>{setStravaState('manual');setStravaActivity(null);setStravaTime('')}}
+                      style={{flex:1,padding:'8px',border:'1px solid #e2e6ed',borderRadius:'8px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#9aa5b4',cursor:'pointer',textTransform:'uppercase',letterSpacing:'1px'}}>
+                      Wrong Activity
+                    </button>
+                    <button onClick={()=>{setStravaState('idle');setStravaActivity(null);setStravaTime('')}}
+                      style={{flex:1,padding:'8px',border:'1px solid #e2e6ed',borderRadius:'8px',background:'transparent',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'11px',color:'#c53030',cursor:'pointer',textTransform:'uppercase',letterSpacing:'1px'}}>
+                      Remove
+                    </button>
+                  </div>
+                </>
               )}
             </>
           ) : (
-            <div style={{padding:'11px 16px',border:'1.5px solid #e2e6ed',borderRadius:'10px',background:'#f8f9fb',display:'flex',alignItems:'center',gap:'10px',opacity:0.6}}>
+            <div style={{padding:'11px 16px',border:'1.5px solid #e2e6ed',borderRadius:'10px',background:'#fafbfc',display:'flex',alignItems:'center',gap:'10px',opacity:0.5}}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="#9aa5b4"><path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169"/></svg>
-              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>Connect Strava above to pull in this activity</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',color:'#9aa5b4',fontWeight:600,letterSpacing:'1px',textTransform:'uppercase'}}>Connect Strava on the previous screen</span>
             </div>
           )}
         </div>
