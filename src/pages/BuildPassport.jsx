@@ -37,7 +37,7 @@ export default function BuildPassport() {
   const importedCount = location.state?.imported || 0
   const firstName     = location.state?.firstName || ''
 
-  const [checking, setChecking]         = useState(true) // checking for returning user
+  const [checking, setChecking]         = useState(true)
   const [phone, setPhone]               = useState('')
   const [gender, setGender]             = useState('')
   const [address, setAddress]           = useState('')
@@ -52,6 +52,7 @@ export default function BuildPassport() {
   const [goalDistance, setGoalDistance] = useState('')
   const [error, setError]               = useState(null)
   const [saving, setSaving]             = useState(false)
+  const [fullName, setFullName]         = useState('')
 
   const SIZES     = ['XS','S','M','L','XL','XXL','XXXL']
   const DISTANCES = ['5K','10K','10 Mile','Half Marathon','Marathon','Ultra','Triathlon']
@@ -62,8 +63,8 @@ export default function BuildPassport() {
 
       const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single()
 
-      // Pre-fill any existing profile fields
       if (data) {
+        setFullName(data.full_name || '')
         setPhone(data.phone || '')
         setGender(data.gender || '')
         setAddress(data.address || '')
@@ -118,7 +119,14 @@ export default function BuildPassport() {
     setError(null)
     setSaving(true)
     try {
+      // Derive first_name and last_name from full_name
+      const nameParts = (fullName || '').trim().split(' ').filter(Boolean)
+      const derivedFirst = nameParts[0] || ''
+      const derivedLast  = nameParts.slice(1).join(' ') || ''
+
       await supabase.from('profiles').update({
+        first_name:              derivedFirst        || null,
+        last_name:               derivedLast         || null,
         phone:                   phone.trim()        || null,
         emergency_contact_name:  contactName.trim()  || null,
         emergency_contact_phone: contactPhone.trim() || null,
@@ -139,7 +147,6 @@ export default function BuildPassport() {
 
   const TICKER = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M','26.2','13.1','10K','5K','70.3','140.6','50K','100M']
 
-  // Show spinner while checking if returning user
   if (checking) return (
     <div style={{ minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff' }}>
       <div style={{ width:36, height:36, border:'3px solid rgba(201,168,76,0.3)', borderTopColor:'#C9A84C', borderRadius:'50%', animation:'spin 1s linear infinite' }} />
@@ -163,7 +170,6 @@ export default function BuildPassport() {
             <span style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'12px', letterSpacing:'3.5px', color:'#1B2A4A' }}>RACE PASSPORT</span>
           </div>
 
-          {/* Step indicator */}
           <div style={{ display:'flex', gap:'6px', justifyContent:'center', marginBottom:'8px' }}>
             <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
             <div style={{ height:'3px', width:'36px', background:'#C9A84C', borderRadius:'2px' }} />
