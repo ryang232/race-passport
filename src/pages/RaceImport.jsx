@@ -258,7 +258,7 @@ function StravaManualPicker({ candidates, onSelect, onSkip }) {
 }
 
 // ── Race edit form ────────────────────────────────────────────────────────────
-function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport →', isNew=true, stravaProfile, stravaConnected }) {
+function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport →', isNew=true, stravaProfile, stravaConnected, onLocationRetry }) {
   const [name, setName]               = useState(initial.name||'')
   const [date, setDate]               = useState(initial.date||'')
   const [location, setLocation]       = useState(initial.location||'')
@@ -267,6 +267,7 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
   const [stravaTime, setStravaTime]   = useState('')
   const nameRef = useRef(null)
 
+  const [localLocationHint, setLocalLocationHint] = useState('')
   const resultFound   = initial.runner_result?.found === true
   const placeOverall  = initial.runner_result?.place_overall || ''
   const placeAG       = initial.runner_result?.place_age_group || ''
@@ -450,7 +451,7 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
 
       <div style={{padding:'18px'}}>
 
-        {/* Pacer vibe block — confidence 3 only */}
+        {/* Pacer vibe — confidence 3 with vibe content */}
         {initial.race_vibe && initial.confidence >= 3 && (
           <div style={{marginBottom:'16px',padding:'14px 16px',background:'rgba(27,42,74,0.03)',border:'1.5px solid rgba(27,42,74,0.08)',borderRadius:'12px',borderLeft:'4px solid #C9A84C'}}>
             <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'7px'}}>
@@ -458,6 +459,39 @@ function RaceEditForm({ initial, onSave, onCancel, saveLabel='Add to My Passport
               <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',fontWeight:600,letterSpacing:'2px',color:'#C9A84C',textTransform:'uppercase'}}>Pacer on this race</span>
             </div>
             <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'14px',color:'#3d4f6b',lineHeight:1.65,margin:0,fontWeight:300}}>{initial.race_vibe}</p>
+          </div>
+        )}
+
+        {/* Local gem message — confidence < 3 or no vibe found */}
+        {initial.confidence < 3 && (
+          <div style={{marginBottom:'16px',padding:'14px 16px',background:'rgba(201,168,76,0.04)',border:'1.5px solid rgba(201,168,76,0.2)',borderRadius:'12px',borderLeft:'4px solid #C9A84C'}}>
+            <div style={{display:'flex',alignItems:'center',gap:'6px',marginBottom:'7px'}}>
+              <span style={{fontSize:'13px'}}>⚡</span>
+              <span style={{fontFamily:"'Barlow Condensed',sans-serif",fontSize:'10px',fontWeight:600,letterSpacing:'2px',color:'#C9A84C',textTransform:'uppercase'}}>Pacer on this race</span>
+            </div>
+            <p style={{fontFamily:"'Barlow',sans-serif",fontSize:'14px',color:'#3d4f6b',lineHeight:1.65,margin:0,fontWeight:300}}>
+              Pacer couldn't find this one online — which usually means it's a true local gem. Those races are often the most meaningful ones in a runner's story.
+            </p>
+            {/* Location hint — try again with location */}
+            {onLocationRetry && (
+              <div style={{marginTop:'12px',display:'flex',gap:'8px'}}>
+                <input
+                  value={localLocationHint}
+                  onChange={e => setLocalLocationHint(e.target.value)}
+                  placeholder="Add city/state (e.g. Columbia MD)"
+                  onKeyDown={e => e.key==='Enter' && localLocationHint.trim() && onLocationRetry(localLocationHint.trim())}
+                  style={{flex:1,padding:'9px 12px',borderRadius:'8px',border:'1.5px solid rgba(201,168,76,0.3)',background:'#fff',fontFamily:"'Barlow',sans-serif",fontSize:'13px',color:'#1B2A4A',outline:'none'}}
+                  onFocus={e=>e.target.style.borderColor='#C9A84C'}
+                  onBlur={e=>e.target.style.borderColor='rgba(201,168,76,0.3)'}
+                />
+                <button
+                  onClick={() => localLocationHint.trim() && onLocationRetry(localLocationHint.trim())}
+                  disabled={!localLocationHint.trim()}
+                  style={{padding:'9px 14px',border:'none',borderRadius:'8px',background:localLocationHint.trim()?'#C9A84C':'#e2e6ed',color:localLocationHint.trim()?'#1B2A4A':'#9aa5b4',fontFamily:"'Barlow Condensed',sans-serif",fontSize:'12px',fontWeight:600,letterSpacing:'1px',cursor:localLocationHint.trim()?'pointer':'not-allowed',textTransform:'uppercase',whiteSpace:'nowrap'}}>
+                  Try Again
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -702,6 +736,7 @@ export default function RaceImport() {
   const [searchError, setSearchError] = useState('')
   const [races, setRaces]           = useState([])
   const [popupOpen, setPopupOpen]   = useState(false)
+  const [locationHint, setLocationHint] = useState('')
   const [poolConsent]               = useState(locationState?.poolConsent !== false)
 
   // Strava state
@@ -796,6 +831,7 @@ export default function RaceImport() {
         query: query.trim(),
         year: selectedYear || '',
         distance: selectedDist,
+        location_hint: locationHint.trim(),
       }
       // Pass runner identity for result lookup
       if (userProfile) {
@@ -937,6 +973,7 @@ export default function RaceImport() {
     setSearchError('')
     setQuery('')
     setSelectedDist('')
+    setLocationHint('')
     setPopupOpen(false)
   }
 
@@ -1113,6 +1150,31 @@ export default function RaceImport() {
               stravaProfile={stravaProfile}
               onSave={handleAddRace}
               onCancel={closePopup}
+              onLocationRetry={async (hint) => {
+                setLocationHint(hint)
+                setSearching(true)
+                try {
+                  const body = {
+                    action: 'race_lookup',
+                    query: query.trim(),
+                    year: selectedYear || '',
+                    distance: selectedDist,
+                    location_hint: hint,
+                  }
+                  if (userProfile) {
+                    body.first_name = userProfile.first_name || userProfile.full_name?.trim().split(' ')[0] || ''
+                    body.last_name  = userProfile.last_name  || userProfile.full_name?.trim().split(' ').slice(1).join(' ') || ''
+                    body.dob        = userProfile.dob || userProfile.date_of_birth || ''
+                  }
+                  const resp = await fetch('/api/pacer', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body),
+                  })
+                  const data = await resp.json()
+                  if (!data.error) setPacerResult(data)
+                } catch(e) {}
+                setSearching(false)
+              }}
             />
           </div>
         )}
