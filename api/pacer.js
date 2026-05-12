@@ -121,36 +121,40 @@ PACER COACHING PHILOSOPHY — FOLLOW THESE RULES STRICTLY:
     const hasRunner = !!(first_name && last_name)
 
     // ── Step 1: Web search for race details + personality ─────────────────
+    // Strategy: search race name FIRST (always finds it), then refine date with year
     const detailsPrompt = `You are a race data assistant for an endurance sports app called Race Passport.
 
-Search the web for this race: "${raceName}"${raceYear ? ` in ${raceYear}` : ''}${raceDist ? `, ${raceDist} distance` : ''}.
+You need to find information about this race: "${raceName}"${raceDist ? ` (${raceDist})` : ''}${raceYear ? ` — the user ran it in ${raceYear}` : ''}.
 
-Do TWO searches:
-1. Search for the official race details: exact name, date, location, distance, official website
-2. Search for the race's reputation and personality: what runners say about it, what makes it special, course highlights, difficulty, scenery, crowd support, notable features
+Do THREE searches in this exact order:
+1. Search "${raceName}" — get the official race name, city, state, typical date (month), distance, and what makes it special. This search should always succeed.
+2. Search "${raceName}${raceYear ? ` ${raceYear}` : ''} race date" — find the SPECIFIC date this race occurred${raceYear ? ` in ${raceYear}` : ''}. Most races have the same month every year (e.g. Boston is always April, Marine Corps is always October).
+3. Search "${raceName} runners review course highlights" — find what runners love about it: scenery, crowd, course features, prestige.
 
-Then return ONLY a single JSON object (no markdown, no explanation) with exactly these fields:
+IMPORTANT: Search #1 is your foundation — it will always find the race. Searches #2 and #3 refine it. Never let a failed search #2 or #3 reduce your confidence if search #1 succeeded.
+
+Return ONLY a single JSON object (no markdown, no explanation) with exactly these fields:
 {
-  "name": "official event/series name only — no distance in the name. e.g. 'Baltimore Running Festival' not 'Baltimore Running Festival 10K'",
-  "date": "Month YYYY format e.g. Apr 2022",
-  "date_sort": "YYYY-MM-DD — use actual race date, 01 for day if unknown",
+  "name": "official event/series name only — NEVER include the distance. 'Los Angeles Marathon' not 'Los Angeles Marathon 26.2'. 'Cherry Blossom' not 'Cherry Blossom 10 Miler'",
+  "date": "Month YYYY format using the ACTUAL month this race occurs e.g. 'Mar 2023' for LA Marathon 2023. Never default to January — find the real month.",
+  "date_sort": "YYYY-MM-DD — use the actual race date. If you know the month but not the day, use the 15th as a placeholder e.g. 2023-03-15",
   "location": "City, ST",
   "city": "city name only",
   "state": "2-letter state abbreviation",
   "distance": "${raceDist || 'normalized: 5K or 10K or 10 mi or 13.1 or 26.2 or 50K or 70.3 or 140.6 or Ultra or Other'}",
   "confidence": 3,
-  "race_vibe": "EXACTLY 2 sentences. No more. Pacer voice — warm, punchy, specific to THIS race. One sentence on what makes the course or setting special. One sentence on the vibe, crowd, or prestige. Real details only. No filler. No generic running praise.",
+  "race_vibe": "EXACTLY 2 sentences. No more. Pacer voice — warm, punchy, specific to THIS race. One sentence on what makes the course or setting special. One sentence on the vibe, crowd, or prestige. Real details only — no generic praise.",
   "website": "official race website URL or empty string"
 }
 
 CRITICAL RULES:
-- name field NEVER includes the distance
-- If user said 'Baltimore Running Festival 10K' → name is 'Baltimore Running Festival', distance is '10K'
-- confidence 3 = found it definitively via web search
-- confidence 2 = pretty sure but not 100% confirmed
-- confidence 1 = couldn't find it, using best guess
-- race_vibe must be specific to THIS race — not generic running praise
-- ALWAYS return valid JSON even if search fails — use best knowledge as fallback`
+- name field NEVER includes the distance or year
+- confidence 3 = found the race definitively (search #1 succeeded)
+- confidence 2 = found partial info only
+- confidence 1 = genuinely couldn't find anything
+- The date field must reflect the REAL month this race occurs — not a guess of January
+- race_vibe must reference real specific details about THIS race
+- ALWAYS return valid JSON`
 
     // ── Step 2: Attempt to find runner's result (if name provided) ────────
     let resultPrompt = null
