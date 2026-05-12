@@ -178,26 +178,7 @@ export default function VerifyEmail() {
           </>
         )}
 
-        {/* Progress tracker */}
-        <div style={{ border:'1px solid #f0f2f5', borderRadius:'6px', padding:'8px 16px', marginTop:'20px' }}>
-          <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'9px', fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'4px' }}>Account Setup</div>
-          {[
-            { label:'Enter email', done: true },
-            { label:'Verify email', done: verified, active: !verified },
-            { label:'Create account', done: false },
-            { label:'Build your passport', done: false },
-          ].map((step, i) => (
-            <div key={i} className="step-row">
-              <div className={`step-dot ${step.done ? (i === 1 && verified ? 'done-anim' : 'done') : 'pending'}`}>
-                {step.done ? '✓' : i + 1}
-              </div>
-              <span style={{ fontSize:'13px', color: step.done || step.active ? '#1B2A4A' : '#9aa5b4', fontWeight: step.done || step.active ? 500 : 400 }}>
-                {step.label}
-                {i === 1 && verified && <span style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:'11px', color:'#C9A84C', marginLeft:'8px', letterSpacing:'0.5px' }}>→</span>}
-              </span>
-            </div>
-          ))}
-        </div>
+
       </div>
     </div>
   )
