@@ -150,10 +150,11 @@ Return ONLY a single JSON object (no markdown, no explanation) with exactly thes
 
 CRITICAL RULES:
 - name field NEVER includes the distance or year
-- confidence 3 = found the race via web search with good details
-- confidence 2 = found partial info, some uncertainty
-- confidence 1 = very little found — likely a small local race
-- race_vibe must reference real specific details about THIS race — if it's a small local race and you can't find details, set race_vibe to empty string
+- confidence 3 = the race exists and you found its name and location (this should be MOST races)
+- confidence 2 = you found the race name but are uncertain about location or details
+- confidence 1 = you genuinely cannot find this race at all after searching
+- DO NOT downgrade confidence just because runner reviews were sparse — if you found the race, confidence is 3
+- race_vibe: if you found real specific details about the course, crowd, or prestige, include them. If not, set to empty string. Never fabricate.
 - ALWAYS return valid JSON even if searches return little`
 
     // ── Step 2: Attempt to find runner's result (if name provided) ────────
