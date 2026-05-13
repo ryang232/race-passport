@@ -48,14 +48,11 @@ export default function BuildPassport() {
   const [contactName, setContactName]   = useState('')
   const [contactPhone, setContactPhone] = useState('')
   const [shirtSize, setShirtSize]       = useState('')
-  const [experience, setExperience]     = useState('')
-  const [goalDistance, setGoalDistance] = useState('')
   const [error, setError]               = useState(null)
   const [saving, setSaving]             = useState(false)
   const [fullName, setFullName]         = useState('')
 
-  const SIZES     = ['XS','S','M','L','XL','XXL','XXXL']
-  const DISTANCES = ['5K','10K','10 Mile','Half Marathon','Marathon','Ultra','Triathlon']
+  const SIZES = ['XS','S','M','L','XL','XXL','XXXL']
 
   useEffect(() => {
     const loadProfile = async () => {
@@ -75,8 +72,6 @@ export default function BuildPassport() {
         setContactName(data.emergency_contact_name || '')
         setContactPhone(data.emergency_contact_phone || '')
         setShirtSize(data.shirt_size || '')
-        setExperience(data.experience_level || '')
-        setGoalDistance(data.favorite_distance || '')
       }
 
       setChecking(false)
@@ -132,8 +127,6 @@ export default function BuildPassport() {
         emergency_contact_phone: contactPhone.trim() || null,
         gender:                  gender              || null,
         shirt_size:              shirtSize           || null,
-        experience_level:        experience          || null,
-        favorite_distance:       goalDistance        || null,
         address:                 address.trim()      || null,
         city:                    city.trim()         || null,
         state:                   state.trim()        || null,
@@ -162,6 +155,15 @@ export default function BuildPassport() {
       </div>
 
       <div style={{ position:'relative', zIndex:10, background:'#fff', borderRadius:'4px', padding:'36px 36px 32px', width:'100%', maxWidth:'480px', margin:'20px', boxShadow:'0 2px 40px rgba(27,42,74,0.10),0 0 0 1px rgba(27,42,74,0.07)' }}>
+
+        {/* Back button */}
+        <button onClick={() => navigate('/goal-races', { state:{ firstName, imported: importedCount } })}
+          style={{ display:'flex', alignItems:'center', gap:'5px', background:'none', border:'none', cursor:'pointer', fontFamily:"'Barlow Condensed',sans-serif", fontSize:'12px', fontWeight:600, letterSpacing:'1px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:'20px', padding:0 }}
+          onMouseEnter={e => e.currentTarget.style.color='#1B2A4A'}
+          onMouseLeave={e => e.currentTarget.style.color='#9aa5b4'}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 12L6 8l4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+          Back
+        </button>
 
         {/* Header */}
         <div style={{ textAlign:'center', marginBottom:'20px' }}>
@@ -263,26 +265,6 @@ export default function BuildPassport() {
           <div>
             <label className="field-label">Contact Phone</label>
             <input className="rp-input" type="tel" value={contactPhone} onChange={e => setContactPhone(e.target.value)} placeholder="+1 (555) 000-0000" onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'} />
-          </div>
-        </div>
-
-        {/* Running background */}
-        <div className="section-header">Running Background</div>
-        <div style={{ marginBottom:'14px' }}>
-          <label className="field-label">Experience Level</label>
-          <select className="rp-select" value={experience} onChange={e => setExperience(e.target.value)} onFocus={e => e.target.style.borderColor='#C9A84C'} onBlur={e => e.target.style.borderColor='#e2e6ed'}>
-            <option value="">Select your level</option>
-            <option value="beginner">Beginner — just getting started</option>
-            <option value="recreational">Recreational — run for fun</option>
-            <option value="intermediate">Intermediate — training regularly</option>
-            <option value="competitive">Competitive — racing to place</option>
-            <option value="elite">Elite — podium contender</option>
-          </select>
-        </div>
-        <div style={{ marginBottom:'14px' }}>
-          <label className="field-label">Goal Distance <span style={{ fontWeight:400, color:'#b0b8c4', textTransform:'none', letterSpacing:0 }}>(optional)</span></label>
-          <div style={{ display:'flex', gap:'6px', flexWrap:'wrap' }}>
-            {DISTANCES.map(d => <button key={d} className={`dist-btn ${goalDistance===d?'selected':''}`} onClick={() => setGoalDistance(d===goalDistance?'':d)}>{d}</button>)}
           </div>
         </div>
 
