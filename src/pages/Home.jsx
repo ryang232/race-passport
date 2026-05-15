@@ -9,6 +9,7 @@ import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useStrava, stravaStatsToItems } from '../lib/useStrava'
 import { useIsMobile } from '../lib/useIsMobile'
 import RaceReadinessCard from '../components/RaceReadinessCard'
+import RaceRecapsCard from '../components/RaceRecapsCard'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
@@ -1061,13 +1062,13 @@ export default function Home() {
             />
             {/* Pacer insight */}
             <PacerDashboard races={passportRaces} profile={profile} />
-            {/* Race Grades */}
-            {passportRaces.some(r=>r.pacer_grade) && (
-              <div>
-                <div style={{ fontFamily:"'Barlow Condensed',sans-serif", fontSize:10, fontWeight:600, letterSpacing:'2px', color:'#9aa5b4', textTransform:'uppercase', marginBottom:10 }}>Your Race Grades</div>
-                <RaceGrades races={passportRaces} navigate={navigate} />
-              </div>
-            )}
+            {/* Race Recaps — career grade + per-race breakdown */}
+            <RaceRecapsCard
+              passportRaces={passportRaces}
+              careerScore={careerScore}
+              careerGrade={careerGrade}
+              pacerInsight={passportRaces.length > 0 ? undefined : undefined}
+            />
           </div>
         </section>
 
