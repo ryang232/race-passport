@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { supabase } from '../lib/supabase'
 import { getDistanceColor } from '../lib/colors'
-import { useStrava, looksLikeRace } from '../lib/useStrava'
+import { useStrava, looksLikeRace } from '../lib/useStrava' 
 import { useIsMobile } from '../lib/useIsMobile'
 
 // ── Static demo data ──────────────────────────────────────────────────────────
