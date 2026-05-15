@@ -9,7 +9,7 @@ import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useStrava, stravaStatsToItems } from '../lib/useStrava'
 import { useIsMobile } from '../lib/useIsMobile'
 import RaceReadinessCard from '../components/RaceReadinessCard'
-import RaceRecapsCard from '../components/RaceRecapsCard'
+import RaceRecapsCard from '../components/RaceRecapsCard' 
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
