@@ -840,5 +840,286 @@ CRITICAL: pacer_message must reference real specific details about this race. co
     }
   }
 
+  // ── race_readiness: compute Race Readiness score from Strava + race history ──
+  if (action === 'race_readiness') {
+    const { activities = [], passport_races = [], profile: prof = {}, goal_race = null } = req.body
+
+    // ── Sub-score computations (all return 0-100) ─────────────────────────────
+
+    const toSecs = t => {
+      if (!t) return null
+      const p = t.split(':').map(Number)
+      return p.length === 3 ? p[0]*3600 + p[1]*60 + p[2] : p[0]*60 + (p[1]||0)
+    }
+
+    const now = Date.now()
+    const weeksMs = w => w * 7 * 24 * 60 * 60 * 1000
+
+    // Filter to run/walk activities only for most metrics
+    const runTypes = ['run','virtualrun','walk']
+    const triTypes = ['swim','ride','virtualride','mountainbikeride','run','virtualrun']
+    const recentRuns = activities.filter(a => {
+      const type = (a.type || a.sport_type || '').toLowerCase()
+      const age = now - new Date(a.start_date_local || a.start_date).getTime()
+      return runTypes.includes(type) && age <= weeksMs(4)
+    })
+    const recentAll = activities.filter(a => {
+      const age = now - new Date(a.start_date_local || a.start_date).getTime()
+      return age <= weeksMs(4)
+    })
+    const prevRuns = activities.filter(a => {
+      const type = (a.type || a.sport_type || '').toLowerCase()
+      const age = now - new Date(a.start_date_local || a.start_date).getTime()
+      return runTypes.includes(type) && age > weeksMs(4) && age <= weeksMs(8)
+    })
+    const longTermRuns = activities.filter(a => {
+      const type = (a.type || a.sport_type || '').toLowerCase()
+      const age = now - new Date(a.start_date_local || a.start_date).getTime()
+      return runTypes.includes(type) && age <= weeksMs(12)
+    })
+
+    // 1. CONSISTENCY — training frequency and streaks (0-100)
+    const computeConsistency = () => {
+      if (!recentRuns.length) return 0
+      // Days active in last 28 days
+      const activeDays = new Set(recentRuns.map(a => new Date(a.start_date_local || a.start_date).toDateString()))
+      const daysActive = activeDays.size
+      // Frequency: 5+/week = 100, 4/week = 85, 3/week = 70, 2/week = 55, 1/week = 35
+      const perWeek = daysActive / 4
+      let freqScore = perWeek >= 5 ? 100 : perWeek >= 4 ? 85 : perWeek >= 3 ? 70 : perWeek >= 2 ? 55 : 35
+      // Streak bonus — consecutive weeks with at least 2 runs
+      const weeks = [0,1,2,3].map(w => {
+        const start = now - weeksMs(w+1), end = now - weeksMs(w)
+        return recentRuns.filter(a => {
+          const t = new Date(a.start_date_local || a.start_date).getTime()
+          return t >= start && t < end
+        }).length
+      })
+      const streak = weeks.filter(c => c >= 2).length
+      const streakBonus = streak * 3
+      return Math.min(100, Math.round(freqScore + streakBonus))
+    }
+
+    // 2. VOLUME TREND — weekly mileage trend (0-100)
+    const computeVolumeTrend = () => {
+      const recentMi = recentRuns.reduce((s, a) => s + (a.distance || 0) / 1609.34, 0)
+      const prevMi   = prevRuns.reduce((s, a) => s + (a.distance || 0) / 1609.34, 0)
+      if (!recentMi && !prevMi) return 0
+      if (!prevMi) return 65 // no baseline
+      const ratio = recentMi / prevMi
+      // 1.1+ = building well, 0.9-1.1 = maintenance, <0.7 = declining
+      if (ratio >= 1.2) return 90
+      if (ratio >= 1.1) return 82
+      if (ratio >= 0.95) return 72
+      if (ratio >= 0.8) return 58
+      return 42
+    }
+
+    // 3. INTENSITY BALANCE — easy/hard ratio (0-100)
+    const computeIntensityBalance = () => {
+      if (!recentRuns.length) return 0
+      // Use average pace as proxy — faster efforts = harder
+      // First establish average pace across all their runs
+      const paces = longTermRuns
+        .filter(a => a.distance > 1609 && a.moving_time)
+        .map(a => a.moving_time / (a.distance / 1609.34))
+      if (!paces.length) return 65
+      const avgPace = paces.reduce((s, p) => s + p, 0) / paces.length
+      const recentPaces = recentRuns
+        .filter(a => a.distance > 1609 && a.moving_time)
+        .map(a => a.moving_time / (a.distance / 1609.34))
+      if (!recentPaces.length) return 65
+      // Hard runs = significantly faster than avg (< 90% of avg pace = faster)
+      const hardCount = recentPaces.filter(p => p < avgPace * 0.92).length
+      const hardRatio = hardCount / recentPaces.length
+      // Ideal: 20-30% hard, 70-80% easy
+      if (hardRatio >= 0.15 && hardRatio <= 0.35) return 88
+      if (hardRatio >= 0.10 && hardRatio <= 0.45) return 74
+      if (hardRatio < 0.05) return 55  // all easy
+      if (hardRatio > 0.55) return 52  // too much hard
+      return 65
+    }
+
+    // 4. RECOVERY QUALITY — rest between efforts (0-100)
+    const computeRecovery = () => {
+      if (recentRuns.length < 2) return 70
+      const sorted = [...recentRuns].sort((a, b) =>
+        new Date(a.start_date_local || a.start_date) - new Date(b.start_date_local || b.start_date)
+      )
+      let gaps = []
+      for (let i = 1; i < sorted.length; i++) {
+        const diff = (new Date(sorted[i].start_date_local || sorted[i].start_date) -
+                     new Date(sorted[i-1].start_date_local || sorted[i-1].start_date)) / (1000*60*60)
+        gaps.push(diff)
+      }
+      // Flag back-to-back hard days (< 20hr gap after long run)
+      const longRuns = sorted.filter(a => (a.distance || 0) / 1609.34 > 8)
+      const badGaps = gaps.filter(g => g < 20).length
+      const avgGap = gaps.reduce((s, g) => s + g, 0) / gaps.length
+      if (badGaps === 0 && avgGap >= 36) return 90
+      if (badGaps <= 1 && avgGap >= 24) return 78
+      if (badGaps <= 2) return 65
+      return 50
+    }
+
+    // 5. SPEED ENDURANCE — recent pace vs historical best (0-100)
+    const computeSpeedEndurance = () => {
+      const historicalPaces = longTermRuns
+        .filter(a => a.distance > 3000 && a.moving_time)
+        .map(a => a.moving_time / (a.distance / 1609.34))
+        .sort((a, b) => a - b)
+      if (!historicalPaces.length) return 65
+      const bestPace = historicalPaces[0]
+      const recentBestPaces = recentRuns
+        .filter(a => a.distance > 3000 && a.moving_time)
+        .map(a => a.moving_time / (a.distance / 1609.34))
+        .sort((a, b) => a - b)
+      if (!recentBestPaces.length) return 50
+      const recentBest = recentBestPaces[0]
+      // How close is recent best to historical best?
+      const ratio = bestPace / recentBest // > 1 means recent is slower
+      if (ratio >= 0.98) return 92  // at or near best
+      if (ratio >= 0.95) return 82
+      if (ratio >= 0.90) return 70
+      if (ratio >= 0.85) return 58
+      return 45
+    }
+
+    // 6. vs PR CYCLE — compare to training leading into best races (0-100)
+    const computeVsPRCycle = () => {
+      const prRaces = passport_races.filter(r => r.is_pr && r.date_sort)
+      if (!prRaces.length || !longTermRuns.length) return 65
+      // Get current 4-week mileage
+      const currentMi = recentRuns.reduce((s, a) => s + (a.distance || 0) / 1609.34, 0)
+      const currentPerWeek = currentMi / 4
+      // Estimate PR cycle volume from number of runs and distances in passport
+      // Proxy: if current weekly > 25mi, compare to PR race distances
+      const bestRaceDistMi = Math.max(...prRaces.map(r => {
+        const d = {'5K':3.1,'10K':6.2,'10 mi':10,'13.1':13.1,'26.2':26.2,'50K':31,'70.3':70.3,'140.6':140.6}
+        return d[r.distance] || 0
+      }))
+      // Expected training volume for best race distance
+      const expectedPerWeek = bestRaceDistMi >= 26.2 ? 40 : bestRaceDistMi >= 13.1 ? 28 : bestRaceDistMi >= 10 ? 22 : 18
+      const ratio = currentPerWeek / expectedPerWeek
+      if (ratio >= 1.0) return 90
+      if (ratio >= 0.85) return 80
+      if (ratio >= 0.70) return 68
+      if (ratio >= 0.55) return 55
+      return 42
+    }
+
+    // ── Compute all six sub-scores ────────────────────────────────────────────
+    const hasData = activities.length >= 3
+    let subScores, composite, grade
+
+    if (!hasData) {
+      // Baseline state — not enough data
+      composite = 75
+      grade = 'C'
+      subScores = []
+    } else {
+      const raw = {
+        consistency:      computeConsistency(),
+        volume_trend:     computeVolumeTrend(),
+        intensity_balance: computeIntensityBalance(),
+        recovery:         computeRecovery(),
+        speed_endurance:  computeSpeedEndurance(),
+        vs_pr_cycle:      computeVsPRCycle(),
+      }
+
+      // Weights
+      const weights = { consistency:0.22, volume_trend:0.2, intensity_balance:0.16, recovery:0.16, speed_endurance:0.14, vs_pr_cycle:0.12 }
+      composite = Math.round(Object.entries(raw).reduce((s, [k, v]) => s + v * (weights[k] || 0), 0))
+
+      // Grade
+      const gradeFromScore = s => {
+        if (s >= 97) return 'A+'; if (s >= 93) return 'A'; if (s >= 90) return 'A-'
+        if (s >= 87) return 'B+'; if (s >= 83) return 'B'; if (s >= 80) return 'B-'
+        if (s >= 77) return 'C+'; if (s >= 73) return 'C'; if (s >= 70) return 'C-'
+        if (s >= 67) return 'D+'; if (s >= 63) return 'D'; if (s >= 60) return 'D-'
+        return 'F'
+      }
+      grade = gradeFromScore(composite)
+
+      // Build ranked sub-score list for display
+      const LABELS = {
+        consistency:       'Consistency',
+        volume_trend:      'Volume trend',
+        intensity_balance: 'Intensity balance',
+        recovery:          'Recovery quality',
+        speed_endurance:   'Speed endurance',
+        vs_pr_cycle:       'vs. PR cycle',
+      }
+      const STATUS = (val) => {
+        if (val >= 88) return { label: 'Strong',    color: '#16a34a', bg: 'rgba(22,163,74,0.08)' }
+        if (val >= 78) return { label: 'Good',      color: '#16a34a', bg: 'rgba(22,163,74,0.08)' }
+        if (val >= 68) return { label: 'Building',  color: '#C9A84C', bg: 'rgba(201,168,76,0.1)' }
+        if (val >= 55) return { label: 'Fair',      color: '#C9A84C', bg: 'rgba(201,168,76,0.1)' }
+        return { label: 'Needs work', color: '#c53030', bg: 'rgba(197,48,48,0.08)' }
+      }
+
+      subScores = Object.entries(raw).map(([key, val]) => {
+        const st = STATUS(val)
+        return { key, name: LABELS[key], val, ...st }
+      })
+    }
+
+    // ── Pick top 3 most relevant factors ─────────────────────────────────────
+    // Sort by absolute deviation from 75 (most notable, up or down)
+    const top3 = hasData
+      ? [...subScores].sort((a, b) => Math.abs(b.val - 75) - Math.abs(a.val - 75)).slice(0, 3)
+      : []
+    const improving = hasData ? subScores.filter(f => f.val >= 75).sort((a, b) => b.val - a.val).slice(0, 3) : []
+    const declining = hasData ? subScores.filter(f => f.val < 75).sort((a, b) => a.val - b.val).slice(0, 3) : []
+
+    // ── Ask Pacer to generate the narrative insight ───────────────────────────
+    let insight = ''
+    try {
+      const recentMiTotal = recentRuns.reduce((s, a) => s + (a.distance || 0) / 1609.34, 0).toFixed(1)
+      const goalContext = goal_race ? `Goal race: ${goal_race.name || goal_race.goal_race_name || ''} (${goal_race.goal_distance || ''})` : 'No specific goal race set'
+      const topFactors = top3.map(f => `${f.name}: ${f.val} (${f.label})`).join(', ')
+      const firstName = (prof.full_name || '').split(' ')[0] || 'Runner'
+
+      const prompt = [
+        'You are Pacer, a warm AI running coach inside Race Passport.',
+        POSITIVITY_RULES,
+        '',
+        'RUNNER DATA:',
+        `Name: ${firstName}`,
+        `4-week mileage: ${recentMiTotal} miles`,
+        `Activities last 4 weeks: ${recentRuns.length}`,
+        `Race Readiness score: ${composite}/100 (${grade})`,
+        `Top factors: ${topFactors || 'insufficient data'}`,
+        goalContext,
+        `Passport races: ${passport_races.length}`,
+        '',
+        'Write a Race Readiness insight with EXACTLY this structure:',
+        '- Sentence 1: One punchy, specific observation about what their training pattern MEANS for racing right now. Be specific — reference actual training signals.',
+        '- Sentences 2-3: More detail — what is building, what needs attention, how this translates to race performance. Keep it warm and coach-like.',
+        '- Sentence 4: One forward-looking statement about what to focus on or when to race.',
+        '',
+        'Return ONLY valid JSON:',
+        '{"insight": "4 sentences as described above. No markdown. No generic praise."}',
+      ].join('\n')
+
+      const text = await callClaude(prompt, 200)
+      const parsed = JSON.parse(text)
+      insight = parsed.insight || ''
+    } catch(e) {
+      const recentMi = recentRuns.reduce((s, a) => s + (a.distance || 0) / 1609.34, 0).toFixed(0)
+      insight = hasData
+        ? `Your training is building real race fitness right now. ${recentMi} miles in the last four weeks shows genuine commitment — keep this momentum going and a race in the next 4-8 weeks will catch you near your peak.`
+        : 'Your Race Readiness is at baseline — as you train and sync with Strava, Pacer will calculate your real score. Keep moving and this card will start telling your story.'
+    }
+
+    return res.status(200).json({
+      score:    composite,
+      grade,
+      insight,
+      factors:  { all: top3, improving, declining },
+      has_data: hasData,
+    })
+  }
+
   return res.status(400).json({ error: 'Unknown action: ' + action })
 }
