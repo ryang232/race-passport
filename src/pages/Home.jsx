@@ -9,11 +9,11 @@ import { PHOTO_PLACEHOLDER, loadRacePhoto } from '../lib/photos'
 import { useStrava, stravaStatsToItems } from '../lib/useStrava'
 import { useIsMobile } from '../lib/useIsMobile'
 import RaceReadinessCard from '../components/RaceReadinessCard'
-import RaceRecapsCard from '../components/RaceRecapsCard' 
+import RaceRecapsCard from '../components/RaceRecapsCard'
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TICKER_ITEMS = ['26.2','13.1','10K','5K','70.3','140.6','50K','100M']
-const MAX_W = '960px'
+const MAX_W = '1080px'
 
 const RYAN_STAMPS = [
   { id:9,  distance:'70.3',  name:'IRONMAN 70.3 Eagleman', location:'Cambridge, MD',   month:'Jun', year:'2025', date:'Jun 2025', date_sort:'2025-06-08' },
@@ -987,8 +987,8 @@ export default function Home() {
 
       {/* ── GREETING ── */}
       {!isMobile && (
-        <div style={{ position:'relative', zIndex:10, background:'#fff', borderBottom:'1px solid #e8eaed', padding:'36px 40px 32px' }}>
-          <div style={{ maxWidth:MAX_W, margin:'0 auto', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:32 }}>
+        <div style={{ position:'relative', zIndex:10, background:'#fff', borderBottom:'1px solid #e8eaed', padding:'36px 0 32px' }}>
+          <div style={{ maxWidth:MAX_W, margin:'0 auto', padding:'0 48px', display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:32 }}>
             <div>
               <div style={{ fontFamily:"'Bebas Neue',sans-serif", fontSize:'clamp(36px,5vw,60px)', color:'#1B2A4A', letterSpacing:2, lineHeight:1, marginBottom:4 }}>
                 {greeting}{firstName?`, ${firstName.toUpperCase()}`:''}.</div>
@@ -1039,7 +1039,7 @@ export default function Home() {
       )}
 
       {/* ── MAIN CONTENT ── */}
-      <div style={{ position:'relative', zIndex:10, maxWidth:MAX_W, margin:'0 auto', padding:isMobile?'16px 12px 100px':'32px 24px 80px', display:'flex', flexDirection:'column', gap:32 }}>
+      <div style={{ position:'relative', zIndex:10, maxWidth:MAX_W, margin:'0 auto', padding:isMobile?'16px 16px 100px':'32px 48px 80px', display:'flex', flexDirection:'column', gap:32 }}>
 
         {/* ══ PACER INTELLIGENCE ══ */}
         <section>
